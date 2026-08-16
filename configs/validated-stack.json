@@ -47,5 +47,13 @@
     "torchvision": "0.25.0+rocm7.13.0a20260513",
     "index": "https://rocm.nightlies.amd.com/v2/gfx1151/",
     "note": "index tops out at torch 2.10.0 for cp312 (2.11.0 nightlies are cp314-only, probed 2026-08-16); vllm-torch210-compat.diff bridges the torch-2.13-era stable C++ API"
+  },
+  "llama_cpp": {
+    "source_repo": "https://github.com/ggml-org/llama.cpp.git",
+    "commit": "4df29be4f4c3673f428170fda944a5b19f743bb8",
+    "build_arch": "gfx1151",
+    "toolchain": "/home/amd/rocm-7.14.0",
+    "backend": "HIP",
+    "built_at": "2026-08-17"
   }
 }
