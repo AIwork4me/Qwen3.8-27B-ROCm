@@ -590,12 +590,13 @@ Spike B — exact-byte GiB, see the note below the next table):
 | GGUF UD-Q4_K_XL (unsloth) | 16.69 GiB | bf16 16.0 GiB | ~32.7 GiB | **yes — comfortably** |
 | vLLM `cyankiwi` AWQ-INT4 W4A16 | 19.6 GiB | bf16 16.0 GiB | ~35.6 GiB | **yes** |
 | GGUF Q6_K (unsloth) | 21.31 GiB | bf16 16.0 GiB | ~37.3 GiB | **yes** |
-| BF16 weights (base repo) | 49.8 GiB | bf16 16.0 GiB | ~65.8 GiB | **yes** |
+| BF16 weights (base repo) | 51.7 GiB | bf16 16.0 GiB | ~67.7 GiB | **yes** |
 
 Reading: **on the validated 80 GiB pool, KV quantization is NOT a
 capacity requirement even at 262K** — UD-Q4_K_XL + bf16 KV ≈ 32.7 GiB
-fits with ~47 GiB to spare, and even the 49.8 GiB BF16 weights fit the
-visible pool. The binding constraint is performance, not capacity: the
+fits with ~47 GiB to spare, and even the 51.7 GiB BF16 weights fit the
+visible pool (51.7 + 16.0 = 67.7 GiB, ~12 GiB to spare). The binding
+constraint is performance, not capacity: the
 pool is GTT-backed (shared system memory), so pressure past fast memory
 means a **silent GTT spill** — throughput collapse with no load-time
 error, the llama.cpp #26432 class Spike B recorded — and the remaining
