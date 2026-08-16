@@ -158,7 +158,7 @@ log_grep() { # log_grep <log> <pattern> [tail-n]
 
 # boot_attempt <section-label> <log> <ENV=V...>
 # Appends a "## Boot (<label>)" section; rc 0 = healthy, 1 = failed (verbatim
-# failure recorded). Sets BOOT_WALL / BOOT_LOG for the caller.
+# failure recorded). Sets BOOT_WALL for the caller.
 boot_attempt() {
     local label="$1" log="$2"; shift 2
     local t0 rc=0
@@ -167,7 +167,6 @@ boot_attempt() {
     SERVER_PID="$(launch "$log" "$@")"
     wait_healthy "$SERVER_PID" "$BOOT_TIMEOUT" || rc=$?
     BOOT_WALL=$(( $(date +%s) - t0 ))
-    BOOT_LOG="$log"
     if [ "$rc" -eq 0 ]; then
         {
             echo "- server: $BASE_URL"

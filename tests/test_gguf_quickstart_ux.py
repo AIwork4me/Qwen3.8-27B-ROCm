@@ -1,3 +1,5 @@
+import json
+
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -25,3 +27,16 @@ def test_quickstart_mtp_is_opt_in_and_labeled():
     src = SCRIPT.read_text()
     assert "WITH_MTP" in src
     assert "draft-mtp" in src or "spec-type" in src
+
+
+def test_receipt_and_stack_record_vision():
+    receipt = (ROOT / "docs" / "results" / "rocm-7.14" / "gguf-validation.md").read_text()
+    assert "## Vision" in receipt
+    stack = json.loads((ROOT / "configs" / "validated-stack.json").read_text())
+    v = stack["llama_cpp"]["validated"]
+    assert isinstance(v.get("vision"), bool)
+
+
+def test_readme_gguf_row_is_measured_now():
+    text = (ROOT / "README.md").read_text()
+    assert "GGUF" in text and "llama.cpp" in text

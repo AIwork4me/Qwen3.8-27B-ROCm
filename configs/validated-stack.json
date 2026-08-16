@@ -58,7 +58,7 @@
     "validated": {
       "text": true,
       "mtp": true,
-      "vision": null,
+      "vision": true,
       "ctx_size": 131072,
       "receipt": "docs/results/rocm-7.14/gguf-validation.md",
       "date": "2026-08-17"

@@ -157,10 +157,12 @@ fi
 #   - "draft-mtp" name mapped in common/speculative.cpp:36
 #   - no separate draft GGUF is needed: setting the type makes the loader pull
 #     the MTP block out of the SAME model file (common.cpp:1689 sets
-#     mparams.load_mtp; qwen35moe.cpp load_block_mtp reads blk.<n> MTP tensors
-#     from the main GGUF), and the draft context is created against the target
-#     model itself (common/speculative.cpp: "creating MTP draft context against
-#     the target model"). -md is therefore deliberately NOT passed.
+#     mparams.load_mtp; qwen35.cpp:97 load_block_mtp reads blk.<n> MTP tensors
+#     from the main GGUF for this dense qwen35 arch; the mechanism is
+#     identical in qwen35moe.cpp), and the draft context is created against
+#     the target model itself (common/speculative.cpp: "creating MTP draft
+#     context against the target model"). -md is therefore deliberately NOT
+#     passed.
 if [ "${WITH_MTP:-0}" = "1" ]; then
     SERVER_ARGS+=(--spec-type draft-mtp)
 fi
