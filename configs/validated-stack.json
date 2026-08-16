@@ -6,6 +6,12 @@
     "rocm_recommended": "7.14.0",
     "rocm_historical_fallback": "7.2.1"
   },
+  "install": {
+    "prefix": "/home/amd/rocm-7.14.0",
+    "verified_sha256": "2567d5e34e470db104a62a02c36aa770cb0430175e48c1c46df0eefc05e1d77c",
+    "installed_on": "2026-08-16",
+    "kernel_at_install": "6.17.0-1032-oem"
+  },
   "model": {
     "id": "Qwen/Qwen3.8-27B",
     "architecture": "Qwen3_5ForConditionalGeneration",
