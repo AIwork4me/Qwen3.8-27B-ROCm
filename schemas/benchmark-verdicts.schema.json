@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Benchmark verdicts",
+  "type": "object",
+  "required": ["checked_at", "cells"],
+  "properties": {
+    "checked_at": {"type": "string"},
+    "reviewed_by": {"type": "string"},
+    "cells": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "verdict", "reason", "metrics"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^(gguf|vllm)-(udq4kxl|bf16)-auto-(base|mtp)-c(1|4|8|16)-ctx(32768|131072|262144)$"},
+          "verdict": {"enum": ["recommended", "caution", "avoid"]},
+          "reason": {"type": "string"},
+          "conditions": {"type": "string"},
+          "workaround": {"type": "string"},
+          "upstream": {"type": "string"},
+          "metrics": {"type": "object"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

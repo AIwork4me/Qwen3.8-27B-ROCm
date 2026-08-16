@@ -1,0 +1,347 @@
+{
+  "generated_at": "2026-08-17",
+  "generator": "scripts/gen-matrix.py",
+  "notes": [
+    "Declaration only: statuses flip to measured by the cell runners (Tasks 3/4); regenerating resets to this declaration.",
+    "Weight is path-bound by construction (gguf<->udq4kxl, vllm<->bf16); cross pairs are invalid and never emitted (METHODOLOGY.md \u00a78).",
+    "Dropped cells record the unsupported-tier exclusions per spec 4.3."
+  ],
+  "cells": [
+    {
+      "id": "gguf-udq4kxl-auto-base-c1-ctx32768",
+      "status": "planned",
+      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true
+    },
+    {
+      "id": "gguf-udq4kxl-auto-base-c4-ctx32768",
+      "status": "planned",
+      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true
+    },
+    {
+      "id": "gguf-udq4kxl-auto-base-c8-ctx32768",
+      "status": "planned",
+      "reason": "time-boxed session; machinery complete",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": false
+    },
+    {
+      "id": "gguf-udq4kxl-auto-base-c16-ctx32768",
+      "status": "planned",
+      "reason": "time-boxed session; machinery complete",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": false
+    },
+    {
+      "id": "gguf-udq4kxl-auto-base-c1-ctx131072",
+      "status": "planned",
+      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true
+    },
+    {
+      "id": "gguf-udq4kxl-auto-base-c4-ctx131072",
+      "status": "planned",
+      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true
+    },
+    {
+      "id": "gguf-udq4kxl-auto-base-c8-ctx131072",
+      "status": "planned",
+      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true
+    },
+    {
+      "id": "gguf-udq4kxl-auto-base-c16-ctx131072",
+      "status": "planned",
+      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true
+    },
+    {
+      "id": "gguf-udq4kxl-auto-base-c1-ctx262144",
+      "status": "planned",
+      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true
+    },
+    {
+      "id": "gguf-udq4kxl-auto-base-c4-ctx262144",
+      "status": "planned",
+      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true
+    },
+    {
+      "id": "gguf-udq4kxl-auto-base-c8-ctx262144",
+      "status": "planned",
+      "reason": "time-boxed session; machinery complete",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": false
+    },
+    {
+      "id": "gguf-udq4kxl-auto-base-c16-ctx262144",
+      "status": "planned",
+      "reason": "time-boxed session; machinery complete",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": false
+    },
+    {
+      "id": "gguf-udq4kxl-auto-mtp-c1-ctx32768",
+      "status": "planned",
+      "reason": "time-boxed session; machinery complete",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": false
+    },
+    {
+      "id": "gguf-udq4kxl-auto-mtp-c4-ctx32768",
+      "status": "planned",
+      "reason": "time-boxed session; machinery complete",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": false
+    },
+    {
+      "id": "gguf-udq4kxl-auto-mtp-c8-ctx32768",
+      "status": "planned",
+      "reason": "time-boxed session; machinery complete",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": false
+    },
+    {
+      "id": "gguf-udq4kxl-auto-mtp-c16-ctx32768",
+      "status": "planned",
+      "reason": "time-boxed session; machinery complete",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": false
+    },
+    {
+      "id": "gguf-udq4kxl-auto-mtp-c1-ctx131072",
+      "status": "planned",
+      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true
+    },
+    {
+      "id": "gguf-udq4kxl-auto-mtp-c4-ctx131072",
+      "status": "planned",
+      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true
+    },
+    {
+      "id": "gguf-udq4kxl-auto-mtp-c8-ctx131072",
+      "status": "planned",
+      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true
+    },
+    {
+      "id": "gguf-udq4kxl-auto-mtp-c16-ctx131072",
+      "status": "planned",
+      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true
+    },
+    {
+      "id": "gguf-udq4kxl-auto-mtp-c1-ctx262144",
+      "status": "planned",
+      "reason": "time-boxed session; machinery complete",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": false
+    },
+    {
+      "id": "gguf-udq4kxl-auto-mtp-c4-ctx262144",
+      "status": "planned",
+      "reason": "time-boxed session; machinery complete",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": false
+    },
+    {
+      "id": "gguf-udq4kxl-auto-mtp-c8-ctx262144",
+      "status": "planned",
+      "reason": "time-boxed session; machinery complete",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": false
+    },
+    {
+      "id": "gguf-udq4kxl-auto-mtp-c16-ctx262144",
+      "status": "planned",
+      "reason": "time-boxed session; machinery complete",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": false
+    },
+    {
+      "id": "vllm-bf16-auto-base-c1-ctx32768",
+      "status": "dropped",
+      "reason": "32768 is not a supported conf tier for the vllm path (validated conf serves --max-model-len 262144; no tier below it is offered)",
+      "runner_hint": "none (dropped tier)",
+      "priority": false
+    },
+    {
+      "id": "vllm-bf16-auto-base-c4-ctx32768",
+      "status": "dropped",
+      "reason": "32768 is not a supported conf tier for the vllm path (validated conf serves --max-model-len 262144; no tier below it is offered)",
+      "runner_hint": "none (dropped tier)",
+      "priority": false
+    },
+    {
+      "id": "vllm-bf16-auto-base-c8-ctx32768",
+      "status": "dropped",
+      "reason": "32768 is not a supported conf tier for the vllm path (validated conf serves --max-model-len 262144; no tier below it is offered)",
+      "runner_hint": "none (dropped tier)",
+      "priority": false
+    },
+    {
+      "id": "vllm-bf16-auto-base-c16-ctx32768",
+      "status": "dropped",
+      "reason": "32768 is not a supported conf tier for the vllm path (validated conf serves --max-model-len 262144; no tier below it is offered)",
+      "runner_hint": "none (dropped tier)",
+      "priority": false
+    },
+    {
+      "id": "vllm-bf16-auto-base-c1-ctx131072",
+      "status": "planned",
+      "reason": "time-boxed session; machinery complete",
+      "runner_hint": "scripts/run-cell-vllm.sh",
+      "priority": false
+    },
+    {
+      "id": "vllm-bf16-auto-base-c4-ctx131072",
+      "status": "planned",
+      "reason": "time-boxed session; machinery complete",
+      "runner_hint": "scripts/run-cell-vllm.sh",
+      "priority": false
+    },
+    {
+      "id": "vllm-bf16-auto-base-c8-ctx131072",
+      "status": "planned",
+      "reason": "time-boxed session; machinery complete",
+      "runner_hint": "scripts/run-cell-vllm.sh",
+      "priority": false
+    },
+    {
+      "id": "vllm-bf16-auto-base-c16-ctx131072",
+      "status": "planned",
+      "reason": "time-boxed session; machinery complete",
+      "runner_hint": "scripts/run-cell-vllm.sh",
+      "priority": false
+    },
+    {
+      "id": "vllm-bf16-auto-base-c1-ctx262144",
+      "status": "planned",
+      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "runner_hint": "scripts/run-cell-vllm.sh",
+      "priority": true
+    },
+    {
+      "id": "vllm-bf16-auto-base-c4-ctx262144",
+      "status": "planned",
+      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "runner_hint": "scripts/run-cell-vllm.sh",
+      "priority": true
+    },
+    {
+      "id": "vllm-bf16-auto-base-c8-ctx262144",
+      "status": "planned",
+      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "runner_hint": "scripts/run-cell-vllm.sh",
+      "priority": true
+    },
+    {
+      "id": "vllm-bf16-auto-base-c16-ctx262144",
+      "status": "planned",
+      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "runner_hint": "scripts/run-cell-vllm.sh",
+      "priority": true
+    },
+    {
+      "id": "vllm-bf16-auto-mtp-c1-ctx32768",
+      "status": "dropped",
+      "reason": "32768 is not a supported conf tier for the vllm path (validated conf serves --max-model-len 262144; no tier below it is offered)",
+      "runner_hint": "none (dropped tier)",
+      "priority": false
+    },
+    {
+      "id": "vllm-bf16-auto-mtp-c4-ctx32768",
+      "status": "dropped",
+      "reason": "32768 is not a supported conf tier for the vllm path (validated conf serves --max-model-len 262144; no tier below it is offered)",
+      "runner_hint": "none (dropped tier)",
+      "priority": false
+    },
+    {
+      "id": "vllm-bf16-auto-mtp-c8-ctx32768",
+      "status": "dropped",
+      "reason": "32768 is not a supported conf tier for the vllm path (validated conf serves --max-model-len 262144; no tier below it is offered)",
+      "runner_hint": "none (dropped tier)",
+      "priority": false
+    },
+    {
+      "id": "vllm-bf16-auto-mtp-c16-ctx32768",
+      "status": "dropped",
+      "reason": "32768 is not a supported conf tier for the vllm path (validated conf serves --max-model-len 262144; no tier below it is offered)",
+      "runner_hint": "none (dropped tier)",
+      "priority": false
+    },
+    {
+      "id": "vllm-bf16-auto-mtp-c1-ctx131072",
+      "status": "planned",
+      "reason": "time-boxed session; machinery complete",
+      "runner_hint": "scripts/run-cell-vllm.sh",
+      "priority": false
+    },
+    {
+      "id": "vllm-bf16-auto-mtp-c4-ctx131072",
+      "status": "planned",
+      "reason": "time-boxed session; machinery complete",
+      "runner_hint": "scripts/run-cell-vllm.sh",
+      "priority": false
+    },
+    {
+      "id": "vllm-bf16-auto-mtp-c8-ctx131072",
+      "status": "planned",
+      "reason": "time-boxed session; machinery complete",
+      "runner_hint": "scripts/run-cell-vllm.sh",
+      "priority": false
+    },
+    {
+      "id": "vllm-bf16-auto-mtp-c16-ctx131072",
+      "status": "planned",
+      "reason": "time-boxed session; machinery complete",
+      "runner_hint": "scripts/run-cell-vllm.sh",
+      "priority": false
+    },
+    {
+      "id": "vllm-bf16-auto-mtp-c1-ctx262144",
+      "status": "planned",
+      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "runner_hint": "scripts/run-cell-vllm.sh",
+      "priority": true
+    },
+    {
+      "id": "vllm-bf16-auto-mtp-c4-ctx262144",
+      "status": "planned",
+      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "runner_hint": "scripts/run-cell-vllm.sh",
+      "priority": true
+    },
+    {
+      "id": "vllm-bf16-auto-mtp-c8-ctx262144",
+      "status": "planned",
+      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "runner_hint": "scripts/run-cell-vllm.sh",
+      "priority": true
+    },
+    {
+      "id": "vllm-bf16-auto-mtp-c16-ctx262144",
+      "status": "planned",
+      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "runner_hint": "scripts/run-cell-vllm.sh",
+      "priority": true
+    }
+  ]
+}

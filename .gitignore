@@ -6,4 +6,10 @@ builds/
 models/
 docs/results/*.log
 docs/results/*.json
+# Benchmark matrix (Task 1, 2026-08-17): the matrix manifest and raw cell
+# receipts are committed evidence — the pattern above only matches JSONs
+# directly under docs/results/, and this negation documents that the
+# matrix-714 tree is deliberately committable (guards against the pattern
+# ever broadening to **).
+!docs/results/matrix-714/**
 docs/results/.matrix-721-baseline-snapshot/
