@@ -156,8 +156,7 @@ PY
 fi
 
 # ------------------------------------------------------------------ mtp pass --
-echo >> "$RECEIPT"
-echo "## MTP" >> "$RECEIPT"
+{ echo; echo "## MTP"; } >> "$RECEIPT"
 cat >> "$RECEIPT" <<EOF
 - server: $BASE_URL (relaunched with configs/serve-args-mtp.conf)
 - health: $(health)

@@ -35,9 +35,11 @@
     "validated": {
       "text": true,
       "mtp": true,
+      "vision": true,
       "date": "2026-08-16",
       "receipt": "docs/results/rocm-7.14/vllm-validation.md"
-    }
+    },
+    "reasoning_parser": "qwen3 (serves the native <think> split as message.reasoning at this pin; verified boot+greedy+stream+MTP, see receipt)"
   },
   "pytorch": {
     "source": "AMD TheRock gfx1151 index",

@@ -85,3 +85,68 @@ trigger):
     INFO 08-17 03:06:40 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 2.00, Accepted throughput: 3.70 tokens/s, Drafted throughput: 3.70 tokens/s, Accepted: 37 tokens, Drafted: 37 tokens, Per-position acceptance rate: 1.000, Avg Draft acceptance rate: 100.0%
     INFO 08-17 03:06:50 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 2.00, Accepted throughput: 3.60 tokens/s, Drafted throughput: 3.60 tokens/s, Accepted: 36 tokens, Drafted: 36 tokens, Per-position acceptance rate: 1.000, Avg Draft acceptance rate: 100.0%
     INFO 08-17 03:07:00 [metrics.py:120] SpecDecoding metrics: Mean acceptance length: 2.00, Accepted throughput: 1.30 tokens/s, Drafted throughput: 1.30 tokens/s, Accepted: 13 tokens, Drafted: 13 tokens, Per-position acceptance rate: 1.000, Avg Draft acceptance rate: 100.0%
+
+## Reasoning parser (Task 6 review follow-up)
+`--reasoning-parser qwen3` added to BOTH confs after on-host verification
+(2026-08-17, /tmp/vllm-serve.log). The parser exists at the pin: registered
+as "qwen3" at vllm/reasoning/__init__.py:127 -> Qwen3ParserReasoningAdapter
+(vllm/reasoning/qwen3_engine_reasoning_parser.py -> make_adapters(
+vllm.parser.qwen3.Qwen3Parser)).
+
+- boot with the flag: healthy in ~187 s (nohup -> first healthy poll);
+  `'reasoning_parser': 'qwen3'` appears in api_utils non-default args and
+  `reasoning_parser='qwen3'` in the StructuredOutputsConfig of the engine
+  init line. No new warnings beyond the pre-existing transformers
+  Qwen3VL docstring notices.
+- greedy (same prompt as ## Greedy smoke, temperature=0, max_tokens=512,
+  wall 7 s): finish_reason=stop, usage prompt_tokens=57
+  completion_tokens=27 — token-identical to the no-parser baseline above,
+  i.e. the parser changes OUTPUT PACKAGING ONLY, not generation.
+- split verified; NOTE the field at this commit is message."reasoning"
+  (the older DeepSeek-style "reasoning_content" stays absent — .get()
+  returns None):
+    reasoning: 'We need to respond to user: "Reply with exactly: OK". Need final exactly OK. No extra.\n'
+    content:   '\n\nOK'
+  The pre-</think> text lands verbatim in "reasoning"; content keeps the
+  post-tag separator plus the answer ('OK' present, no '</think>' residue).
+- streaming (stream=True, same prompt): first delta carries
+  "reasoning" ('We'); content deltas begin only after the reasoning stream
+  ends (first content delta '\n\n').
+- MTP combo (serve-args-mtp.conf WITH the parser; boot ~255 s -> healthy;
+  /tmp/vllm-serve-mtp.log, wall 4.5 s): same split, same 57/27 tokens,
+  finish_reason=stop, drafter loaded as before ('Resolved architecture:
+  Qwen3_5MTP'). Parser and speculative decoding coexist.
+
+## Vision (Task 6)
+- server: http://127.0.0.1:8000, baseline conf INCLUDING the reasoning
+  parser above (i.e. the final configs/serve-args.conf state); log
+  /tmp/vllm-serve.log. --skip-mm-profiling was still set — it skips only
+  boot-time PROFILING, not image serving, and the forward path below ran
+  the real image through preprocessor -> ViT encoder -> LLM.
+- request: inline-generated solid-red 64x64 PNG (rgb 200,30,30), sent as a
+  data:image/png;base64 image_url content part with text "What is the
+  dominant color of this image? Answer in one word.", temperature=0,
+  max_tokens=512. Wall: 29.3 s (includes first-use Triton JIT of the
+  vision kernels, see evidence below).
+- finish_reason: stop
+- usage: prompt_tokens=132 completion_tokens=117 (the same text prompt
+  alone costs 57 — the PNG really entered the context as ~75 image tokens)
+- message.reasoning (verbatim):
+  'The user wants the dominant color of the image, answered in a single word. The image is a uniform field of a deep, saturated red hue. There are no other colors, gradients, or objects present. The instruction is strict: one word. Possible candidates include "red," "crimson," or "maroon." The shade is a strong, classic red, not leaning heavily toward purple (maroon) or pink (crimson). The most accurate and simplest single-word descriptor is "Red." I will provide just that word to satisfy the constraint.\n'
+- message.content (verbatim): '\n\nRed'
+- color word present in content: True ("Red" — correct for the solid-red
+  input; the encoder demonstrably processed the actual pixels, per the
+  reasoning text describing a uniform saturated red field with no gradients)
+
+Encoder-forward log evidence (/tmp/vllm-serve.log, at the vision request):
+    (EngineCore pid=3415174) INFO 08-17 03:16:25 [mm_encoder_attention.py:375] Using AttentionBackendEnum.TORCH_SDPA for MMEncoderAttention.
+    (EngineCore pid=3415174) WARNING 08-17 03:20:49 [jit_monitor.py:141] Triton kernel JIT compilation during inference: _bilinear_pos_embed_kernel. This causes a latency spike; consider extending warmup to cover this shape/config.
+    (EngineCore pid=3415174) .../third_party/vllm/vllm/v1/attention/ops/vit_attn_wrappers.py:246: UserWarning: Flash Efficient attention on Current AMD GPU is still experimental. Enable it with TORCH_ROCM_AOTRITON_ENABLE_EXPERIMENTAL=1.
+    (APIServer pid=3414818) INFO 08-17 03:21:10 [loggers.py:310] Engine 000: ... Running: 1 reqs, Waiting: 0 reqs, GPU KV cache usage: 1.0%, Prefix cache hit rate: 0.0%, MM cache hit rate: 0.0%
+
+Conclusion: PASS — the multimodal forward path serves real images end-to-end
+on gfx1151 (ROCm 7.14, TORCH_SDPA MM-encoder attention). Scope caveat,
+mirrored in both confs: with --skip-mm-profiling the encoder's activation
+peak is not measured or reserved at boot, so encoder-peak memory budgeting
+for image workloads is the operator's job; this receipt covers a single
+64x64 image only.
