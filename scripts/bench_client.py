@@ -29,7 +29,8 @@ Metric definitions (binding, see docs/results/METHODOLOGY.md):
 Usage:
   python3 scripts/bench_client.py --base-url http://127.0.0.1:8080 \
       --concurrency 4 --prompts scripts/prompt-sets/default.json \
-      --max-tokens 256 --label gguf-x [--out FILE] [--anchor-only] [--timeout S]
+      --max-tokens 256 --label gguf-x [--out FILE] [--anchor-only] [--timeout S] \
+      [--no-thinking]
 
 Emits one JSON object on stdout (and --out FILE):
   {"label", "concurrency", "started_utc",
@@ -250,8 +251,9 @@ def consume_stream(chunks, now=time.perf_counter):
 
 # --------------------------------------------------------------- network
 
-def build_body(model, prompt_text, max_tokens, temperature, top_p):
-    return {
+def build_body(model, prompt_text, max_tokens, temperature, top_p,
+               no_thinking=False):
+    body = {
         "model": model,
         "messages": [{"role": "user", "content": prompt_text}],
         "max_tokens": max_tokens,
@@ -262,6 +264,16 @@ def build_body(model, prompt_text, max_tokens, temperature, top_p):
         # count chunk while streaming (muse-rocm lesson: metrics must be real).
         "stream_options": {"include_usage": True},
     }
+    if no_thinking:
+        # Per-request template switch (Qwen3 family). Task 3 live-cell erratum
+        # (2026-08-17): with thinking on, the model spent the entire 256-token
+        # budget in reasoning_content (finish_reason=length, zero visible
+        # content), leaving the frozen TTFT/TPOT definitions undefined and the
+        # anchor unable to answer within its cap. Disabling thinking per
+        # request keeps the metric definitions binding and works on both
+        # serving paths (llama.cpp --jinja and vLLM honor chat_template_kwargs).
+        body["chat_template_kwargs"] = {"enable_thinking": False}
+    return body
 
 
 def run_one_stream(base_url, body, timeout):
@@ -335,7 +347,8 @@ def run_bench(args):
 
     def worker(i):
         body = build_body(args.model, prompts[i % len(prompts)]["text"],
-                          max_tokens, temperature, top_p)
+                          max_tokens, temperature, top_p,
+                          no_thinking=args.no_thinking)
         rec, t0, t1 = run_one_stream(args.base_url, body, args.timeout)
         content = rec.pop("_content", "")
         if expect is not None:
@@ -396,6 +409,10 @@ def main(argv=None):
     ap.add_argument("--model", default="default",
                     help="model name for the chat API (llama-server accepts any alias; "
                          "pass the served name for vLLM)")
+    ap.add_argument("--no-thinking", action="store_true",
+                    help="send chat_template_kwargs {enable_thinking: false} so the "
+                         "model emits visible content deltas within the generation "
+                         "budget (matrix cells measure the visible-answer stream)")
     args = ap.parse_args(argv)
     if args.concurrency < 1:
         ap.error("--concurrency must be >= 1")

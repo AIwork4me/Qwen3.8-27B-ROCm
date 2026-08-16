@@ -1,0 +1,121 @@
+{
+  "id": "gguf-udq4kxl-auto-mtp-c4-ctx131072",
+  "label": "gguf-udq4kxl-auto-mtp-c4-ctx131072",
+  "base_url": "http://127.0.0.1:8080",
+  "started_utc": "2026-08-16T22:31:30Z",
+  "server_flags": {
+    "ctx_size": 131072,
+    "concurrency_np": 4,
+    "with_mtp": true,
+    "extra_args": "-np 4",
+    "port": 8080,
+    "kv_semantics_expected": "split (explicit -np 4: per-slot window = 131072/4 = 32768, kv_unified=false)",
+    "quickstart": "scripts/gguf-quickstart.sh",
+    "llama_server_flags": [
+      "--ctx-size",
+      "131072",
+      "-ngl",
+      "99",
+      "--jinja",
+      "--spec-type",
+      "draft-mtp",
+      "-np",
+      "4"
+    ]
+  },
+  "slot_info": {
+    "n_slots": 4,
+    "n_ctx_slot": 32768,
+    "kv_unified": "false",
+    "log_line": "n_slots = 4, n_ctx_slot = 32768, kv_unified = 'false'"
+  },
+  "load": {
+    "vram_mib": 1131,
+    "gtt_mib": 29272
+  },
+  "boot": {
+    "ok": true,
+    "health_wall_s": 6
+  },
+  "client": {
+    "label": "gguf-udq4kxl-auto-mtp-c4-ctx131072",
+    "concurrency": 4,
+    "started_utc": "2026-08-16T22:31:39.679040+00:00",
+    "streams": [
+      {
+        "ttft_ms": 22850.89364205487,
+        "tpot_ms": 104.14709190965867,
+        "completion_tokens": 256,
+        "prompt_tokens": 1412,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 20542.6218759967,
+        "tpot_ms": 0.0,
+        "completion_tokens": 2,
+        "prompt_tokens": 1474,
+        "reasoning_tokens": 0,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 20541.772233031224,
+        "tpot_ms": 145.53481352176397,
+        "completion_tokens": 47,
+        "prompt_tokens": 1298,
+        "reasoning_tokens": 0,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 23129.807583987713,
+        "tpot_ms": 110.87604346539592,
+        "completion_tokens": 233,
+        "prompt_tokens": 1469,
+        "reasoning_tokens": 0,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      }
+    ],
+    "aggregate": {
+      "tok_per_s": 10.888793439104289,
+      "wall_s": 49.40859637100948,
+      "ok_streams": 4,
+      "failed_streams": 0
+    }
+  },
+  "anchor": {
+    "ok": true,
+    "content_tail": "OK"
+  },
+  "log_excerpt": [
+    "llama-server : /home/amd/Desktop/Qwen3.8-27B-ROCm/third_party/llama.cpp/build-714/bin/llama-server (version: 0.1.0-dev (build 1, commit 4df29be4f))",
+    "model        : models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf (17G)",
+    "ctx-size     : 131072  (override: CTX_SIZE=<n>)",
+    "gpu layers   : 99 (all)",
+    "mmproj       : models/Qwen3.8-27B-GGUF/mmproj-F16.gguf",
+    "speculative  : draft-mtp (MTP head from the same GGUF)",
+    "extra args   : -np 4",
+    "Serving on http://127.0.0.1:8080 ...",
+    "0.00.026.379 W srv  llama_server: -----------------",
+    "0.00.026.380 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set",
+    "0.00.026.381 W srv  llama_server: this can be a security risk (cross-origin attacks)",
+    "0.00.026.381 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655",
+    "0.00.026.381 W srv  llama_server: -----------------",
+    "0.03.891.924 I common_speculative_init_result: creating MTP draft context against the target model 'models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf'",
+    "0.03.937.640 W load_hparams: Qwen-VL models require at minimum 1024 image tokens to function correctly on grounding tasks",
+    "0.03.937.644 W load_hparams: if you encounter problems with accuracy, try adding --image-min-tokens 1024",
+    "0.03.937.644 W load_hparams: more info: https://github.com/ggml-org/llama.cpp/issues/16842",
+    "0.04.376.550 I srv    load_model: initializing, n_slots = 4, n_ctx_slot = 32768, kv_unified = 'false'",
+    "0.04.376.827 W llama_sampler_backend_support: device 'ROCm0' does not have support for op TOP_K needed for sampler 'top-k'",
+    "0.04.376.839 W llama_sampler_backend_support: device 'ROCm0' does not have support for op TOP_K needed for sampler 'top-k'"
+  ],
+  "degraded": false,
+  "degraded_reason": null
+}

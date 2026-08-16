@@ -1,0 +1,117 @@
+{
+  "id": "gguf-udq4kxl-auto-base-c4-ctx32768",
+  "label": "gguf-udq4kxl-auto-base-c4-ctx32768",
+  "base_url": "http://127.0.0.1:8080",
+  "started_utc": "2026-08-16T22:40:48Z",
+  "server_flags": {
+    "ctx_size": 32768,
+    "concurrency_np": 4,
+    "with_mtp": false,
+    "extra_args": "",
+    "port": 8080,
+    "kv_semantics_expected": "unified (default boot: auto n_parallel=4, shared ctx pool)",
+    "quickstart": "scripts/gguf-quickstart.sh",
+    "llama_server_flags": [
+      "--ctx-size",
+      "32768",
+      "-ngl",
+      "99",
+      "--jinja"
+    ]
+  },
+  "slot_info": {
+    "n_slots": 4,
+    "n_ctx_slot": 32768,
+    "kv_unified": "true",
+    "log_line": "n_slots = 4, n_ctx_slot = 32768, kv_unified = 'true'"
+  },
+  "load": {
+    "vram_mib": 1131,
+    "gtt_mib": 20406
+  },
+  "boot": {
+    "ok": true,
+    "health_wall_s": 4
+  },
+  "client": {
+    "label": "gguf-udq4kxl-auto-base-c4-ctx32768",
+    "concurrency": 4,
+    "started_utc": "2026-08-16T22:40:55.656512+00:00",
+    "streams": [
+      {
+        "ttft_ms": 22433.10779501917,
+        "tpot_ms": 167.6649745763736,
+        "completion_tokens": 256,
+        "prompt_tokens": 1412,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 20072.572130011395,
+        "tpot_ms": 176.42646123513614,
+        "completion_tokens": 256,
+        "prompt_tokens": 1474,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 22796.70501500368,
+        "tpot_ms": 166.61915728621477,
+        "completion_tokens": 256,
+        "prompt_tokens": 1298,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 20071.90659601474,
+        "tpot_ms": 176.42624349420086,
+        "completion_tokens": 256,
+        "prompt_tokens": 1469,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      }
+    ],
+    "aggregate": {
+      "tok_per_s": 15.684695890094476,
+      "wall_s": 65.28657024499262,
+      "ok_streams": 4,
+      "failed_streams": 0
+    }
+  },
+  "anchor": {
+    "ok": false,
+    "content_tail": "////////////////"
+  },
+  "log_excerpt": [
+    "llama-server : /home/amd/Desktop/Qwen3.8-27B-ROCm/third_party/llama.cpp/build-714/bin/llama-server (version: 0.1.0-dev (build 1, commit 4df29be4f))",
+    "model        : models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf (17G)",
+    "ctx-size     : 32768  (override: CTX_SIZE=<n>)",
+    "gpu layers   : 99 (all)",
+    "mmproj       : models/Qwen3.8-27B-GGUF/mmproj-F16.gguf",
+    "speculative  : off (opt in: WITH_MTP=1)",
+    "extra args   : none",
+    "Serving on http://127.0.0.1:8080 ...",
+    "0.00.032.214 W srv  llama_server: -----------------",
+    "0.00.032.215 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set",
+    "0.00.032.215 W srv  llama_server: this can be a security risk (cross-origin attacks)",
+    "0.00.032.216 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655",
+    "0.00.032.216 W srv  llama_server: -----------------",
+    "0.00.786.043 W model has unused tensor blk.64.attn_norm.weight (size = 20480 bytes) -- ignoring",
+    "0.00.786.052 W model has unused tensor blk.64.post_attention_norm.weight (size = 20480 bytes) -- ignoring",
+    "0.00.786.059 W model has unused tensor blk.64.attn_q.weight (size = 43253760 bytes) -- ignoring",
+    "0.00.786.062 W model has unused tensor blk.64.attn_k.weight (size = 3604480 bytes) -- ignoring",
+    "0.00.786.064 W model has unused tensor blk.64.attn_v.weight (size = 4300800 bytes) -- ignoring",
+    "0.00.786.074 W model has unused tensor blk.64.attn_output.weight (size = 21626880 bytes) -- ignoring",
+    "0.00.786.076 W model has unused tensor blk.64.attn_q_norm.weight (size = 1024 bytes) -- ignoring"
+  ],
+  "degraded": true,
+  "degraded_reason": "anchor check failed (greedy byte-identity)"
+}

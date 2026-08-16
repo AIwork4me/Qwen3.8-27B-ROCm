@@ -81,7 +81,21 @@ Client contract (Task 2's `scripts/bench_client.py`): OpenAI-compatible
 that buffers on `\n\n` and never assumes one event per chunk (the muse-rocm
 framing lesson). Prompt set is deterministic and committed
 (`scripts/prompt-sets/default.json`: 8 varied prompts, ~1500–2500 tokens
-each, generation capped at 256 tokens). No random sampling: temperature 0.
+each, generation capped at 256 tokens). Throughput runs sample at
+temperature 0.7 / top_p 0.95; the anchor is greedy (temperature 0).
+
+**Erratum (2026-08-17, recorded at first live-cell execution, Task 3):**
+the Qwen3.8 chat template spends the ENTIRE generation budget in
+`reasoning_content` before any visible content — the first live cell
+measured 256/256 completion tokens as reasoning (`finish_reason=length`,
+zero content deltas), leaving the frozen TTFT/TPOT definitions undefined,
+and the greedy anchor cannot fit its think phase inside the anchor cap.
+Instrument correction (metric definitions and verdict rules unchanged):
+cells send `chat_template_kwargs {"enable_thinking": false}` per request
+(bench client `--no-thinking`; honored by llama.cpp `--jinja` and by vLLM),
+so every cell measures the visible-answer stream both paths share.
+Thinking-mode latency remains a legitimate study — declared a non-goal for
+this session rather than silently mixed into the cells.
 
 ## 3. Verdict rules — pre-declared, verbatim
 
@@ -272,11 +286,45 @@ KV pool**. Source-level expectations for the concurrency cells:
 Runner consequence: to guarantee each of N streams a K-token window in split
 mode, pass `--ctx-size N×K` (total KV then N×K tokens = N × the §4 KV
 bytes); to keep one shared K-token pool with full-K windows, pass `-kvu`.
-**Obligation (dated 2026-08-17): measured in Task 3** — the GGUF cell runner
-MUST record the actual `n_slots` / `n_ctx_slot` / `kv_unified` from each
-cell's server log line (above) into the cell JSON and fill the measured-semantics
-row of this table; source-derived rows above are then confirmed or corrected
-against the pin's runtime behavior before any concurrency verdict is final.
+
+**Measured (Task 3, 2026-08-17 — the dated obligation fulfilled).** The GGUF
+cell runner (`scripts/run-cell-gguf.sh`) records the actual boot line
+(`srv load_model: initializing, n_slots = …, n_ctx_slot = …, kv_unified = '…'`)
+into every cell JSON. Every source-derived row above is CONFIRMED at the pin:
+
+| Boot flags (measured cell) | n_slots | n_ctx_slot | kv_unified | GTT @ load |
+|---|---|---|---|---|
+| default @32768 (base-c1-ctx32768) | 4 | 32768 | 'true' | 20,406 MiB |
+| `-np 4` @131072 (base-c4-ctx131072) | 4 | 32768 | 'false' | 26,550 MiB |
+| `-np 8` @131072 (base-c8-ctx131072) | 8 | 16384 | 'false' | 27,148 MiB |
+| `-np 16` @131072 (base-c16-ctx131072) | 16 | 8192 | 'false' | 28,392 MiB |
+| default @131072 (base-c1-ctx131072) | 4 | 131072 | 'true' | 26,548 MiB |
+| default @262144 (base-c1-ctx262144) | 4 | 262144 | 'true' | 34,742 MiB |
+
+Notes from the measured rows: (a) explicit `-np N` flips to split semantics
+exactly as derived — per-slot window = `--ctx-size`/N, `kv_unified='false'`;
+(b) the default boot is auto `n_parallel = 4`, unified, at every ctx tier;
+(c) GTT corroborates the §4 closed form at every rung (131072→262144:
++8,194 MiB ≈ 8.0 GiB for +131,072 tokens = 64 KiB/token; 32768→131072:
++6,142 MiB ≈ 6.0 GiB for +98,304 tokens); (d) split mode carries a small
+per-stream tensor overhead on top of the same total KV (c8 +~600 MiB,
+c16 +~1.8 GiB vs the unified boot at the same `--ctx-size`).
+
+**Measured pit at the pin (anchor degradation, 2026-08-17):** after a
+sustained multi-stream bench, greedy decoding on the SAME server instance
+degenerates into a `'////…'` repetition loop — the byte-identity anchor
+fails persistently (every subsequent greedy request, streaming or not).
+Reproduced deterministically on `-np 8` (fresh boot → 8-stream bench → first
+greedy anchor fails; with and without mmproj) and measured in cells
+`base-c4-ctx32768` (unified boot — NOT split-specific), `base-c8`,
+`base-c16`, `mtp-c8`, `mtp-c16` @131072. Clean cells all passed the anchor
+(`c1` everywhere, `-np 4` @131072, unified c4 @262144). Correlation noted
+for upstream reporting: every degraded cell's bench had ALL streams hit the
+256-token length cap, while clean c4 benches had early-stopping streams.
+These cells are recorded `measured(degraded)` with the reason verbatim;
+per §1 the anchor drift invalidates cross-path comparison for them, and
+per §3 the ladder demotes (upstream: llama.cpp `4df29be4` HIP build on
+gfx1151; exact mechanism unresolved at session close).
 
 ## 7. vLLM concurrency (client-parallel)
 
@@ -288,7 +336,7 @@ NOT set `--max-num-seqs`: the serve confs (`configs/serve-args.conf`,
 below the scheduler cap in any case — at the pin, for this host class
 (device_memory ≥ 70 GiB, non-A100), the default for the OpenAI server is
 `max_num_seqs = 1024` and `max_num_batched_tokens = 8192`
-(`vllm/engine/arg_utils.py:2606-2615`); the validated boot log's non-default
+(`vllm/engine/arg_utils.py:2592-2601`); the validated boot log's non-default
 args contain no `max_num_seqs` entry, i.e. the default applied
 (`docs/results/rocm-7.14/vllm-validation.md`).
 

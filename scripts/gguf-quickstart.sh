@@ -14,6 +14,12 @@
 #   WITH_MTP=1                opt in to MTP speculative decoding (see below)
 #   WITH_MMPROJ=0             skip the vision projector even when present
 #   VERIFY_GGUF=1             full SHA256 re-verification before serving (~1 min)
+#   EXTRA_ARGS='...'          extra llama-server flags appended verbatim
+#                             (word-split; empty by default so default boots
+#                             are byte-identical. Added for the benchmark
+#                             matrix cell runner scripts/run-cell-gguf.sh,
+#                             which passes explicit `-np N` for concurrency
+#                             cells — split KV semantics, METHODOLOGY.md §6)
 #
 # UX patterns adapted from muse-rocm scripts/gguf-quickstart.sh: port preflight,
 # required-commands loop, manifest-driven resolution, disk preflight for the
@@ -35,6 +41,11 @@ try:
 except ValueError:
     sys.exit(2)
 sock = socket.socket()
+# SO_REUSEADDR mirrors how a real server binds: sockets lingering in TIME_WAIT
+# from a just-killed server must NOT read as "in use" (the matrix cell runner
+# boots back-to-back cells and hit exactly that false positive); an ACTIVE
+# listener still fails the bind and is reported.
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 try:
     sock.bind(("127.0.0.1", port))
 except OSError:
@@ -169,12 +180,24 @@ if [ "${WITH_MTP:-0}" = "1" ]; then
     SERVER_ARGS+=(--spec-type draft-mtp)
 fi
 
+# EXTRA_ARGS pass-through (benchmark matrix, Task 3): appended verbatim after
+# the validated flags, word-split on whitespace. Empty default → unchanged
+# behavior; the matrix cell runner is the only intended user (explicit -np N
+# flips llama.cpp to split KV semantics — see METHODOLOGY.md §6 and
+# scripts/run-cell-gguf.sh).
+if [ -n "${EXTRA_ARGS:-}" ]; then
+    # word-split deliberately, but robustly (shellcheck SC2206-clean)
+    read -r -a extra_args_arr <<< "$EXTRA_ARGS"
+    SERVER_ARGS+=("${extra_args_arr[@]}")
+fi
+
 echo "llama-server : $SERVER ($("$SERVER" --version 2>&1 | head -n1))"
 echo "model        : $MODEL_PATH ($(du -h "$MODEL_PATH" | cut -f1))"
 echo "ctx-size     : $CTX_SIZE  (override: CTX_SIZE=<n>)"
 echo "gpu layers   : 99 (all)"
 echo "mmproj       : $([ "${WITH_MMPROJ:-1}" != "0" ] && [ -f "$MMPROJ_PATH" ] && echo "$MMPROJ_PATH" || echo "none")"
 echo "speculative  : $([ "${WITH_MTP:-0}" = "1" ] && echo "draft-mtp (MTP head from the same GGUF)" || echo "off (opt in: WITH_MTP=1)")"
+echo "extra args   : ${EXTRA_ARGS:-none}"
 
 # --- End-of-launch UX (muse pattern): where to point the client, how to verify.
 cat <<EOF

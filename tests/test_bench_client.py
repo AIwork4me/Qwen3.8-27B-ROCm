@@ -250,3 +250,20 @@ def test_default_prompt_set_shape_and_sizes(client):
     assert anchor["id"]
     assert anchor["text"] == "Reply with exactly: OK"
     assert anchor["expect_exact"] == "OK"
+
+
+def test_build_body_defaults_and_no_thinking(client):
+    # Default body: streaming, usage included, NO template kwargs (byte-stable
+    # default behavior; the matrix runner opts in explicitly per request).
+    body = client.build_body("default", "hello", 256, 0.7, 0.95)
+    assert body["stream"] is True
+    assert body["stream_options"] == {"include_usage": True}
+    assert body["max_tokens"] == 256
+    assert "chat_template_kwargs" not in body
+
+    # --no-thinking: per-request template switch so the thinking model emits
+    # visible content deltas within the generation budget (Task 3 live-cell
+    # erratum: with thinking on, 256/256 tokens went to reasoning_content and
+    # TTFT/TPOT were undefined).
+    body = client.build_body("default", "hello", 256, 0.7, 0.95, no_thinking=True)
+    assert body["chat_template_kwargs"] == {"enable_thinking": False}

@@ -9,17 +9,17 @@
   "cells": [
     {
       "id": "gguf-udq4kxl-auto-base-c1-ctx32768",
-      "status": "planned",
-      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true
     },
     {
       "id": "gguf-udq4kxl-auto-base-c4-ctx32768",
-      "status": "planned",
-      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
-      "priority": true
+      "priority": true,
+      "degraded": true,
+      "note": "measured (degraded): anchor check failed (greedy byte-identity)"
     },
     {
       "id": "gguf-udq4kxl-auto-base-c8-ctx32768",
@@ -37,43 +37,41 @@
     },
     {
       "id": "gguf-udq4kxl-auto-base-c1-ctx131072",
-      "status": "planned",
-      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true
     },
     {
       "id": "gguf-udq4kxl-auto-base-c4-ctx131072",
-      "status": "planned",
-      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true
     },
     {
       "id": "gguf-udq4kxl-auto-base-c8-ctx131072",
-      "status": "planned",
-      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
-      "priority": true
+      "priority": true,
+      "degraded": true,
+      "note": "measured (degraded): anchor check failed (greedy byte-identity)"
     },
     {
       "id": "gguf-udq4kxl-auto-base-c16-ctx131072",
-      "status": "planned",
-      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
-      "priority": true
+      "priority": true,
+      "degraded": true,
+      "note": "measured (degraded): anchor check failed (greedy byte-identity)"
     },
     {
       "id": "gguf-udq4kxl-auto-base-c1-ctx262144",
-      "status": "planned",
-      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true
     },
     {
       "id": "gguf-udq4kxl-auto-base-c4-ctx262144",
-      "status": "planned",
-      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true
     },
@@ -121,31 +119,31 @@
     },
     {
       "id": "gguf-udq4kxl-auto-mtp-c1-ctx131072",
-      "status": "planned",
-      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true
     },
     {
       "id": "gguf-udq4kxl-auto-mtp-c4-ctx131072",
-      "status": "planned",
-      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true
     },
     {
       "id": "gguf-udq4kxl-auto-mtp-c8-ctx131072",
-      "status": "planned",
-      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
-      "priority": true
+      "priority": true,
+      "degraded": true,
+      "note": "measured (degraded): anchor check failed (greedy byte-identity)"
     },
     {
       "id": "gguf-udq4kxl-auto-mtp-c16-ctx131072",
-      "status": "planned",
-      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
-      "priority": true
+      "priority": true,
+      "degraded": true,
+      "note": "measured (degraded): anchor check failed (greedy byte-identity)"
     },
     {
       "id": "gguf-udq4kxl-auto-mtp-c1-ctx262144",
