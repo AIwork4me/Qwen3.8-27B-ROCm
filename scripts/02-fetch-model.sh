@@ -24,7 +24,7 @@ REV="$(python3 -c 'import json;print(json.load(open("'"$MANIFEST"'"))["sets"]["b
 mkdir -p "$DEST"
 
 python3 - "$MANIFEST" "$DEST" "$MS_ENDPOINT" "$REPO" "$REV" "$NCONNS" <<'PY'
-import hashlib, json, os, subprocess, sys
+import hashlib, json, os, subprocess, sys, time
 from concurrent.futures import ThreadPoolExecutor
 
 manifest, dest, endpoint, repo, rev, nconns = sys.argv[1:7]
@@ -49,14 +49,14 @@ def fetch(item):
         return path, True
     url = f"{base}?FilePath={path}&Revision={rev}"
     out = os.path.join(dest, path)
-    # A file already at (or past) the expected size that fails verification
-    # cannot be resumed into correctness — restart it from scratch.
-    try:
-        if os.path.isfile(out) and os.path.getsize(out) >= size:
-            os.remove(out)
-    except OSError:
-        pass
-    for attempt in range(1, 4):
+    for attempt in range(1, 6):
+        # A complete-but-unverified file (wrong revision or corrupt bytes)
+        # can never be resumed into correctness — restart it from scratch.
+        try:
+            if os.path.isfile(out) and os.path.getsize(out) >= size:
+                os.remove(out)
+        except OSError:
+            pass
         r = subprocess.run(["curl", "--fail", "--location", "--silent",
                             "--show-error", "--retry", "3",
                             "--retry-all-errors", "--connect-timeout", "20",
@@ -65,8 +65,16 @@ def fetch(item):
         if r.returncode == 0 and verified(path, size, sha):
             print(f"  ok: {path}", flush=True)
             return path, True
-        print(f"  retry {attempt}/3: {path} (rc={r.returncode})", flush=True)
-    print(f"  FAIL: {path} — size/sha256 mismatch after 3 attempts", flush=True)
+        if r.returncode == 0:
+            # Transfer completed but bytes don't verify: drop them so the
+            # next attempt restarts instead of resuming from bad bytes.
+            try:
+                os.remove(out)
+            except OSError:
+                pass
+        print(f"  retry {attempt}/5: {path} (rc={r.returncode})", flush=True)
+        time.sleep(min(30, 5 * attempt))
+    print(f"  FAIL: {path} — size/sha256 mismatch after 5 attempts", flush=True)
     return path, False
 
 with ThreadPoolExecutor(max_workers=int(nconns)) as ex:

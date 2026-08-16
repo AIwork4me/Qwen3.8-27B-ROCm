@@ -3,7 +3,7 @@
     "bf16": {
       "repository": "Qwen/Qwen3.8-27B",
       "host": "modelscope",
-      "revision": "1098534ab5d7220ea0f4a6b9f07bb03729a79c1d",
+      "revision": "e823e888ae179eb3be02c1a48899c4f828371376",
       "dest": "models/Qwen3.8-27B",
       "files": [
         {
