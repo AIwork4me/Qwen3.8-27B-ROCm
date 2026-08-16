@@ -21,5 +21,23 @@
     "model_type": "qwen3_5",
     "max_position_embeddings": 262144,
     "bf16_safetensors_gib": 51.7
+  },
+  "vllm": {
+    "source_repo": "https://github.com/vllm-project/vllm.git",
+    "commit": "4d2a68d64d9e05921ed5c4099146e768a92d71d5",
+    "build_arch": "gfx1151",
+    "toolchain": "/home/amd/rocm-7.14.0",
+    "patches": [
+      "patches/vllm-amdsmi-import.diff",
+      "patches/vllm-torch210-compat.diff"
+    ],
+    "triton_kernels": "third_party/triton-kernels (ROCm/triton@0f380657dbf3ee86eb57558ff71df24f03b5d4e7 python/triton_kernels/triton_kernels, blob-SHA-verified; consumed via TRITON_KERNELS_SRC_DIR override in scripts/01-build-vllm.sh)"
+  },
+  "pytorch": {
+    "source": "AMD TheRock gfx1151 index",
+    "version": "2.10.0+rocm7.13.0a20260513",
+    "torchvision": "0.25.0+rocm7.13.0a20260513",
+    "index": "https://rocm.nightlies.amd.com/v2/gfx1151/",
+    "note": "index tops out at torch 2.10.0 for cp312 (2.11.0 nightlies are cp314-only, probed 2026-08-16); vllm-torch210-compat.diff bridges the torch-2.13-era stable C++ API"
   }
 }
