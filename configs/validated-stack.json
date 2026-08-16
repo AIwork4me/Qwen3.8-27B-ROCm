@@ -54,6 +54,14 @@
     "build_arch": "gfx1151",
     "toolchain": "/home/amd/rocm-7.14.0",
     "backend": "HIP",
-    "built_at": "2026-08-17"
+    "built_at": "2026-08-17",
+    "validated": {
+      "text": true,
+      "mtp": true,
+      "vision": null,
+      "ctx_size": 131072,
+      "receipt": "docs/results/rocm-7.14/gguf-validation.md",
+      "date": "2026-08-17"
+    }
   }
 }
