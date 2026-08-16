@@ -21,7 +21,8 @@ SET="${SET:-bf16}"
 MANIFEST="configs/artifact-manifest.json"
 
 if ! python3 -c 'import json,sys;sys.exit(0 if sys.argv[2] in json.load(open(sys.argv[1]))["sets"] else 1)' "$MANIFEST" "$SET"; then
-  echo "ERROR: SET=$SET not found in $MANIFEST (available sets: bf16, gguf)" >&2
+  available_sets="$(python3 -c 'import json,sys;print(", ".join(json.load(open(sys.argv[1]))["sets"]))' "$MANIFEST")"
+  echo "ERROR: SET=$SET not found in $MANIFEST (available sets: $available_sets)" >&2
   exit 1
 fi
 

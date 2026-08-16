@@ -95,6 +95,8 @@ rocm-smi samples during load + greedy (`/tmp/llama-262k-mem.log`, VRAM/GTT MiB e
     04:59:16  VRAM 1131 MiB  GTT 16489 MiB
     04:59:18  VRAM 1131 MiB  GTT 34736 MiB
 
+Spike reconciliation: the spike receipt (`docs/results/spike/gguf.md` @ `3cb7ffb`) said llama-server had no MTP/spec flags — that grep missed `common/arg.cpp`; at the validated pin `4df29be4` the stock server flag `--spec-type draft-mtp` exists (`common/arg.cpp:4154`) and is what this receipt exercises.
+
 ## Outcome
 - text (boot + greedy at ctx 131072): true
 - MTP (draft-mtp boot + greedy + acceptance lines): true
@@ -138,6 +140,7 @@ rocm-smi samples during load + greedy (`/tmp/llama-262k-mem.log`, VRAM/GTT MiB e
   tokenization), finish_reason stop (wall 14.7 s)
 - message.content (verbatim): 'Red' — same correct answer;
   reasoning again pixel-faithful: "a solid field of a deep, saturated red hue"
+
     0.41.371.156 I slot print_timing: id  3 | task 0 | prompt eval time =    5410.06 ms /  1092 tokens (    4.95 ms per token,   201.85 tokens per second)
 - outcome: both configurations answer "Red" correctly for this image, so the
   warning's accuracy concern did NOT manifest for a single-small-image color

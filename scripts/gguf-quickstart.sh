@@ -95,9 +95,11 @@ if [ ! -f "$MODEL_PATH" ]; then
     echo "ERROR: model file not found: $MODEL_PATH" >&2
     echo "       run SET=gguf bash scripts/02-fetch-model.sh" >&2
     # Disk preflight for that remedy (muse pattern): refuse to point the user
-    # at a fetch the filesystem cannot hold before they start it.
+    # at a fetch the filesystem cannot hold before they start it. Probe
+    # $ROOT (always exists): $DEST may not exist yet before the first
+    # fetch, and df on a missing path silently yields nothing.
     if [ "$need_bytes" -gt 0 ]; then
-        avail_kb="$(df -Pk "$DEST" 2>/dev/null | awk 'NR==2 {print $4}')"
+        avail_kb="$(df -Pk "$ROOT" 2>/dev/null | awk 'NR==2 {print $4}')"
         if [ -n "$avail_kb" ] && [ "$((avail_kb * 1024))" -lt "$need_bytes" ]; then
             echo "       (that filesystem has $((avail_kb / 1024 / 1024)) GiB free; the fetch needs $((need_bytes / 1024 / 1024 / 1024)) GiB)" >&2
         fi
