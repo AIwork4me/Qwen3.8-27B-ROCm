@@ -4,6 +4,11 @@ Probed 2026-08-16. Every quoted block below is verbatim probe output recorded
 at the stated commit. Absence of matches is recorded as absence. Where a brief
 probe URL 404'd due to upstream refactor, the moved location was found and
 probed — both are recorded. Network-level failures get exactly one retry.
+Revised 2026-08-16 (fix round 1): ROCM_ATTN head_size constraint made
+explicit (custom paged attention never fires for this model on gfx1151 —
+head_dim 256 vs the gate's `head_size == 128`), line citations re-verified
+against the pinned SHA, ROCm backend-list function renamed to
+`_get_backend_priorities`, Q4_K_M GiB rounding fixed.
 
 Pins for this entire probe:
 
@@ -204,7 +209,7 @@ otherwise** — see next receipt; the discrepancy is recorded, not resolved.
 
 ### ROCm platform code: what is actually enforced
 
-`vllm/platforms/rocm.py` (lines 517–542 at the pin) — the list the platform
+`vllm/platforms/rocm.py` (lines 513–537 at the pin) — the list the platform
 actually verifies against:
 
 ```python
@@ -379,12 +384,16 @@ CLI surface: `--kv-cache-dtype` and `--kv-cache-dtype-skip-layers`
 Kernel-level on gfx1151 (RDNA), at the pin:
 
 - The ROCm custom paged-attention gate
-  (`use_rocm_custom_paged_attention`, `rocm.py:392-424`) — the `_ON_GFX1X`
-  branch requires **`kv_cache_dtype == "auto"`** (plus head_size 128,
-  gqa_ratio 3–16, etc.). With `--kv-cache-dtype fp8` on gfx1151 the custom
-  paged-attn path is skipped and selection falls through the ROCm backend
-  list (`get_supported_attention_backends`: ROCM_ATTN, AITER variants,
-  **TRITON_ATTN**, TURBOQUANT) to Triton attention.
+  (`use_rocm_custom_paged_attention`, `rocm.py:386-425`) — the `_ON_GFX1X`
+  branch (lines 410–424) requires **`head_size == 128`** (line 415) AND
+  `kv_cache_dtype == "auto"` (line 420), plus block_size 16, gqa_ratio
+  3–16, max_seq_len ≤ 128K. **Qwen3.8-27B's `head_dim` is 256, so
+  `use_rocm_custom_paged_attention` returns False for this model on gfx1151
+  regardless of KV dtype** — the head-size gate fails before the dtype gate
+  is even reached. Custom paged attention therefore never fires for this
+  model on gfx1151; backend selection falls through the ROCm priorities
+  (`_get_backend_priorities`, `rocm.py:459-495`: ROCM_ATTN, AITER variants,
+  **TRITON_ATTN**, TURBOQUANT) to Triton attention either way.
 - `vllm/v1/attention/backends/triton_attn.py:296-306` —
   `supported_kv_cache_dtypes` includes `fp8`, `fp8_e4m3`, `fp8_e5m2`
   unconditionally. Its SM89+ fp8 guard (lines 540–548: "FP8 KV cache is not
@@ -438,9 +447,13 @@ Web receipts (searched 2026-08-16):
   commit (no matching scheme → NotImplementedError); Quark MXFP4 loads but
   computes via high-precision emulation.
 - KV cache: `--kv-cache-dtype fp8` (e4m3) is a supported lever on ROCm per
-  config + docs; on gfx1151 it routes to Triton attention (custom paged attn
-  requires `auto`), with no in-tree guard and no public gfx1151 validation —
-  an experiment with a bf16 fallback, not a given.
+  config + docs; on gfx1151 **custom paged attention never fires for this
+  model** (`use_rocm_custom_paged_attention`'s `_ON_GFX1X` branch requires
+  `head_size == 128` at `rocm.py:415`; the model's `head_dim` is 256 —
+  False regardless of KV dtype), so the KV-dtype choice routes between
+  attention paths that are Triton-backed either way, with no in-tree guard
+  and no public gfx1151 validation — an experiment with a bf16 fallback, not
+  a given.
 
 ## Q3 llama.cpp KV quant
 
@@ -568,7 +581,7 @@ dense-attn block while speculating: 2 × 1 × 4 × 256 = 2,048 elems/token =
 Budget: 32 GiB total minus OS/carve-out (~2 GiB) minus activations +
 fragmentation (~1.5–2 GiB at long ctx) → ~28 GiB of headroom for
 weights + KV. Weight sizes from Q1 (GiB) and Spike B (GB as reported by
-publisher APIs: UD-Q4_K_XL 17.92 GB = 16.68 GiB, Q4_K_M 17.11 GB = 15.92
+publisher APIs: UD-Q4_K_XL 17.92 GB = 16.68 GiB, Q4_K_M 17.11 GB = 15.93
 GiB, Q6_K 22.88 GB = 21.30 GiB):
 
 | weights (repo) | size | KV @ 262K | total | fits 32 GiB? |
@@ -593,9 +606,13 @@ at all. At short context everything down to Q6 fits comfortably.
    saved at 262K; watch correctness against the f16 baseline.
 2. **vLLM path**: `cyankiwi/Qwen3.8-27B-AWQ-INT4` (compressed-tensors W4A16,
    the one int4 class with an upstream gfx1151 kernel — RDNAHybrid) ×
-   `--kv-cache-dtype auto` vs `fp8` × ctx 128K/262K; record which attention
-   backend gets selected (ROCM_ATTN only fires at `auto`) and watch the
-   #13147-class fp8+prefix-caching interaction.
+   `--kv-cache-dtype auto` vs `fp8` × ctx 128K/262K; **expect Triton
+   attention under both settings — ROCM_ATTN (custom paged attention) never
+   fires for this model on gfx1151 because its `_ON_GFX1X` gate requires
+   `head_size == 128` (`rocm.py:415`) while the model's `head_dim` is 256
+   (the `kv_cache_dtype == "auto"` condition at line 420 is moot)** — so
+   record which Triton path is selected rather than hunting for a paged-attn
+   cell, and watch the #13147-class fp8+prefix-caching interaction.
 3. **Do not schedule**: official FP8 weights on gfx1151
    (`supports_fp8()=False` — CDNA/RDNA4 lever), `amd` Quark W4A16-int4
    (unloadable: no quark scheme at `4d2a68d`); Quark-MXFP4 only as a
