@@ -2,6 +2,9 @@
 
 Probed 2026-08-16. Every quoted block below is verbatim probe output recorded
 at the stated commit. Absence of matches is recorded as absence.
+Revised 2026-08-16 (fix round 1): Q4/Impact corrected after review — two
+AMD Qwen3.8 Day-0 publications added, vllm#37151 closed-state fixed, radeon
+URL slug fixed. Q1–Q3 unchanged.
 
 ## Q1: transformers support
 
@@ -202,33 +205,101 @@ vllm/model_executor/models/qwen3_5_mtp.py c05d75aaa95cf89f547503044c192162590508
 
 ## Q4: ROCm/gfx1151 angle
 
-- AMD Day-0 article (official): https://www.amd.com/en/developer/resources/technical-articles/2026/day-0-support-for-qwen-3-5-on-amd-instinct-gpus.html
+Official AMD coverage exists at three levels — Qwen 3.5/Instinct (Feb),
+Qwen 3.8/Instinct (Aug 12), and **Qwen 3.8 27B on Ryzen AI Max + Radeon
+(Aug 14)** — all three probed below.
+
+- AMD Day-0 article, Qwen 3.5 on Instinct (official):
+  https://www.amd.com/en/developer/resources/technical-articles/2026/day-0-support-for-qwen-3-5-on-amd-instinct-gpus.html
   — "Day 0 Support for Qwen 3.5 on AMD Instinct GPUs", published 2026-02-16
   (updated 2026-02-19). What it claims: Day-0 support for "Qwen 3.5, the
   newest generation of LLMs from Alibaba" on **Instinct MI300X, MI325X, and
   MI35X**; optimized Triton kernel for gated-delta-net, hipBLASLt shared-expert
   GEMMs, AITER FusedMoE, MIOpen mRoPE/Conv3d/DeepStack-ViT; "Qwen 3.5
   multimodal native support"; "The next upstream released SGLang and vLLM
-  docker image will run Qwen 3.5 out-of-the-box." It does **not** pin a vLLM
-  version number (references "the next upstream released" image, plus
-  "Install Transformers from Source inside the container"). What it does NOT
-  cover: any mention of **Qwen3.8** (article predates the 2026-08-08
-  ModelScope release by ~6 months), any **Radeon/RDNA/gfx1151/Strix Halo**
-  GPU, and **MTP** (not mentioned). AITER is an Instinct-focused kernel library.
+  docker image will run Qwen 3.5 out-of-the-box." This article does **not**
+  pin a vLLM version/image and does not mention **MTP**, **Radeon/RDNA/
+  gfx1151**, or **Qwen3.8** (it predates the 2026-08-08 ModelScope release by
+  ~6 months). AITER is an Instinct-focused kernel library. (Its Step-3
+  "pinned vLLM version" gap is closed by the Qwen 3.8 article below.)
+- AMD Day-0 article, Qwen 3.8 on Instinct (official, probed 2026-08-16):
+  https://www.amd.com/en/developer/resources/technical-articles/2026/day-0-support-for-qwen-3-8-on-amd-instinct-gpus.html
+  — "Day 0 Support for Qwen 3.8 on AMD Instinct GPUs", published
+  2026-08-12. Key verbatim lines:
+  - "AMD is excited to announce Day-0 support for Alibaba's latest Qwen 3.8 model family on AMD Instinct™ MI300X, MI325X, and MI355X GPUs. Developers can immediately deploy and evaluate Qwen 3.8 using the AMD ROCm™ software together with SGLang and vLLM."
+  - Pinned vLLM image (this answers the brief's Step-3 "pinned vLLM
+    version/image" ask — a tag, not a version number): "vLLM Docker:
+    `docker pull vllm/vllm-openai-rocm:qwen38`"
+  - MTP + MXFP4: "Starting from the FP8 checkpoint, Quark selectively quantizes the MoE routed experts in both the main model and MTP layers to MXFP4, while keeping the remaining layers in BF16."
+  - SGLang images also pinned (rocm/sgl-dev:v0.5.8.post1-rocm720-mi35x-20260808, rocm/sgl-dev:v0.5.8.post1-rocm720-mi30x-20260215) and ATOM nightly (rocm/atom-dev:nightly_qwen3.8_day0).
+  - Flagship covered is the 2.4T MoE (Qwen/Qwen3.8-2.4T-A95B-FP8; MXFP4
+    variant) on MI355X — not the 27B. Notable lineage receipt: the article's
+    Quark recipe uses `model_type="qwen3_5_moe_text"` — AMD's own tooling
+    confirms Qwen 3.8 checkpoints ride the `qwen3_5*` config family.
+  - Still **Instinct (CDNA) only**; no gfx1151/RDNA/Radeon mention.
+- AMD Day-0 blog, **Qwen 3.8 27B on Ryzen AI Max + Radeon** (official,
+  probed 2026-08-16 — this is AMD's official Day-0 for our EXACT model and
+  platform class):
+  https://www.amd.com/en/blogs/2026/run-qwen-3-8-27b-on-amd-ryzen-ai-max-and-radeon-graphics-cards-day-0.html
+  — "Run Qwen 3.8 27B on AMD Ryzen™ AI Max Agentic PCs and Radeon™ GPUs",
+  published 2026-08-14. Key verbatim lines:
+  - "Qwen3.8 27B arrives with Day 0 support on AMD Ryzen™ AI processors and Radeon™ graphics cards. Run the latest Qwen model locally with LM Studio on supported AMD hardware."
+  - Path is llama.cpp/Vulkan via LM Studio, NOT vLLM-on-ROCm: "As noted above, only the llama.cpp based Vulkan backend is supported." / "M:", and "GGUF is the only local file format option on LM Studio" (Qwen/Qwen3.8-27B-Instruct-GGUF:Qwen3.8-27B-Instruct-UD-Q4_K_XL). "Ollama and MLX were ruled out" / "as they do not support Qwen3.8".
+  - Why not ROCm (Windows): "LM Studio's ROCm python requirements are not currently met by the Windows release, so the default runtime remains Vulkan."
+  - MTP on gfx1151, with numbers: "we used an MTP setting of 4 (24.5 tok/s output vs 39.9 tok/s without)" — i.e. on Ryzen AI Max+ 395 (GMKtec EVO-X2, 128GB unified) **MTP=4 was net-negative** (24.5 vs 39.9 tok/s output), while Radeon AI PRO R9700 (32GB) reached 51.8 tok/s output (MTP not supported there).
+  - Conclusion from this piece: AMD's official Qwen3.8-27B-on-gfx1151 path is
+    **llama.cpp/Vulkan (LM Studio) with MTP=4**, explicitly not vLLM-on-ROCm.
 - gfx1151 community evidence (web search `vLLM qwen3_5 ROCm gfx1151`,
   2026-08-16):
-  - AMD official Radeon build guide (gfx1151/gfx1150 vLLM Docker image, build-it-yourself): https://rocm.docs.amd.com/projects/radeon-ryz/en/docs-7.1/docs/advanced/advancedryz/linux/llm/build-docker-image.html
-  - Known gfx1151 multimodal bug: https://github.com/vllm-project/vllm/issues/37151 — Qwen3-VL-32B-AWQ crashes in libhsa on Ryzen AI MAX+ 395 with vLLM ROCm builds.
+  - AMD official Radeon build guide (gfx1151/gfx1150 vLLM Docker image, build-it-yourself):
+    https://rocm.docs.amd.com/projects/radeon-ryzen/en/docs-7.1/docs/advanced/advancedryz/linux/llm/build-docker-image.html
+    — search-indexed as "AMD ROCm official vLLM Docker guide ... supports gfx1151 and gfx1150". Direct fetch returned **HTTP 429 (rate-limited)** on two attempts (initial + one retry after 20 s with browser UA), so the quote above is the search-indexed one; slug corrected from `radeon-ryz` (dead) to `radeon-ryzen` per the search index. Absence-of-verification recorded as such.
+  - gfx1151 multimodal crash-class issue, **re-verified 2026-08-16 via
+    `https://api.github.com/repos/vllm-project/vllm/issues/37151`**:
+    ```
+    number: 37151
+    title: [Bug]: [ROCm][gfx1151] Engine Core segfaults in libhsa-runtime64.so when loading Qwen3-VL-32B-AWQ on AMD Ryzen AI MAX+ 395
+    state: closed
+    state_reason: completed
+    closed_at: 2026-07-30T10:57:49Z
+    labels: ['bug', 'rocm', 'stale']
+    ```
+    It is **closed, not open** (closed 2026-07-30, before our probe date).
+    No fix PR/commit is linked (closed event has no `commit_id`); the close
+    followed the stale bot (2026-07-27: "automatically marked as stale ...
+    will be automatically closed if no further activity occurs within 30
+    days"). The fix-relevant maintainer guidance in-thread (2026-04-22,
+    vllmellm): "please use ROCm 7.2.1 as in the docker image
+    vllm/vllm-openai-rocm:0.19.1 and tested working with gfx1151, as ROCm 7.1
+    doesn't support gfx1151" — i.e. the crash class was attributed to ROCm
+    7.1-era stacks and the working reference is vLLM image 0.19.1 / ROCm
+    7.2.1 (both older than this project's ROCm 7.14 baseline).
+  - Re-check for OTHER open issues tracking qwen3_5 MTP on ROCm
+    (`api.github.com/search/issues`, `repo:vllm-project/vllm qwen3_5 mtp rocm
+    state:open`, 2026-08-16): **no open issue is ROCm-specific for qwen3_5
+    MTP**. Closest open qwen3_5-MTP issues (platform-agnostic):
+    https://github.com/vllm-project/vllm/issues/52480 ("qwen3_5_mtp fails to
+    load at tensor-parallel-size >= 2 (drafter weight shape mismatch)") and
+    https://github.com/vllm-project/vllm/issues/52481 ("MTP speculative
+    decoding on Qwen3.5-family models logs misleading multimodal warnings
+    ('treated as multimodal but has no registered multimodal processor')").
+    Absence of a ROCm-specific MTP issue is recorded as absence.
   - Source-build recipe, Qwen3-Next reported working on Strix Halo: https://community.frame.work/t/how-to-compiling-vllm-from-source-on-strix-halo/77241
   - EVO-X2 (gfx1151) ROCm + vLLM build/benchmark running Qwen3.5-9B: https://note.com/zephel01/n/n686593376d85
   - Full vLLM stack from source for Strix Halo via TheRock builds: https://www.reddit.com/r/ROCm/comments/1rur2ji/full_vllm_inference_stack_built_from_source_for/
   - TheRock nightly ROCm SDK + Strix Halo patches, no prebuilt image: https://github.com/hec-ovi/vllm-qwen
-- Conclusion: AMD's official Day-0 coverage is CDNA (Instinct) only and
-  Qwen 3.5-era; nothing official exists for **Qwen3.8 on gfx1151/RDNA4**. All
-  public gfx1151 vLLM evidence is community source builds (TheRock / AMD
-  Dockerfile.rocm), one confirmed Qwen3.5-class model (9B dense) running on
-  EVO-X2, and at least one open multimodal bug (#37151). No public report of
-  Qwen3_5ForConditionalGeneration (multimodal) or MTP running on gfx1151.
+- Conclusion: official AMD coverage of **Qwen3.8 exists and is current** —
+  Instinct (CDNA) via ROCm SGLang/vLLM with a pinned image
+  (`vllm/vllm-openai-rocm:qwen38`, published 2026-08-12), and gfx1151/Radeon
+  via **llama.cpp/Vulkan + LM Studio with MTP=4** (2026-08-14), the latter
+  being AMD's official route for this exact model on this exact platform.
+  What no official AMD piece covers is **vLLM-on-ROCm on gfx1151 for
+  Qwen3.8**: all public evidence for that remains community source builds
+  (TheRock / AMD Dockerfile.rocm route), one Qwen3.5-class model (9B dense)
+  confirmed on EVO-X2, and no public report of
+  Qwen3_5ForConditionalGeneration (multimodal) or vLLM MTP running on
+  gfx1151. The prior draft's "nothing official exists for Qwen3.8 on
+  gfx1151" was wrong and is corrected here.
 
 ## Impact
 
@@ -239,20 +310,43 @@ vllm/model_executor/models/qwen3_5_mtp.py c05d75aaa95cf89f547503044c192162590508
 - vLLM arch registration + multimodal impl: **full-validation-now** — at
   probed main `4d2a68d` (2026-08-16) the arch is registered in
   `_MULTIMODAL_MODELS` with a maintained implementation file; no upstream
-  patching required for the arch itself. Our remaining work is a vLLM source
-  build against the ROCm 7.14 gfx1151 toolchain, not upstream code changes.
+  patching required for the arch itself. AMD's own Instinct Day-0 (2026-08-12)
+  ships a pinned vLLM ROCm image (`vllm/vllm-openai-rocm:qwen38`) for the
+  Qwen 3.8 family, confirming the arch is production-routed on CDNA. Our
+  remaining work is a vLLM source build against the ROCm 7.14 gfx1151
+  toolchain, not upstream code changes.
 - vLLM MTP wiring: **full-validation-now for wiring, recorded-gap for
   platform** — registry + `qwen3_5_mtp` spec-decode literal + draft model all
-  exist upstream; what is absent is any public ROCm/gfx1151 runtime evidence
-  for this MTP path. Record as a gap to validate locally; no upstream issue to
-  file unless it fails on AMD (none exists today — search found none specific
-  to qwen3_5 MTP on ROCm).
-- AMD Day-0 / gfx1151: **recorded-gap** — AMD's Day-0 article covers Qwen 3.5
-  on Instinct MI300X/MI325X/MI35X only, references no pinned vLLM version, and
-  predates Qwen3.8; no official AMD validation of Qwen3.8-27B
-  (Qwen3_5ForConditionalGeneration) on gfx1151 exists. Open upstream issue to
-  track for the gfx1151 multimodal crash class:
-  https://github.com/vllm-project/vllm/issues/37151. Practical consequence for
-  the plan: expect to build vLLM from source (TheRock/AMD Dockerfile.rocm
-  route), do not count on AITER-optimized paths (Instinct-only), and treat
-  MTP-on-gfx1151 as an experiment with a fallback to non-speculative decoding.
+  exist upstream, and AMD's Instinct Day-0 quantizes "the MoE routed experts
+  in both the main model and MTP layers", so MTP layers are exercised
+  officially on CDNA. What is absent is any public ROCm/gfx1151 runtime
+  evidence for this vLLM MTP path — validate locally. Open upstream issues to
+  watch (found on re-check, neither ROCm-specific):
+  vllm#52480 (qwen3_5_mtp fails to load at TP >= 2) and vllm#52481
+  (misleading multimodal-processor warnings on Qwen3.5-family MTP). With TP=1
+  on a single gfx1151 iGPU, #52480 should not bite; file a new ROCm-specific
+  issue only if a local reproduction warrants it (none exists today).
+- AMD Day-0 / gfx1151: **recorded-gap, but narrower than first recorded** —
+  official AMD Qwen3.8 coverage exists on both fronts as of 2026-08-12/14:
+  Instinct via ROCm SGLang/vLLM (pinned image `vllm/vllm-openai-rocm:qwen38`,
+  CDNA + AITER only), and gfx1151/Radeon via **llama.cpp/Vulkan + LM Studio
+  with MTP=4** — explicitly NOT vLLM-on-ROCm (AMD: "LM Studio's ROCm python
+  requirements are not currently met by the Windows release, so the default
+  runtime remains Vulkan"). The gap that remains is precisely
+  **vLLM-on-ROCm on gfx1151 for Qwen3.8-27B**: no official AMD validation,
+  community source builds only (TheRock / AMD Dockerfile.rocm route). The
+  gfx1151 multimodal crash-class issue vllm#37151 is **closed** (completed,
+  2026-07-30, stale-bot path; in-thread working reference: vLLM image
+  0.19.1 / ROCm 7.2.1, with the maintainer note that "ROCm 7.1 doesn't
+  support gfx1151" — our ROCm 7.14 baseline clears that floor). Do not count
+  on AITER-optimized paths (Instinct-only), and treat vLLM MTP-on-gfx1151 as
+  an experiment with a fallback to non-speculative decoding.
+- Benchmark anchor for the GGUF path (feeds Spike B/C): AMD's published
+  Day-0 numbers for this exact model on this exact platform are the
+  methodology-relevant reference — Ryzen AI Max+ 395 (GMKtec EVO-X2, 128GB
+  unified): **39.9 tok/s output without MTP vs 24.5 tok/s with MTP=4** (MTP
+  net-negative on the 395 per AMD), and Radeon AI PRO R9700 32GB:
+  **51.8 tok/s** — all via llama.cpp/Vulkan (LM Studio, Q4_K_XL GGUF). Any
+  vLLM-on-ROCm result this project produces should be compared against these
+  Vulkan baselines, and our MTP experiments should expect MTP to cost
+  throughput on gfx1151 unless vLLM's implementation changes that picture.
