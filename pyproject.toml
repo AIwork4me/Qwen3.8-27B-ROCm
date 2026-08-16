@@ -36,6 +36,9 @@ torch = { index = "therock-gfx1151" }
 torchvision = { index = "therock-gfx1151" }
 
 [tool.pytest.ini_options]
+# Bare pytest must stay inside this repo: the editable vLLM checkout under
+# third_party/vllm ships its own large test suite that we do not run.
+testpaths = ["tests"]
 markers = [
     "gpu: requires a ROCm GPU on this host",
     "server: requires a running inference server",
