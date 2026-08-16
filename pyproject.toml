@@ -1,0 +1,21 @@
+[project]
+name = "qwen3-8-27b-rocm"
+version = "0.1.0"
+description = "Reproducible ROCm 7.14 reference for Qwen3.8-27B on AMD Radeon, gfx1151 first"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+
+[dependency-groups]
+ci = [
+    "pytest>=8",
+    "shellcheck-py>=0.10",
+    "actionlint-py>=1.7",
+    "jsonschema>=4",
+]
+
+[tool.pytest.ini_options]
+markers = [
+    "gpu: requires a ROCm GPU on this host",
+    "server: requires a running inference server",
+]
+addopts = "-m 'not gpu and not server'"

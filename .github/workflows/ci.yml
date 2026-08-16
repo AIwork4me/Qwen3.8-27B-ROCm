@@ -1,0 +1,37 @@
+name: fast-ci
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  no-gpu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Sync lightweight CI dependencies
+        run: uv sync --only-group ci --locked
+
+      - name: Assert GPU runtime is not installed
+        run: uv run --no-sync python -c "import importlib.util; assert importlib.util.find_spec('torch') is None"
+
+      - name: Bash syntax
+        run: find scripts -name '*.sh' -print0 | xargs -0 -r bash -n
+
+      - name: ShellCheck
+        run: find scripts -name '*.sh' -print0 | xargs -0 -r uv run --no-sync shellcheck -x
+
+      - name: GitHub Actions semantics
+        run: uv run --no-sync actionlint
+
+      - name: No-GPU tests
+        run: uv run --no-sync pytest -m "not gpu and not server" -v

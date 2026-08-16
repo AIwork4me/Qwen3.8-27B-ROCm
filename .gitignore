@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+third_party/
+builds/
+models/
+docs/results/*.log
+docs/results/*.json
+docs/results/.matrix-721-baseline-snapshot/
