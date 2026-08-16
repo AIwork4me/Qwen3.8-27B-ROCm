@@ -147,6 +147,29 @@
           "sha256": "ce99b4cb2983d118806ce0a8b777a35b093e2000a503ebde25853284c9dfa003"
         }
       ]
+    },
+    "gguf": {
+      "repository": "unsloth/Qwen3.8-27B-GGUF",
+      "host": "modelscope",
+      "revision": "c882514ed737f384900d3cb294be58b7edc2ceb4",
+      "dest": "models/Qwen3.8-27B-GGUF",
+      "files": [
+        {
+          "path": "Qwen3.8-27B-UD-Q4_K_XL.gguf",
+          "size_bytes": 17923394624,
+          "sha256": "bee238bbeb3dc0a34bde4d0dedbaee1f98c009e8bb4226f03070054c12fb1372"
+        },
+        {
+          "path": "config.json",
+          "size_bytes": 3760,
+          "sha256": "45d9009888b40b71af58ac82f7151393c113b4eabb870ca3c3bbd237667d18cc"
+        },
+        {
+          "path": "mmproj-F16.gguf",
+          "size_bytes": 927607488,
+          "sha256": "cbb841a9ee0636b2ec172f5bb8df2ea8dfeb01e90fe7c6126581d662a0b4e43e"
+        }
+      ]
     }
   }
 }

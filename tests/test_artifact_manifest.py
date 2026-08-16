@@ -43,3 +43,16 @@ def test_every_file_entry_has_size_and_sha256():
         assert isinstance(f["size_bytes"], int) and f["size_bytes"] > 0
         sha = f["sha256"]
         assert isinstance(sha, str) and len(sha) == 64 and sha == sha.lower()
+
+
+def test_gguf_set_has_default_quant_and_mmproj():
+    s = json.loads((ROOT / "configs" / "artifact-manifest.json").read_text())["sets"]["gguf"]
+    assert s["repository"] == "unsloth/Qwen3.8-27B-GGUF"
+    assert s["host"] == "modelscope"
+    assert len(s["revision"]) == 40
+    assert s["dest"] == "models/Qwen3.8-27B-GGUF"
+    paths = [f["path"] for f in s["files"]]
+    assert any("UD-Q4_K_XL" in p and p.endswith(".gguf") for p in paths)
+    assert any("mmproj" in p.lower() for p in paths)
+    for f in s["files"]:
+        assert f["size_bytes"] > 0 and len(f["sha256"]) == 64

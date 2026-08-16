@@ -77,10 +77,21 @@ hipcc --version | sed 's/^/  hipcc> /' | head -3
 # userspace tree torch ships) via a .pth. Its wrapper resolves its .so via a
 # path RELATIVE TO THE PACKAGE FILE, so it must stay at its original location
 # (a `pip install` copy would break that).
-VENV_SITE=".venv/lib/python3.12/site-packages"
+# The site dir is derived from the live venv interpreter (never hardcode a
+# pythonX.Y path component); --no-sync is mandatory (a sync would drop the
+# editable vllm install).
+if ! VENV_SITE="$(uv run --no-sync python -c 'import sysconfig; print(sysconfig.get_paths()["purelib"])' 2>/dev/null)" || [ -z "$VENV_SITE" ]; then
+  echo "ERROR: cannot locate the uv venv interpreter — is the venv bootstrapped?" >&2
+  echo "       Run: uv sync --group vllm" >&2
+  exit 1
+fi
+if [ ! -d "$VENV_SITE" ]; then
+  echo "ERROR: venv site dir $VENV_SITE does not exist — bootstrap with: uv sync --group vllm" >&2
+  exit 1
+fi
 VENV_ROCM="$VENV_SITE/_rocm_sdk_core"
 AMD_PTH="$VENV_SITE/_amdsmi_therock.pth"
-echo "$ROOT/$VENV_ROCM/share/amd_smi" > "$AMD_PTH"
+echo "$VENV_ROCM/share/amd_smi" > "$AMD_PTH"
 
 # --- Install build backend deps ---------------------------------------------
 # --no-build-isolation means the build backend must already live in the venv.
@@ -166,9 +177,14 @@ echo "  patches: $(git -C "$SRC" diff --stat | tail -1)"
 # --- triton_kernels FetchContent override ------------------------------------
 # vLLM main's cmake configure FetchContent-clones ROCm/triton (a large repo)
 # for the triton_kernels package on ROCm builds. A pre-fetched copy at
-# third_party/triton-kernels (blobs fetched + git-SHA-verified; see
-# .superpowers task-3 report) bypasses that clone via the upstream-supported
-# TRITON_KERNELS_SRC_DIR override. Only .py files are consumed by the install.
+# third_party/triton-kernels (blobs fetched + git-SHA-verified) bypasses that
+# clone via the upstream-supported TRITON_KERNELS_SRC_DIR override. Only .py
+# files are consumed by the install. Reproduce the prefetch in 3 steps:
+#   1. blob tarball at the pinned SHA via jsDelivr:
+#      curl -L -o tk.tar.gz "https://cdn.jsdelivr.net/gh/ROCm/triton@0f380657dbf3ee86eb57558ff71df24f03b5d4e7.tar.gz"
+#   2. extract python/triton_kernels/triton_kernels/*.py into third_party/triton-kernels/
+#   3. sha256-verify the blobs against the pin recorded in
+#      configs/validated-stack.json (vllm.triton_kernels: ROCm/triton@0f380657...).
 TRITON_KERNELS_DIR="$ROOT/third_party/triton-kernels"
 if [ -f "$TRITON_KERNELS_DIR/__init__.py" ]; then
   export TRITON_KERNELS_SRC_DIR="$TRITON_KERNELS_DIR"

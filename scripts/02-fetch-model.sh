@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
-# Fetch the Qwen3.8-27B BF16 artifact set from ModelScope into models/.
+# Fetch a Qwen3.8-27B artifact set from ModelScope into models/.
+# Set-aware: SET selects the manifest set — "bf16" (default; the 18-shard
+# safetensors checkpoint, models/Qwen3.8-27B) or "gguf" (unsloth
+# UD-Q4_K_XL + mmproj-F16 + config sidecar, models/Qwen3.8-27B-GGUF).
 # Manifest-driven: every file is verified against configs/artifact-manifest.json
 # (size + SHA256) after download; verified files are skipped on re-run.
 # Resumable: partial downloads continue with -C -.
+#   SET=bf16|gguf          artifact set to fetch (default bf16)
 #   MODEL_DEST=/path      override destination
 #   NCONNS=N              parallel shard downloads (default 6)
 #   MS_ENDPOINT=https://modelscope.cn   override mirror
@@ -13,22 +17,34 @@ cd "$ROOT"
 command -v python3 >/dev/null 2>&1 || { echo "ERROR: python3 required" >&2; exit 1; }
 command -v curl >/dev/null 2>&1 || { echo "ERROR: curl required" >&2; exit 1; }
 
+SET="${SET:-bf16}"
 MANIFEST="configs/artifact-manifest.json"
-DEST="${MODEL_DEST:-models/Qwen3.8-27B}"
+
+if ! python3 -c 'import json,sys;sys.exit(0 if sys.argv[2] in json.load(open(sys.argv[1]))["sets"] else 1)' "$MANIFEST" "$SET"; then
+  echo "ERROR: SET=$SET not found in $MANIFEST (available sets: bf16, gguf)" >&2
+  exit 1
+fi
+
+read_set_field() {
+  python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["sets"][sys.argv[2]][sys.argv[3]])' \
+    "$MANIFEST" "$SET" "$1"
+}
+
+REPO="$(read_set_field repository)"
+REV="$(read_set_field revision)"
+DEST="${MODEL_DEST:-$(read_set_field dest)}"
 MS_ENDPOINT="${MS_ENDPOINT:-https://modelscope.cn}"
 NCONNS="${NCONNS:-6}"
 
-REPO="$(python3 -c 'import json;print(json.load(open("'"$MANIFEST"'"))["sets"]["bf16"]["repository"])')"
-REV="$(python3 -c 'import json;print(json.load(open("'"$MANIFEST"'"))["sets"]["bf16"]["revision"])')"
-
+echo "Fetching set '$SET': $REPO @ $REV -> $DEST"
 mkdir -p "$DEST"
 
-python3 - "$MANIFEST" "$DEST" "$MS_ENDPOINT" "$REPO" "$REV" "$NCONNS" <<'PY'
+python3 - "$MANIFEST" "$DEST" "$MS_ENDPOINT" "$REPO" "$REV" "$NCONNS" "$SET" <<'PY'
 import hashlib, json, os, subprocess, sys, time
 from concurrent.futures import ThreadPoolExecutor
 
-manifest, dest, endpoint, repo, rev, nconns = sys.argv[1:7]
-files = json.load(open(manifest))["sets"]["bf16"]["files"]
+manifest, dest, endpoint, repo, rev, nconns, set_name = sys.argv[1:8]
+files = json.load(open(manifest))["sets"][set_name]["files"]
 base = f"{endpoint}/api/v1/models/{repo}/repo"
 os.makedirs(dest, exist_ok=True)
 

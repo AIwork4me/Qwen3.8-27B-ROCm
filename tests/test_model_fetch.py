@@ -1,5 +1,3 @@
-import json
-import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -22,4 +20,10 @@ def test_script_is_resumable_and_idempotent():
 
 def test_manifest_fetch_file_list_matches():
     src = SCRIPT.read_text()
-    assert 'sets.bf16.files' in src or '"sets"]["bf16"]["files"]' in src
+    assert '["sets"][set_name]["files"]' in src
+
+
+def test_fetch_script_is_set_aware():
+    src = SCRIPT.read_text()
+    assert 'SET="${SET:-bf16}"' in src
+    assert '"sets"' in src and '["sets"]' in src
