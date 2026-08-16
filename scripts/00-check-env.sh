@@ -98,6 +98,6 @@ vram_kb="$(awk -v arch="$GPU_ARCH" '
 [[ "$vram_kb" =~ ^[0-9]+$ ]] ||
     fail "could not read $GPU_ARCH global memory pool from rocminfo"
 pool_gib=$(( vram_kb / 1024 / 1024 ))
-echo "GPU-visible pool: ${pool_gib} GiB (quantized-weights serving targets need a large share of this; BF16 weights ~49.8 GiB do not fit — see README)"
+echo "GPU-visible pool: ${pool_gib} GiB (BF16 weights ~49.8 GiB need a large visible pool; on this validated-class 80 GiB pool they fit — on 32 GiB-class pools they do not)"
 
 echo "OK: base environment ready for Qwen3.8-27B on gfx1151"

@@ -18,9 +18,9 @@
     {"repo_id": "amd/Qwen3.8-27B-Quark-AWQ-MXFP4", "host": "modelscope", "method": "mxfp4", "total_gib": 18.4},
     {"repo_id": "cyankiwi/Qwen3.8-27B-AWQ-INT4", "host": "modelscope", "method": "awq", "total_gib": 19.6},
     {"repo_id": "Inferact/Qwen3.8-27B-MXFP4", "host": "modelscope", "method": "mxfp4", "total_gib": 25.8},
-    {"repo_id": "unsloth/Qwen3.8-27B-GGUF::Qwen3.8-27B-UD-Q4_K_XL.gguf", "host": "modelscope", "method": "gguf", "total_gib": 16.68},
+    {"repo_id": "unsloth/Qwen3.8-27B-GGUF::Qwen3.8-27B-UD-Q4_K_XL.gguf", "host": "modelscope", "method": "gguf", "total_gib": 16.69},
     {"repo_id": "unsloth/Qwen3.8-27B-GGUF::Qwen3.8-27B-Q4_K_M.gguf", "host": "modelscope", "method": "gguf", "total_gib": 15.93},
-    {"repo_id": "unsloth/Qwen3.8-27B-GGUF::Qwen3.8-27B-Q6_K.gguf", "host": "modelscope", "method": "gguf", "total_gib": 21.30}
+    {"repo_id": "unsloth/Qwen3.8-27B-GGUF::Qwen3.8-27B-Q6_K.gguf", "host": "modelscope", "method": "gguf", "total_gib": 21.31}
   ],
   "kv_cache_fp8": {
     "status": "partial",

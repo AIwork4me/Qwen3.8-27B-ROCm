@@ -384,7 +384,7 @@ CLI surface: `--kv-cache-dtype` and `--kv-cache-dtype-skip-layers`
 Kernel-level on gfx1151 (RDNA), at the pin:
 
 - The ROCm custom paged-attention gate
-  (`use_rocm_custom_paged_attention`, `rocm.py:386-425`) — the `_ON_GFX1X`
+  (`use_rocm_custom_paged_attention`, `rocm.py:386-422`) — the `_ON_GFX1X`
   branch (lines 410–424) requires **`head_size == 128`** (line 415) AND
   `kv_cache_dtype == "auto"` (line 420), plus block_size 16, gqa_ratio
   3–16, max_seq_len ≤ 128K. **Qwen3.8-27B's `head_dim` is 256, so
@@ -546,7 +546,7 @@ q8_0 KV (#23873) was closed/fixed 2026-06-12; no open HIP-specific KV-quant
 blocker was found, but also no gfx1151-specific validation — same
 experiment-with-fallback posture as vLLM.
 
-## Impact — 32 GiB unified-memory math and the benchmark sweep
+## Impact — unified-memory math (validated 80 GiB pool; 32 GiB minimum-SKU envelope) and the benchmark sweep
 
 ### Closed-form KV bytes (for METHODOLOGY.md to lift directly)
 
@@ -576,28 +576,69 @@ to 8.00 GiB; q8_0 = 16 × (1.0625/2) = 8.50 GiB. MTP draft adds one extra
 dense-attn block while speculating: 2 × 1 × 4 × 256 = 2,048 elems/token =
 4 KiB/token bf16 (1/16 of main KV) — negligible-to-minor.
 
-### Realistic combos on 32 GiB UMA (c = 1 sequence)
+### Realistic combos on the validated host (80 GiB visible pool, c = 1 sequence)
+
+The validated Strix Halo host (AMD Ryzen AI MAX+ PRO 395, 94 GiB system
+RAM) exposes a **GPU-visible coarse-grained GLOBAL pool of 80 GiB** for
+gfx1151 (`rocminfo`, measured 2026-08-16 — the same envelope muse-rocm
+documented for this platform). Restating the budget for that pool (bf16
+KV @ 262K = 16.0 GiB from the closed form above; weight sizes per Q1 and
+Spike B — exact-byte GiB, see the note below the next table):
+
+| weights (repo) | size | KV @ 262K | total | fits 80 GiB pool? |
+|---|---|---|---|---|
+| GGUF UD-Q4_K_XL (unsloth) | 16.69 GiB | bf16 16.0 GiB | ~32.7 GiB | **yes — comfortably** |
+| vLLM `cyankiwi` AWQ-INT4 W4A16 | 19.6 GiB | bf16 16.0 GiB | ~35.6 GiB | **yes** |
+| GGUF Q6_K (unsloth) | 21.31 GiB | bf16 16.0 GiB | ~37.3 GiB | **yes** |
+| BF16 weights (base repo) | 49.8 GiB | bf16 16.0 GiB | ~65.8 GiB | **yes** |
+
+Reading: **on the validated 80 GiB pool, KV quantization is NOT a
+capacity requirement even at 262K** — UD-Q4_K_XL + bf16 KV ≈ 32.7 GiB
+fits with ~47 GiB to spare, and even the 49.8 GiB BF16 weights fit the
+visible pool. The binding constraint is performance, not capacity: the
+pool is GTT-backed (shared system memory), so pressure past fast memory
+means a **silent GTT spill** — throughput collapse with no load-time
+error, the llama.cpp #26432 class Spike B recorded — and the remaining
+headroom must absorb activations, long-context scratch, the vision
+tower, and the OS. On this host KV quant at 262K is a throughput/quality
+lever, not a gate.
+
+### Minimum-SKU envelope — realistic combos on a 32 GiB-class pool, e.g. R9700/32 GB (c = 1 sequence)
 
 Budget: 32 GiB total minus OS/carve-out (~2 GiB) minus activations +
 fragmentation (~1.5–2 GiB at long ctx) → ~28 GiB of headroom for
 weights + KV. Weight sizes from Q1 (GiB) and Spike B (GB as reported by
-publisher APIs: UD-Q4_K_XL 17.92 GB = 16.68 GiB, Q4_K_M 17.11 GB = 15.93
-GiB, Q6_K 22.88 GB = 21.30 GiB):
+publisher APIs: UD-Q4_K_XL 17.92 GB = 16.69 GiB exact-byte
+(17,923,394,224 B), Q4_K_M 17.11 GB = 15.93 GiB, Q6_K 22.88 GB =
+21.31 GiB exact-byte (22,884,408,288 B)):
 
 | weights (repo) | size | KV @ 262K | total | fits 32 GiB? |
 |---|---|---|---|---|
 | vLLM `cyankiwi` AWQ-INT4 W4A16 | 19.6 GiB | bf16 16.0 GiB | 35.6 GiB | **no** |
 | vLLM `cyankiwi` AWQ-INT4 W4A16 | 19.6 GiB | **fp8 8.0 GiB** | 27.6 GiB | **yes (tight)** |
 | vLLM official FP8 | 28.7 GiB | any | ≥ 29 GiB | no (and `supports_fp8`=False on gfx1151) |
-| GGUF UD-Q4_K_XL (unsloth) | 16.68 GiB | bf16 16.0 GiB | 32.7 GiB | borderline-no |
-| GGUF UD-Q4_K_XL (unsloth) | 16.68 GiB | **q8_0 8.5 GiB** | 25.2 GiB | **yes** |
-| GGUF Q6_K (unsloth) | 21.30 GiB | q8_0 @128K 4.25 GiB | 25.6 GiB | **yes** |
+| GGUF UD-Q4_K_XL (unsloth) | 16.69 GiB | bf16 16.0 GiB | 32.7 GiB | borderline-no |
+| GGUF UD-Q4_K_XL (unsloth) | 16.69 GiB | **q8_0 8.5 GiB** | 25.2 GiB | **yes** |
+| GGUF Q6_K (unsloth) | 21.31 GiB | q8_0 @128K 4.25 GiB | 25.6 GiB | **yes** |
 | c=1 short ctx (8K): any Q4/Q5/Q6 weights | 16.7–21.3 GiB | 0.14–0.5 GiB | ≤ 22 GiB | **yes, roomy** |
 
-Reading: **at max context on 32 GiB, KV quantization is mandatory** —
-bf16 KV (16 GiB) plus even the smallest W4 weights overflows; fp8
+Reading: **at max context on a 32 GiB-class pool, KV quantization is
+mandatory** — bf16 KV (16 GiB) plus even the smallest W4 weights overflows; fp8
 (vLLM) or q8_0 (llama.cpp) KV at ~8–8.5 GiB is what makes 262K reachable
 at all. At short context everything down to Q6 fits comfortably.
+
+> **Erratum 2026-08-16 (final whole-branch review).** This Impact
+> section originally framed "32 GiB UMA" as the validated host's memory
+> budget and concluded KV quant was mandatory at 262K. That 32 GiB
+> framing was the design spec's error, not a measurement: the validated
+> host's gfx1151 GPU-visible pool measures **80 GiB** (`rocminfo`, and
+> `configs/validated-stack.json` `gpu_visible_pool_gib`), on which bf16
+> KV @ 262K fits — see the corrected budget above. The 32 GiB table
+> above is retained, relabeled as the **minimum-SKU envelope** (e.g.
+> R9700/32 GB), where the mandatory-KV-quant conclusion does hold. No
+> probe data elsewhere in this receipt changed; in the same pass two
+> weight sizes were corrected to exact-byte GiB (UD-Q4_K_XL
+> 16.68→16.69, Q6_K 21.30→21.31).
 
 ### What the follow-up benchmark plan must sweep
 

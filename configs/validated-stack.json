@@ -3,6 +3,9 @@
     "minimum_kernel": "6.16.9",
     "gpu_arch": "gfx1151",
     "validated_platform": "AMD Ryzen AI MAX+ PRO 395 / Radeon 8060S",
+    "gpu_visible_pool_gib": 80,
+    "system_ram_gib": 94,
+    "pool_evidence": "rocminfo gfx1151 agent coarse-grained GLOBAL segment, measured 2026-08-16; see docs/results/spike/quant-kv.md",
     "rocm_recommended": "7.14.0",
     "rocm_historical_fallback": "7.2.1"
   },

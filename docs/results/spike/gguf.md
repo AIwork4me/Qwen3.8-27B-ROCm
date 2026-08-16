@@ -108,7 +108,8 @@ done
             //   - Qwen 3.5:    [k0_v0, k1_v1, k0_v2, k1_v3] (needs segmenting of V on the scale of K to get the correct pattern)
 ```
 
-  The 27B size is explicitly enumerated in `qwen35.cpp` lines 34–37:
+  The 27B size is explicitly enumerated in `qwen35.cpp` line 32
+  (corrected 2026-08-16; previously cited as lines 34–37):
   `case 64: type = LLM_TYPE_27B; break;`. Cross-check against the actual
   checkpoint (ModelScope `Qwen/Qwen3.8-27B` `config.json`, fetched this probe):
   `architectures: ['Qwen3_5ForConditionalGeneration']`, `model_type:
@@ -369,7 +370,8 @@ curl -fsSL "https://raw.githubusercontent.com/ggml-org/llama.cpp/master/convert_
   of the GDN tensors — `in_proj_qkv`, `in_proj_z`, `in_proj_b`, `in_proj_a`,
   `A_log/dt_bias/dt_proj`, `conv1d`, `out_proj`) →
   `Qwen3NextModel(_QwenMtpMixin, Qwen2MoeModel)` (line 364) →
-  `_QwenMtpMixin` (line 271: `supports_mtp_export = True`; reads
+  `_QwenMtpMixin` (class at line 271, its `supports_mtp_export = True`
+  attribute at line 279 — corrected 2026-08-16; the class reads
   `mtp_num_hidden_layers` from the HF config, extends `block_count`, emits
   the nextn metadata key, remaps `mtp.*` tensors to layer-indexed nextn
   names) → `Qwen2MoeModel` → `Qwen2Model(TextModel)` (line 54) for standard
