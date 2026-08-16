@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Spike findings",
+  "type": "object",
+  "required": ["checked_at", "paths", "quant_variants", "kv_cache_fp8", "receipts"],
+  "properties": {
+    "checked_at": {"type": "string", "format": "date"},
+    "paths": {
+      "type": "object",
+      "required": ["vllm", "gguf"],
+      "properties": {
+        "vllm": {"$ref": "#/$defs/pathStatus"},
+        "gguf": {"$ref": "#/$defs/pathStatus"}
+      },
+      "additionalProperties": false
+    },
+    "quant_variants": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["repo_id", "host", "method", "total_gib"],
+        "properties": {
+          "repo_id": {"type": "string"},
+          "host": {"enum": ["modelscope", "huggingface"]},
+          "method": {"enum": ["awq", "gptq", "fp8", "mxfp4", "gguf", "other"]},
+          "total_gib": {"type": "number", "exclusiveMinimum": 0}
+        },
+        "additionalProperties": false
+      }
+    },
+    "kv_cache_fp8": {
+      "type": "object",
+      "required": ["status", "evidence"],
+      "properties": {
+        "status": {"enum": ["supported", "partial", "absent"]},
+        "evidence": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "receipts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string"}
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "pathStatus": {
+      "type": "object",
+      "required": ["status", "evidence", "implication"],
+      "properties": {
+        "status": {"enum": ["supported", "partial", "absent"]},
+        "evidence": {"type": "string"},
+        "implication": {"type": "string"}
+      },
+      "additionalProperties": false
+    }
+  }
+}

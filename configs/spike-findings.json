@@ -1,0 +1,34 @@
+{
+  "checked_at": "2026-08-16",
+  "paths": {
+    "vllm": {
+      "status": "supported",
+      "evidence": "docs/results/spike/vllm.md",
+      "implication": "Full validation now, recorded gap is platform-local: Qwen3_5ForConditionalGeneration and Qwen3_5MTP are registered with maintained implementations at vLLM main 4d2a68d and transformers support ships in every release tag since v5.8.0, but vLLM-on-ROCm-gfx1151 runtime is unvalidated for qwen3_5 (community source builds only; head_dim 256 forces the Triton attention backend because the custom paged-attention gate requires head_size 128), and no open ROCm-specific qwen3_5 MTP issue exists to track (vllm#52480/#52481 are platform-agnostic; TP=1 on one iGPU should dodge #52480)."
+    },
+    "gguf": {
+      "status": "supported",
+      "evidence": "docs/results/spike/gguf.md",
+      "implication": "Full validation now: llama.cpp master 3cb7ffb registers arch qwen35 with GDN linear attention, single-block MTP draft head (load + graph + LLAMA_CONTEXT_TYPE_MTP + draft-mtp driver) and Qwen3-VL-type mmproj vision, prebuilt GGUFs from unsloth/lmstudio-community/bartowski cover every size class, and AMD's official gfx1151 route is llama.cpp/Vulkan with MTP=4; recorded gaps: a HIP build for gfx1151 is possible (-DGPU_TARGETS=gfx1151, RDNA3_5-aware, merged MMQ tuning) but not CI-covered with an open Strix Halo prefill-perf issue, and self-conversion carries open bug #27019 / unmerged fix PR #27132 in the exact GDN V-head-reorder code path the 27B exercises, so prebuilts are primary and the converter is fallback."
+    }
+  },
+  "quant_variants": [
+    {"repo_id": "Qwen/Qwen3.8-27B-FP8", "host": "modelscope", "method": "fp8", "total_gib": 28.7},
+    {"repo_id": "amd/Qwen3.8-27B-Quark-AWQ-INT4-W4A16", "host": "modelscope", "method": "other", "total_gib": 18.2},
+    {"repo_id": "amd/Qwen3.8-27B-Quark-AWQ-MXFP4", "host": "modelscope", "method": "mxfp4", "total_gib": 18.4},
+    {"repo_id": "cyankiwi/Qwen3.8-27B-AWQ-INT4", "host": "modelscope", "method": "awq", "total_gib": 19.6},
+    {"repo_id": "Inferact/Qwen3.8-27B-MXFP4", "host": "modelscope", "method": "mxfp4", "total_gib": 25.8},
+    {"repo_id": "unsloth/Qwen3.8-27B-GGUF::Qwen3.8-27B-UD-Q4_K_XL.gguf", "host": "modelscope", "method": "gguf", "total_gib": 16.68},
+    {"repo_id": "unsloth/Qwen3.8-27B-GGUF::Qwen3.8-27B-Q4_K_M.gguf", "host": "modelscope", "method": "gguf", "total_gib": 15.93},
+    {"repo_id": "unsloth/Qwen3.8-27B-GGUF::Qwen3.8-27B-Q6_K.gguf", "host": "modelscope", "method": "gguf", "total_gib": 21.30}
+  ],
+  "kv_cache_fp8": {
+    "status": "partial",
+    "evidence": "docs/results/spike/quant-kv.md: vLLM supports fp8 KV cache on ROCm as e4m3 only (e5m2 is CUDA-only) but the combination is unvalidated on gfx1151, where the model's head_dim 256 makes use_rocm_custom_paged_attention False so KV dtype routes through the Triton attention backend with no in-tree guard (watch the #13147-class fp8+prefix-caching interaction); llama.cpp makes q8_0 KV a first-class lever (-ctk/-ctv, flash-attn mandatory for quantized V, head_dim 256 divides all block sizes) while an f8 cache type does not exist upstream."
+  },
+  "receipts": [
+    "docs/results/spike/vllm.md",
+    "docs/results/spike/gguf.md",
+    "docs/results/spike/quant-kv.md"
+  ]
+}
