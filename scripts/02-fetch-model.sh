@@ -72,6 +72,13 @@ def fetch(item):
                 os.remove(out)
             except OSError:
                 pass
+        elif r.returncode == 33:
+            # Server refused the resume range (rc=33): the partial on disk
+            # is unresumable — drop it so the next attempt starts fresh.
+            try:
+                os.remove(out)
+            except OSError:
+                pass
         print(f"  retry {attempt}/5: {path} (rc={r.returncode})", flush=True)
         time.sleep(min(30, 5 * attempt))
     print(f"  FAIL: {path} — size/sha256 mismatch after 5 attempts", flush=True)
