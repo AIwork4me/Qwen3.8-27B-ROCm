@@ -25,10 +25,16 @@ jobs:
         run: uv run --no-sync python -c "import importlib.util; assert importlib.util.find_spec('torch') is None"
 
       - name: Bash syntax
-        run: find scripts -name '*.sh' -print0 | xargs -0 -r bash -n
+        run: |
+          if [ -d scripts ]; then
+            find scripts -name '*.sh' -print0 | xargs -0 -r bash -n
+          fi
 
       - name: ShellCheck
-        run: find scripts -name '*.sh' -print0 | xargs -0 -r uv run --no-sync shellcheck -x
+        run: |
+          if [ -d scripts ]; then
+            find scripts -name '*.sh' -print0 | xargs -0 -r uv run --no-sync shellcheck -x
+          fi
 
       - name: GitHub Actions semantics
         run: uv run --no-sync actionlint
