@@ -1,4 +1,4 @@
-"""Explain-phase documentation contract (release-v0.1 plan, Task 2).
+"""Explain-phase documentation contract (release-v0.1 plan, Task 2 + Task 4).
 
 Guards the docs suite the way the verdict schema guards the benchmark:
 
@@ -11,13 +11,20 @@ Guards the docs suite the way the verdict schema guards the benchmark:
 (c) ``docs/adaptation.md`` cites at least six committed receipt paths;
 (d) ``CITATION.cff`` parses and names the project;
 (e) ``docs/getting-started.md`` quickstart commands literally match the
-    scripts it documents, including both servers' verify curls.
+    scripts it documents, including both servers' verify curls;
+(f) the v0.1.0 release artifacts (Task 4): ``CHANGELOG.md`` has the required
+    sections, every headline number recomputes from the committed verdicts,
+    every markdown link resolves, ``docs/upstream/PUSH-CHECKLIST.md`` carries
+    the owner-only steps in the right order (merge before tag), and neither
+    release doc contains credential material.
 """
 
 from __future__ import annotations
 
+import json
 import os
 import re
+from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -261,3 +268,151 @@ def test_task2_docs_markdown_links_resolve() -> None:
             if anchor and resolved.suffix == ".md" and anchor not in _anchors_of(resolved):
                 problems.append(f"{rel}: link '{target}' -> anchor #{anchor} missing")
     assert not problems, "broken markdown links:\n  " + "\n  ".join(problems)
+
+
+# ------------------------------------------- (f) v0.1.0 release artifacts (T4)
+
+CHANGELOG = ROOT / "CHANGELOG.md"
+PUSH_CHECKLIST = ROOT / "docs" / "upstream" / "PUSH-CHECKLIST.md"
+RELEASE_DOCS = (CHANGELOG, PUSH_CHECKLIST)
+
+# Sections the release plan (Task 4) requires in the v0.1.0 CHANGELOG entry.
+CHANGELOG_REQUIRED_SECTIONS = (
+    "## Highlights",
+    "## Serving paths",
+    "## Benchmark matrix",
+    "## Known good and known bad",
+    "## Community hardware validation",
+    "## One-pass rehearsal",
+    "## Full commit log",
+)
+
+# Credential material that must never land in release docs.
+SECRET_PATTERNS = ("ghp_", "github_pat_", "AKIA")
+
+
+def test_changelog_exists_with_required_sections() -> None:
+    assert CHANGELOG.exists(), "CHANGELOG.md is missing"
+    text = CHANGELOG.read_text(encoding="utf-8")
+    assert "## v0.1.0" in text, "CHANGELOG has no '## v0.1.0' entry"
+    missing = [s for s in CHANGELOG_REQUIRED_SECTIONS if s not in text]
+    assert not missing, f"CHANGELOG v0.1.0 lacks sections: {missing}"
+
+
+def test_changelog_headline_numbers_recompute_from_verdicts() -> None:
+    """Every headline number in the CHANGELOG must recompute from the
+    committed verdicts JSON (and stay consistent with the generated
+    benchmark tables)."""
+    verdicts = json.loads((ROOT / "configs" / "benchmark-verdicts.json")
+                          .read_text(encoding="utf-8"))
+    cells = {c["id"]: c for c in verdicts["cells"]}
+    dist = Counter(c["verdict"] for c in cells.values())
+    assert len(cells) == 20, f"expected 20 cells, got {len(cells)}"
+    assert dist == {"recommended": 4, "caution": 10, "avoid": 6}, dist
+
+    text = CHANGELOG.read_text(encoding="utf-8")
+    # The distribution line, verbatim from the generated tables.
+    dist_line = (f"{dist['recommended']} recommended / {dist['caution']} caution "
+                 f"/ {dist['avoid']} avoid")
+    assert dist_line in text, f"CHANGELOG lacks the recomputed verdict line {dist_line!r}"
+    assert dist_line in (ROOT / "docs/results/benchmark.md").read_text(encoding="utf-8"), (
+        "docs/results/benchmark.md headline drifted from the verdicts JSON")
+
+    def metric(cid: str, key: str) -> float:
+        return cells[cid]["metrics"][key]
+
+    gguf_mtp = "gguf-udq4kxl-auto-mtp-c1-ctx131072"
+    gguf_base = "gguf-udq4kxl-auto-base-c1-ctx131072"
+    vllm_mtp = "vllm-bf16-auto-mtp-c1-ctx262144"
+    vllm_mtp16 = "vllm-bf16-auto-mtp-c16-ctx262144"
+    vllm_base16 = "vllm-bf16-auto-base-c16-ctx262144"
+
+    def fmt1(x: float) -> str:
+        return f"{x:.1f}"
+
+    recomputed = {
+        # GGUF interactive headline pair
+        fmt1(metric(gguf_mtp, "per_stream_tok_s_median")): "gguf mtp-c1 med tok/s",
+        fmt1(metric(gguf_base, "per_stream_tok_s_median")): "gguf base-c1 med tok/s",
+        # MTP gains, both paths (verdicts mtp_gain_vs_base, basis labeled)
+        f"+{cells[gguf_mtp]['metrics']['mtp_gain_vs_base']['per_stream_pct']}%":
+            "gguf mtp-c1 per-stream gain",
+        f"+{cells[vllm_mtp]['metrics']['mtp_gain_vs_base']['per_stream_pct']}%":
+            "vllm mtp-c1 per-stream gain",
+        f"{cells[vllm_mtp16]['metrics']['mtp_gain_vs_base']['aggregate_pct']}%":
+            "vllm mtp-c16 aggregate regression",
+        # vLLM batch headline
+        fmt1(metric(vllm_base16, "aggregate_tok_s")): "vllm base-c16 aggregate tok/s",
+    }
+    missing = [f"{label} ({numeral})" for numeral, label in recomputed.items()
+               if numeral not in text]
+    assert not missing, "CHANGELOG numbers that no longer recompute: " + ", ".join(missing)
+
+
+def test_release_docs_markdown_links_resolve() -> None:
+    """The link-sweep contract extended to the release artifacts."""
+    md_link = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
+    problems: list[str] = []
+    for doc in RELEASE_DOCS:
+        assert doc.exists(), f"{doc.relative_to(ROOT)} is missing"
+        for target in md_link.findall(doc.read_text(encoding="utf-8")):
+            if target.startswith(("http://", "https://", "mailto:")):
+                continue
+            path_part, _, anchor = target.partition("#")
+            resolved = (doc.parent / path_part) if path_part else doc
+            if not resolved.exists():
+                problems.append(f"{doc.relative_to(ROOT)}: link '{target}' -> path not found")
+                continue
+            if anchor and resolved.suffix == ".md" and anchor not in _anchors_of(resolved):
+                problems.append(f"{doc.relative_to(ROOT)}: link '{target}' -> anchor #{anchor} missing")
+    assert not problems, "broken markdown links:\n  " + "\n  ".join(problems)
+
+
+def test_push_checklist_documents_owner_steps_in_order() -> None:
+    assert PUSH_CHECKLIST.exists(), "docs/upstream/PUSH-CHECKLIST.md is missing"
+    text = PUSH_CHECKLIST.read_text(encoding="utf-8")
+
+    # The pre-tag merge step: feature/release-v0.1 lands on main BEFORE the
+    # tag is cut (the tag must point at the merged main).
+    assert "feature/release-v0.1" in text, "checklist does not name the release branch"
+    assert "git merge" in text, "checklist lacks the merge step"
+    assert "git tag -a v0.1.0" in text, "checklist lacks the annotated tag command"
+    assert "git push" in text, "checklist lacks the push step"
+
+    merge_at = text.index("git merge")
+    tag_at = text.index("git tag -a v0.1.0")
+    push_at = text.index("git push")
+    assert merge_at < tag_at < push_at, (
+        "checklist order is wrong: merge main, then tag, then push")
+
+    # The never-exercised surface gets an explicit first-run watch step.
+    assert "ci.yml" in text or "fast-ci" in text, (
+        "checklist does not point at the workflow to watch")
+
+    # Upstream issue filing + the REAL verdict-update mechanism: the upstream
+    # string is the GGUF_PIT_UPSTREAM constant in scripts/gen-verdicts.py
+    # (verified 2026-08-17 — no env var / configs wiring exists), then the
+    # generators are rerun and the freshness gates re-checked.
+    assert "docs/upstream/llama-cpp-hip-greedy-degradation.md" in text
+    assert "scripts/gen-verdicts.py" in text
+    assert "GGUF_PIT_UPSTREAM" in text
+    gen = (ROOT / "scripts" / "gen-verdicts.py").read_text(encoding="utf-8")
+    assert "GGUF_PIT_UPSTREAM" in gen, (
+        "scripts/gen-verdicts.py no longer carries GGUF_PIT_UPSTREAM — "
+        "update this test to the new mechanism")
+
+    # Every docs/... path the checklist references must exist.
+    for ref in sorted(set(DOC_REF.findall(text))):
+        assert (ROOT / ref.partition("#")[0].rstrip("/")).exists(), (
+            f"PUSH-CHECKLIST references missing path {ref}")
+
+
+def test_release_docs_contain_no_secrets() -> None:
+    problems: list[str] = []
+    for doc in RELEASE_DOCS:
+        assert doc.exists(), f"{doc.relative_to(ROOT)} is missing"
+        text = doc.read_text(encoding="utf-8")
+        for pattern in SECRET_PATTERNS:
+            if pattern in text:
+                problems.append(f"{doc.relative_to(ROOT)}: secret pattern {pattern!r}")
+    assert not problems, "credential material in release docs:\n  " + "\n  ".join(problems)
