@@ -13,3 +13,4 @@ docs/results/*.json
 # ever broadening to **).
 !docs/results/matrix-714/**
 docs/results/.matrix-721-baseline-snapshot/
+.superpowers/
