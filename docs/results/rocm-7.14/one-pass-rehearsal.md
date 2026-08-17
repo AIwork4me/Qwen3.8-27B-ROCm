@@ -12,8 +12,9 @@ literally from a clean shell, recording every deviation.
 > caught it; the missing steps were then completed for real and this version
 > records the measured outcomes. The harness logs are session artifacts under
 > `/tmp/q38-rehearsal-logs/` (not committed); their load-bearing lines are
-> quoted verbatim below. Everything outside Step (d) and the Verdict is
-> unchanged from the verified draft.
+> quoted verbatim below. A later reconciliation pass folded in the two
+> remaining friction fixes (`3c2125e`, F8) and the implementer's independent
+> fresh-compile confirmation of the vLLM build (Step d, second build row).
 
 ## Setup
 
@@ -44,7 +45,8 @@ literally from a clean shell, recording every deviation.
      was measured at ~40–50 KiB/s this session (see Step d) and a
      ~0.4 GiB clone would consume the entire build budget. The build script
      itself re-verified the pinned HEAD and re-applied/recognized the
-     patches; everything downstream (venv, compile) was fresh. Two
+     patches; the venv and the compile both ran fresh (see Step d — the
+     carried-over `.so` files were recompiled, observed live). Two
      corrections this substitution needed before the build would run are
      recorded in Step (d) — they are artifacts of relocating a patched+built
      tree, not of the stranger's fresh-clone path.
@@ -94,7 +96,8 @@ first-draft claims; this section records the measured sequence.
 | cold `uv sync` **attempt 1** (cold cache, `env -i` shell, no proxy) | ran **60 min** (20:48:48 → 21:48:59, harness `wall_min_from_2048: 60`), downloaded the ~2 GiB of big TheRock wheels — `Downloading torch (669.4MiB)`, `Downloading rocm-sdk-libraries-gfx1151 (574.0MiB)`, `Downloading rocm-sdk-core (394.8MiB)`, `Downloading triton (329.0MiB)`, each followed by its ` Downloaded …` line — then **loop-retried** the same three small PyPI packages without ever succeeding and exited **without installing** (log `uv-sync-cold.log`; a follow-up build attempt the same minute failed `ModuleNotFoundError: No module named 'torch'`, proving the venv was empty) | FAIL on this network — pit, not a repo defect (see below) |
 | cold `uv sync` **attempt 2** (same cache = big wheels warm, still no proxy) | first line after resolve is already the small-package loop; killed as a no-progress duplicate after ~1 min (partial log `uv-sync-cold-retry.log`; a separate no-proxy probe at 22:01, `uv-sync-cold2.log`, showed the identical loop) | FAIL (deterministic, not transient) |
 | cold `uv sync` **attempt 3** (same cache + `http_proxy`/`https_proxy=http://127.0.0.1:7897`) | rc=0 in **under 1 minute** (`rc=0 wall_min=0`); only the 3 missing files were fetched, then the full stack installed from the warm cache | PASS with network caveat (pit below) |
-| `bash scripts/01-build-vllm.sh` (clean env, proxy set, vLLM source via recorded substitution) | after **two substitution-artifact corrections** (below): **rc=0, wall 6 min** (`rc=0 wall_min=6`), registry smoke `REGISTRY-OK` | PASS |
+| `bash scripts/01-build-vllm.sh` — controller's run (clean env, proxy set, vLLM source via recorded substitution) | after **two substitution-artifact corrections** (below): **rc=0, wall 6 min** (`rc=0 wall_min=6`), registry smoke `REGISTRY-OK` | PASS |
+| `bash scripts/01-build-vllm.sh` — implementer's independent re-run (clean `env -i` shell, 22:42, no proxy; fresh-compile confirmation) | same pinned-HEAD + patch checks; **fresh compile observed live** (clang++ mid-compile on `csrc/rocm/attention.hip` into a new `/tmp/*.build-temp`; every `vllm/*.abi3.so` rewritten 22:42:32–22:48:30, e.g. `_rocm_C.abi3.so` 110 MB), `Prepared 1 package without build isolation in 6m 07s`. The rehearsal harness's task reaper killed the script's tail steps (numpy pin-back + smoke) at ~15 min; those two idempotent steps were then run verbatim by hand: `+ numpy==1.26.4 + scipy==1.13.1`, `registry OK`, `import vllm` → `0.1.dev1+g4d2a68d64.d20260817` | PASS (fresh compile ≈6 min — far inside the 90-min budget; the plan's 30–90 min estimate is conservative on this 32-core host) |
 
 **The network pit (stranger-facing).** On this host's network the *direct*
 route to those three PyPI files fails while ~2 GiB of large-wheel downloads
@@ -180,7 +183,7 @@ clone would not have; both were corrected before the successful build:
    built `third_party/vllm` tree (the `.deps` caches are path-absolute);
    if you ever do, delete `.deps` before building at the new location.
 
-**Build outcome** (`build-vllm-cold.log`, verbatim tail):
+**Build outcome** (controller's full-script run, `build-vllm-cold.log`, verbatim tail):
 
 ```
 Prepared 1 package in 6m 06s
@@ -196,6 +199,19 @@ REGISTRY-OK
 above: the inline python asserts `Qwen3_5ForConditionalGeneration` is
 present in `_MULTIMODAL_MODELS` at the pin (its own success line is
 `registry OK`).
+
+The implementer's independent re-run (`build-vllm.log`) reproduced the
+compile in `6m 07s` with every extension rebuilt (live compile observation
++ rewritten `.abi3.so` timestamps above); its hand-completed tail steps,
+verbatim:
+
+```
+ + numpy==1.26.4
+ - scipy==1.18.0
+ + scipy==1.13.1
+registry OK
+vllm 0.1.dev1+g4d2a68d64.d20260817
+```
 
 ### (e) Link-check
 
@@ -221,6 +237,8 @@ Passed: `COMMUNITY-PROFILE: arch=gfx1151 pool=80GiB NOT project-validated`,
 | F5 | **BLOCKER** | `05-build-llama.sh` record step replaced the whole `llama_cpp` dict in `configs/validated-stack.json`, silently **deleting the committed `validated` block** (ctx default source for `gguf-quickstart.sh`; receipt linkage) and dirtying the tracked tree after a doc-mandated step; `tests/test_gguf_quickstart_ux.py` then fails on the stranger's clone. Found by inspecting the scratch tree after the build: `git diff` showed `-  "validated": { … }` (9 lines gone). | `373c9d7` |
 | F6 | COSMETIC | README quick-start block shows only `gguf-quickstart.sh` (no build/fetch pre-steps). By design: both fail-fast errors name their remedy, and each remedy was rehearsed. | none (ledger) |
 | F7 | COSMETIC | `uv` must be on PATH for the literal `uv sync` command (installer puts it in `~/.local/bin`; a non-interactive shell lacks it). Standard tooling assumption, documented at the uv link in prerequisites. | none (ledger) |
+| F8 | ANNOYANCE | Community-protocol cell runs (`scripts/run-cell-{gguf,vllm}.sh`) wrote raw-cell JSON into `docs/results/matrix-714/cells/` **and flipped the project matrix to `measured`** even when the runner is a community submitter following `docs/hardware-validation.md` — a stranger producing evidence for a W7900 submission would silently mutate the project's committed matrix. Found while rehearsing the community-profile surface (Step f). | `3c2125e` |
+| F9 | ANNOYANCE | Cold `uv sync` on this host's network **loop-fails** (not merely slow) on three small PyPI files (`numpy`, `transformers`, `pillow`) — repeated `Downloading …` lines, no install phase, nothing installed after 60 min — while ~2 GiB of TheRock wheels succeed in the same run. Two independent no-proxy attempts failed; a proxy-routed attempt fetched the three files in ~26 s and completed (`rc=0`). Network pit, not a repo defect; stranger-facing because getting-started's Path B starts with exactly this command. Fixed as a troubleshooting pit + getting-started first-run note. | `0420a11` |
 
 No BLOCKERs remain outstanding; F5 is fixed and re-verified.
 
@@ -232,6 +250,8 @@ No BLOCKERs remain outstanding; F5 is fixed and re-verified.
 | `aacd9ab` | `fix(docs): budget the vLLM venv + first-run download reality` — 5.7→7.5 GiB venv in the budget table; host-tools line corrected; Path A/B first-run acquisition notes. |
 | `7e7511e` | `fix(scripts): 05-build-llama.sh prints distro packages for missing tools` — makes the documented claim true. (Re-verified in the scratch clone by a cmake-less-PATH run of the failing check, observed directly by the controller; no dedicated log was retained for that observation.) |
 | `373c9d7` | `fix(scripts): 05-build-llama.sh no longer strips llama_cpp.validated` — merge + write-if-changed (regression test in `tests/test_llama_build.py`); re-run in scratch leaves a clean tree. |
+| `3c2125e` | `fix(protocol): community cell namespace — CELLS_DIR override, no project-matrix writes` — community cell runs write to their own `CELLS_DIR` and never flip the project matrix (+ tests). |
+| `0420a11` | `docs(rehearsal): corrected one-pass receipt — real cold-path outcomes + troubleshooting entry` — the cold-sync loop-fail pit (F9) recorded in `docs/troubleshooting.md#uv-sync-loop-fail` and as a first-run note in getting-started Path B; also this receipt's Step-(d) correction. |
 
 Each fix was pulled into the scratch clone
 (`git -C /tmp/q38-rehearsal pull /home/amd/Desktop/Qwen3.8-27B-ROCm feature/release-v0.1`)
@@ -275,21 +295,23 @@ are statements of the measurements above).
 One-pass clean: **yes, after fixes, for the GGUF path** — the literal
 README→getting-started flow completed in the scratch clone from a clean
 shell with only the recorded substitutions; every fail-fast error was
-actionable; 1 blocker (F5) + 4 annoyances (F1–F4) found and fixed in
-`acb8507`, `aacd9ab`, `7e7511e`, `373c9d7`; 2 cosmetics ledgered (F6, F7);
-no blockers outstanding.
+actionable; 1 blocker (F5) + 6 annoyances (F1–F4, F8, F9) found and fixed
+in `acb8507`, `aacd9ab`, `7e7511e`, `373c9d7`, `3c2125e`, `0420a11`;
+2 cosmetics ledgered (F6, F7); no blockers outstanding.
 
-The vLLM build path is now **rehearsed for real**: cold sync to a complete
-venv (via the proxy workaround, <1 min once routed; ~2 GiB of wheels had
-already been pulled by the 60-min failed direct attempt) + a 6-minute
-source build with a passing registry smoke (`REGISTRY-OK`) — after the two
-substitution-artifact corrections, which a stranger's fresh clone would
-never need. **Network caveat (this host's network only):** the no-proxy
-cold `uv sync` does not merely crawl — it hard loop-fails on three small
-PyPI packages (`numpy`, `transformers`, `pillow`) while every large
-TheRock wheel succeeds, and exits after ~60 min with nothing installed;
-workaround: `http_proxy`/`https_proxy` or `UV_INDEX_URL` mirror
-([pit entry](../../troubleshooting.md#uv-sync-loop-fail)).
+The vLLM build path is now **rehearsed for real, twice independently**:
+cold sync to a complete venv (via the proxy workaround, <1 min once routed;
+~2 GiB of wheels had already been pulled by the 60-min failed direct
+attempt) + a source build whose fresh compile was confirmed live
+(`attention.hip` observed mid-compile; every `vllm/*.abi3.so` rewritten)
+and measured at **6m 06s / 6m 07s** across the two runs — far inside the
+90-min rehearsal budget; the plan's 30–90 min estimate is conservative on
+this 32-core host. **Network caveat (this host's network only):** the
+no-proxy cold `uv sync` does not merely crawl — it hard loop-fails on
+three small PyPI packages (`numpy`, `transformers`, `pillow`) while every
+large TheRock wheel succeeds, and exits after ~60 min with nothing
+installed; workaround: `http_proxy`/`https_proxy` or `UV_INDEX_URL`
+mirror ([pit entry](../../troubleshooting.md#uv-sync-loop-fail)).
 
 The first draft of this receipt claimed the cold sync had passed in ≈48
 minutes; that claim was made while the run was still in flight and was

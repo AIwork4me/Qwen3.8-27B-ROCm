@@ -14,6 +14,7 @@ verdict → table → raw cell → method.
 | [`matrix-714/cells/`](matrix-714/cells/) | The 20 raw measured cells — every boot line, stream record, anchor result, engine args verbatim | 20/20 measured; 5 GGUF cells recorded `measured(degraded)` (the greedy-degradation pit) |
 | [`matrix-714/long-context-smoke.json`](matrix-714/long-context-smoke.json) | S3 deep-prompt retrieval smoke (needle at ~80% depth, exact-substring judge), all three GGUF ctx tiers | Non-monotonic vs depth: 30K PASS / 120K confident miss / 247K PASS — deep retrieval unverified above ~30K |
 | [`benchmark.md`](benchmark.md) | Generated result tables (quickstart mapping, both paths, MTP effect, context capacity, rule application) | Generated from the cells by `gen-verdicts.py` + `render-readme-blocks.py`; verdicts reviewed `controller-2026-08-17` — 4 recommended / 10 caution / 6 avoid |
+| [`rocm-7.14/one-pass-rehearsal.md`](rocm-7.14/one-pass-rehearsal.md) | Fresh-clone stranger simulation of README+getting-started (clean shell): every step's outcome, friction ledger, fixes, honest unrehearsed-surfaces list | One-pass clean after 6 friction fixes (1 blocker); vLLM fresh compile confirmed live at ~6 min |
 | [`spike/`](spike/README.md) | Pre-validation upstream reconnaissance: vLLM/transformers support (A), llama.cpp/GGUF support (B), quant + KV levers (C), decision table | Decided the dual-path scope 2026-08-16; all conclusions pin-dated |
 
 Machine-readable companions (repo root): verdicts
