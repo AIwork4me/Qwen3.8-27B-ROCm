@@ -16,6 +16,7 @@ verdict → table → raw cell → method.
 | [`benchmark.md`](benchmark.md) | Generated result tables (quickstart mapping, both paths, MTP effect, context capacity, rule application) | Generated from the cells by `gen-verdicts.py` + `render-readme-blocks.py`; verdicts reviewed `controller-2026-08-17` — 4 recommended / 10 caution / 6 avoid |
 | [`rocm-7.14/one-pass-rehearsal.md`](rocm-7.14/one-pass-rehearsal.md) | Fresh-clone stranger simulation of README+getting-started (clean shell): every step's outcome, friction ledger, fixes, honest unrehearsed-surfaces list | One-pass clean after 6 friction fixes (1 blocker); vLLM fresh compile confirmed live at ~6 min |
 | [`spike/`](spike/README.md) | Pre-validation upstream reconnaissance: vLLM/transformers support (A), llama.cpp/GGUF support (B), quant + KV levers (C), decision table | Decided the dual-path scope 2026-08-16; all conclusions pin-dated |
+| [`upstream-controls/`](upstream-controls/README.md) | Upstream control experiments (2026-08-18): the greedy-degradation pit re-run at build-714 vs master HEAD `01818e495` vs master+PR #25863 vs no-mmproj — one receipt JSON per experiment | Pit reproduced at the pin and at master HEAD (also without mmproj); absent in 2/2 runs with PR #25863 applied |
 
 Machine-readable companions (repo root): verdicts
 [`configs/benchmark-verdicts.json`](../../configs/benchmark-verdicts.json),

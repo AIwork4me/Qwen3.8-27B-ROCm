@@ -1,0 +1,170 @@
+{
+  "experiment": "e0-build714-4df29be4",
+  "sequence": "boot scripts/gguf-quickstart.sh (CTX_SIZE=131072 WITH_MTP=0 EXTRA_ARGS='-np 8' PORT=8080, mmproj on) -> health poll -> bench_client --concurrency 8 --max-tokens 256 -> bench_client --anchor-only (greedy anchor, gate = anchor_ok field)",
+  "llama_commit": "4df29be4f4c3673f428170fda944a5b19f743bb8",
+  "build_dir": "third_party/llama.cpp/build-714",
+  "server_flags": {
+    "llama_server_flags": [
+      "--ctx-size",
+      "131072",
+      "-ngl",
+      "99",
+      "--jinja",
+      "-np",
+      "8"
+    ],
+    "mmproj": "models/Qwen3.8-27B-GGUF/mmproj-F16.gguf",
+    "model": "models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf",
+    "port": 8080
+  },
+  "slot_info": {
+    "n_slots": 8,
+    "n_ctx_slot": 16384,
+    "kv_unified": "false",
+    "log_line": "n_slots = 8, n_ctx_slot = 16384, kv_unified = 'false'"
+  },
+  "load": {
+    "vram_mib": 1630,
+    "gtt_mib": 27154
+  },
+  "boot": {
+    "ok": true,
+    "health_wall_s": 6
+  },
+  "boot_log_excerpt": [
+    "llama-server : /home/amd/Desktop/Qwen3.8-27B-ROCm/third_party/llama.cpp/build-714/bin/llama-server (version: 0.1.0-dev (build 1, commit 4df29be4f))",
+    "model        : models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf (17G)",
+    "ctx-size     : 131072  (override: CTX_SIZE=<n>)",
+    "gpu layers   : 99 (all)",
+    "mmproj       : models/Qwen3.8-27B-GGUF/mmproj-F16.gguf",
+    "speculative  : off (opt in: WITH_MTP=1)",
+    "extra args   : -np 8",
+    "Serving on http://127.0.0.1:8080 ...",
+    "0.00.027.425 W srv  llama_server: -----------------",
+    "0.00.027.426 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set",
+    "0.00.027.427 W srv  llama_server: this can be a security risk (cross-origin attacks)",
+    "0.00.027.427 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655",
+    "0.00.027.427 W srv  llama_server: -----------------",
+    "0.01.160.986 W model has unused tensor blk.64.attn_norm.weight (size = 20480 bytes) -- ignoring",
+    "0.01.160.992 W model has unused tensor blk.64.post_attention_norm.weight (size = 20480 bytes) -- ignoring",
+    "0.01.160.996 W model has unused tensor blk.64.attn_q.weight (size = 43253760 bytes) -- ignoring",
+    "0.01.160.998 W model has unused tensor blk.64.attn_k.weight (size = 3604480 bytes) -- ignoring",
+    "0.01.160.999 W model has unused tensor blk.64.attn_v.weight (size = 4300800 bytes) -- ignoring",
+    "0.01.161.005 W model has unused tensor blk.64.attn_output.weight (size = 21626880 bytes) -- ignoring",
+    "0.01.161.006 W model has unused tensor blk.64.attn_q_norm.weight (size = 1024 bytes) -- ignoring"
+  ],
+  "bench_summary": {
+    "command": "python3 scripts/bench_client.py --base-url http://127.0.0.1:8080 --concurrency 8 --prompts scripts/prompt-sets/default.json --max-tokens 256 --label <label> --model default --no-thinking",
+    "aggregate": {
+      "tok_per_s": 17.8747467872088,
+      "wall_s": 114.57504961499944,
+      "ok_streams": 8,
+      "failed_streams": 0
+    },
+    "streams": [
+      {
+        "ttft_ms": 43688.24374600081,
+        "tpot_ms": 277.9867506040461,
+        "completion_tokens": 256,
+        "prompt_tokens": 1412,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 43685.95054099569,
+        "tpot_ms": 277.9912691844134,
+        "completion_tokens": 256,
+        "prompt_tokens": 1474,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 43115.93018198619,
+        "tpot_ms": 279.6343893490677,
+        "completion_tokens": 256,
+        "prompt_tokens": 1298,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 43117.21871502232,
+        "tpot_ms": 279.6309204194603,
+        "completion_tokens": 256,
+        "prompt_tokens": 1469,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 43682.60845198529,
+        "tpot_ms": 277.995047156982,
+        "completion_tokens": 256,
+        "prompt_tokens": 1336,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 37593.585060036276,
+        "tpot_ms": 300.5074855136484,
+        "completion_tokens": 256,
+        "prompt_tokens": 1516,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 29787.263220991008,
+        "tpot_ms": 330.2255491214786,
+        "completion_tokens": 256,
+        "prompt_tokens": 1462,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 29787.01346303569,
+        "tpot_ms": 330.22647033326837,
+        "completion_tokens": 256,
+        "prompt_tokens": 1408,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      }
+    ],
+    "rc": 0
+  },
+  "anchor": {
+    "command": "python3 scripts/bench_client.py --base-url http://127.0.0.1:8080 --anchor-only --prompts scripts/prompt-sets/default.json --max-tokens 256 --label <label>-anchor --model default --no-thinking",
+    "ok": false,
+    "content_tail": "////////////////",
+    "expect_exact_substring": "OK"
+  },
+  "verdict": "pit reproduced: greedy anchor FAILED after sustained 8-stream load",
+  "started_utc": "2026-08-17T23:28:08Z",
+  "wall_s": 128,
+  "attempts": [
+    {
+      "attempt": 1,
+      "host_state": "16-job HIP compile of the E1 master build running concurrently (bench TTFT ~2x the cell's; aggregate 8.2 tok/s)",
+      "anchor_ok": true,
+      "content_tail": "OK",
+      "bench_shape": "6/8 streams capped at 256; 2 streams stopped at 2 tokens (finish_reason=stop)",
+      "verdict": "pit NOT reproduced",
+      "note": "run discarded as a reference: not an idle host; raw log /tmp/upstream-control-e0-build714-4df29be4.log was overwritten by attempt 2"
+    },
+    {
+      "attempt": 2,
+      "host_state": "idle host (compile finished)",
+      "anchor_ok": false,
+      "content_tail": "////////////////",
+      "bench_shape": "8/8 streams capped at 256 (finish_reason=length) \u2014 the all-capped pattern of the five degraded matrix cells",
+      "verdict": "pit reproduced (receipt body = this attempt)"
+    }
+  ],
+  "reference": "canonical degraded cell docs/results/matrix-714/cells/gguf-udq4kxl-auto-base-c8-ctx131072.json",
+  "note": "no rebuild; existing build-714 binary (fingerprinted scripts/05-build-llama.sh build). Verdict = attempt 2 (idle host); attempt 1 (anchor OK) ran under concurrent compile load with 2 early-stopping streams and is recorded for reproducibility honesty."
+}

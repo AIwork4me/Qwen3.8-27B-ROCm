@@ -1,0 +1,185 @@
+{
+  "experiment": "e2-master-pr25863",
+  "sequence": "boot scripts/gguf-quickstart.sh (CTX_SIZE=131072 WITH_MTP=0 EXTRA_ARGS='-np 8' PORT=8080 LLAMA_SERVER=/tmp/lc-master/build/bin/llama-server, mmproj on) -> health poll -> bench_client --concurrency 8 --max-tokens 256 -> bench_client --anchor-only (greedy anchor, gate = anchor_ok field)",
+  "llama_commit": "01818e4956858fe225a6875aae88b4cbee0b319e-plus-pr25863",
+  "build_dir": "/tmp/lc-master/build",
+  "server_flags": {
+    "llama_server_flags": [
+      "--ctx-size",
+      "131072",
+      "-ngl",
+      "99",
+      "--jinja",
+      "-np",
+      "8"
+    ],
+    "mmproj": "models/Qwen3.8-27B-GGUF/mmproj-F16.gguf",
+    "model": "models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf",
+    "port": 8080
+  },
+  "slot_info": {
+    "n_slots": 8,
+    "n_ctx_slot": 16384,
+    "kv_unified": "false",
+    "log_line": "n_slots = 8, n_ctx_slot = 16384, kv_unified = 'false'"
+  },
+  "load": {
+    "vram_mib": 1630,
+    "gtt_mib": 27170
+  },
+  "boot": {
+    "ok": true,
+    "health_wall_s": 6
+  },
+  "boot_log_excerpt": [
+    "llama-server : /tmp/lc-master/build/bin/llama-server (version: 0.1.1-dev (build 10480, commit 01818e495))",
+    "model        : models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf (17G)",
+    "ctx-size     : 131072  (override: CTX_SIZE=<n>)",
+    "gpu layers   : 99 (all)",
+    "mmproj       : models/Qwen3.8-27B-GGUF/mmproj-F16.gguf",
+    "speculative  : off (opt in: WITH_MTP=1)",
+    "extra args   : -np 8",
+    "Serving on http://127.0.0.1:8080 ...",
+    "0.00.028.907 W srv  llama_server: -----------------",
+    "0.00.028.908 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set",
+    "0.00.028.909 W srv  llama_server: this can be a security risk (cross-origin attacks)",
+    "0.00.028.909 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655",
+    "0.00.028.909 W srv  llama_server: -----------------",
+    "0.01.145.935 W model has unused tensor blk.64.attn_norm.weight (size = 20480 bytes) -- ignoring",
+    "0.01.145.941 W model has unused tensor blk.64.post_attention_norm.weight (size = 20480 bytes) -- ignoring",
+    "0.01.145.946 W model has unused tensor blk.64.attn_q.weight (size = 43253760 bytes) -- ignoring",
+    "0.01.145.947 W model has unused tensor blk.64.attn_k.weight (size = 3604480 bytes) -- ignoring",
+    "0.01.145.949 W model has unused tensor blk.64.attn_v.weight (size = 4300800 bytes) -- ignoring",
+    "0.01.145.954 W model has unused tensor blk.64.attn_output.weight (size = 21626880 bytes) -- ignoring",
+    "0.01.145.956 W model has unused tensor blk.64.attn_q_norm.weight (size = 1024 bytes) -- ignoring"
+  ],
+  "bench_summary": {
+    "command": "python3 scripts/bench_client.py --base-url http://127.0.0.1:8080 --concurrency 8 --prompts scripts/prompt-sets/default.json --max-tokens 256 --label <label> --model default --no-thinking",
+    "aggregate": {
+      "tok_per_s": 16.877771736464286,
+      "wall_s": 118.32130634196801,
+      "ok_streams": 8,
+      "failed_streams": 0
+    },
+    "streams": [
+      {
+        "ttft_ms": 45968.19718898041,
+        "tpot_ms": 283.7366991137684,
+        "completion_tokens": 256,
+        "prompt_tokens": 1412,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 42989.06292603351,
+        "tpot_ms": 294.10506245091227,
+        "completion_tokens": 256,
+        "prompt_tokens": 1474,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 42989.495906978846,
+        "tpot_ms": 294.10402509406686,
+        "completion_tokens": 256,
+        "prompt_tokens": 1298,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 45460.87826800067,
+        "tpot_ms": 285.2287367255628,
+        "completion_tokens": 256,
+        "prompt_tokens": 1469,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 42986.7789199925,
+        "tpot_ms": 294.1039117489138,
+        "completion_tokens": 256,
+        "prompt_tokens": 1336,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 40045.89540400775,
+        "tpot_ms": 304.84487749019854,
+        "completion_tokens": 256,
+        "prompt_tokens": 1516,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 31420.765242015477,
+        "tpot_ms": 337.74526175682195,
+        "completion_tokens": 256,
+        "prompt_tokens": 1462,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 31419.575674983207,
+        "tpot_ms": 355.5253376618174,
+        "completion_tokens": 205,
+        "prompt_tokens": 1408,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      }
+    ],
+    "rc": 0
+  },
+  "anchor": {
+    "command": "python3 scripts/bench_client.py --base-url http://127.0.0.1:8080 --anchor-only --prompts scripts/prompt-sets/default.json --max-tokens 256 --label <label>-anchor --model default --no-thinking",
+    "ok": true,
+    "content_tail": "OK",
+    "expect_exact_substring": "OK"
+  },
+  "verdict": "pit NOT reproduced: greedy anchor OK after sustained 8-stream load",
+  "started_utc": "2026-08-17T23:34:05Z",
+  "wall_s": 130,
+  "base_commit": "01818e4956858fe225a6875aae88b4cbee0b319e (upstream master HEAD 2026-08-17)",
+  "pr_patch": {
+    "pr": 25863,
+    "url": "https://github.com/ggml-org/llama.cpp/pull/25863",
+    "title": "ggml-cuda: avoid direct ROCm_Host compute on HIP integrated GPUs",
+    "state": "OPEN (not merged at master HEAD)",
+    "head_sha": "ce82541acbaf5c532c0727d6ccb6de2b0b0c948d",
+    "branch": "fix/hip-apu-host-buffer",
+    "diff_sha256": "16593297729b8a859d8b304e3e78155f1ae1bcd3c2b2e35d6c8e1d93dd4d718d",
+    "files_touched": [
+      "ggml/src/ggml-cuda/ggml-cuda.cu"
+    ],
+    "diffstat": "+25 -2",
+    "application": "git apply onto clean E1 tree; hunks applied with offsets +148..+175 (master moved past the PR branch point)",
+    "build_detail": "the patch compiles into ggml/src/ggml-hip (shared lib libggml-hip.so in build/bin); bin/llama-server itself is an unchanged launcher \u2014 the E2 boots loaded the patched libggml-hip.so from /tmp/lc-master/build/bin"
+  },
+  "rebuild": "incremental cmake --build of the E1 build dir after patch application",
+  "attempts": [
+    {
+      "attempt": 1,
+      "anchor_ok": true,
+      "content_tail": "OK",
+      "bench_shape": "7/8 streams capped at 256; 1 early stop (205 tokens)",
+      "aggregate_tok_per_s": 16.88,
+      "verdict": "pit NOT reproduced (receipt body = this attempt)"
+    },
+    {
+      "attempt": 2,
+      "anchor_ok": true,
+      "content_tail": "OK",
+      "bench_shape": "7/8 streams capped at 256; 1 early stop (190 tokens)",
+      "aggregate_tok_per_s": 16.15,
+      "verdict": "pit NOT reproduced (repeatability confirmation)",
+      "receipt": "/tmp/e2-repeat.json (raw, uncommitted)"
+    }
+  ]
+}

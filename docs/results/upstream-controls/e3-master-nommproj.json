@@ -1,0 +1,151 @@
+{
+  "experiment": "e3-master-nommproj",
+  "sequence": "boot scripts/gguf-quickstart.sh (CTX_SIZE=131072 WITH_MTP=0 EXTRA_ARGS='-np 8' PORT=8080 LLAMA_SERVER=/tmp/lc-master/build/bin/llama-server, mmproj OFF (WITH_MMPROJ=0)) -> health poll -> bench_client --concurrency 8 --max-tokens 256 -> bench_client --anchor-only (greedy anchor, gate = anchor_ok field)",
+  "llama_commit": "01818e4956858fe225a6875aae88b4cbee0b319e",
+  "build_dir": "/tmp/lc-master/build",
+  "server_flags": {
+    "llama_server_flags": [
+      "--ctx-size",
+      "131072",
+      "-ngl",
+      "99",
+      "--jinja",
+      "-np",
+      "8"
+    ],
+    "mmproj": null,
+    "model": "models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf",
+    "port": 8080
+  },
+  "slot_info": {
+    "n_slots": 8,
+    "n_ctx_slot": 16384,
+    "kv_unified": "false",
+    "log_line": "n_slots = 8, n_ctx_slot = 16384, kv_unified = 'false'"
+  },
+  "load": {
+    "vram_mib": 1630,
+    "gtt_mib": 26016
+  },
+  "boot": {
+    "ok": true,
+    "health_wall_s": 4
+  },
+  "boot_log_excerpt": [
+    "llama-server : /tmp/lc-master/build/bin/llama-server (version: 0.1.1-dev (build 10480, commit 01818e495))",
+    "model        : models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf (17G)",
+    "ctx-size     : 131072  (override: CTX_SIZE=<n>)",
+    "gpu layers   : 99 (all)",
+    "mmproj       : none",
+    "speculative  : off (opt in: WITH_MTP=1)",
+    "extra args   : -np 8",
+    "Serving on http://127.0.0.1:8080 ...",
+    "0.00.030.767 W srv  llama_server: -----------------",
+    "0.00.030.769 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set",
+    "0.00.030.770 W srv  llama_server: this can be a security risk (cross-origin attacks)",
+    "0.00.030.770 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655",
+    "0.00.030.770 W srv  llama_server: -----------------",
+    "0.01.072.125 W model has unused tensor blk.64.attn_norm.weight (size = 20480 bytes) -- ignoring",
+    "0.01.072.132 W model has unused tensor blk.64.post_attention_norm.weight (size = 20480 bytes) -- ignoring",
+    "0.01.072.137 W model has unused tensor blk.64.attn_q.weight (size = 43253760 bytes) -- ignoring",
+    "0.01.072.138 W model has unused tensor blk.64.attn_k.weight (size = 3604480 bytes) -- ignoring",
+    "0.01.072.140 W model has unused tensor blk.64.attn_v.weight (size = 4300800 bytes) -- ignoring",
+    "0.01.072.146 W model has unused tensor blk.64.attn_output.weight (size = 21626880 bytes) -- ignoring",
+    "0.01.072.147 W model has unused tensor blk.64.attn_q_norm.weight (size = 1024 bytes) -- ignoring"
+  ],
+  "bench_summary": {
+    "command": "python3 scripts/bench_client.py --base-url http://127.0.0.1:8080 --concurrency 8 --prompts scripts/prompt-sets/default.json --max-tokens 256 --label <label> --model default --no-thinking",
+    "aggregate": {
+      "tok_per_s": 17.935237077318877,
+      "wall_s": 114.18862160400022,
+      "ok_streams": 8,
+      "failed_streams": 0
+    },
+    "streams": [
+      {
+        "ttft_ms": 29295.73914699722,
+        "tpot_ms": 330.35939944720843,
+        "completion_tokens": 256,
+        "prompt_tokens": 1412,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 29293.616716982797,
+        "tpot_ms": 330.3626034157716,
+        "completion_tokens": 256,
+        "prompt_tokens": 1474,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 43037.60510601569,
+        "tpot_ms": 278.12243380775567,
+        "completion_tokens": 256,
+        "prompt_tokens": 1298,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 43853.10861101607,
+        "tpot_ms": 275.8192988158222,
+        "completion_tokens": 256,
+        "prompt_tokens": 1469,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 43034.9936200073,
+        "tpot_ms": 278.1229783217057,
+        "completion_tokens": 256,
+        "prompt_tokens": 1336,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 37226.61097999662,
+        "tpot_ms": 300.1338479960538,
+        "completion_tokens": 256,
+        "prompt_tokens": 1516,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 43847.80381503515,
+        "tpot_ms": 275.8296502194842,
+        "completion_tokens": 256,
+        "prompt_tokens": 1462,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 43848.93970499979,
+        "tpot_ms": 275.825421353026,
+        "completion_tokens": 256,
+        "prompt_tokens": 1408,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      }
+    ],
+    "rc": 0
+  },
+  "anchor": {
+    "command": "python3 scripts/bench_client.py --base-url http://127.0.0.1:8080 --anchor-only --prompts scripts/prompt-sets/default.json --max-tokens 256 --label <label>-anchor --model default --no-thinking",
+    "ok": false,
+    "content_tail": "////////////////",
+    "expect_exact_substring": "OK"
+  },
+  "verdict": "pit reproduced: greedy anchor FAILED after sustained 8-stream load",
+  "started_utc": "2026-08-17T23:39:48Z",
+  "wall_s": 125,
+  "purpose": "attribution control: identical E1 build (master HEAD 01818e495, PR patch reverted, tree verified clean) booted WITHOUT --mmproj \u2014 closes the gap that all committed matrix evidence ran with mmproj attached",
+  "mmproj": "OFF (WITH_MMPROJ=0; quickstart skips --mmproj)"
+}
