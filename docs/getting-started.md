@@ -53,11 +53,14 @@ builds.
 bash scripts/00-check-env.sh
 ```
 
-Expected tail: `OK: base environment ready for Qwen3.8-27B on gfx1151`. If
-ROCm is not at the default prefix, point the checker at it first:
+Expected tail: `OK: base environment ready for Qwen3.8-27B on gfx1151`. No
+exports are needed for the validated layout — the scripts find the SDK at
+`~/rocm-7.14.0` first (then `/opt/rocm` as the historical fallback) without
+any environment setup. Only if your ROCm install lives somewhere else,
+point the checker at it:
 
 ```bash
-export ROCM_PREFIX=$HOME/rocm-7.14.0
+export ROCM_PREFIX=/path/to/your/rocm
 bash scripts/00-check-env.sh
 ```
 
