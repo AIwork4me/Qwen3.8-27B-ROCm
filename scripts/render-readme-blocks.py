@@ -1,0 +1,506 @@
+#!/usr/bin/env python3
+"""Task 5: README block + benchmark report renderer.
+
+Renders, from configs/benchmark-verdicts.json (+ raw cells, the long-context
+smoke receipt, and matrix.json — never hand-edited copies):
+
+  * the three GENERATED blocks inside README.md (performance highlights,
+    context capacity, known good / known bad), replaced between
+    `<!-- BEGIN GENERATED: <name> -->` / `<!-- END GENERATED: <name> -->`
+    markers — regeneration is idempotent (byte-identical);
+  * docs/results/benchmark.md, wholesale (headline tables + links to the
+    raw cells).
+
+Usage:
+    python3 scripts/render-readme-blocks.py         # write README blocks + benchmark.md
+    python3 scripts/render-readme-blocks.py --check # exit 1 if either is stale
+
+Hand-editing inside the markers is forbidden: the next regen destroys it.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+VERDICTS = ROOT / "configs" / "benchmark-verdicts.json"
+CELLS_DIR = ROOT / "docs" / "results" / "matrix-714" / "cells"
+MATRIX = ROOT / "docs" / "results" / "matrix-714" / "matrix.json"
+SMOKE = ROOT / "docs" / "results" / "matrix-714" / "long-context-smoke.json"
+README = ROOT / "README.md"
+BENCH_MD = ROOT / "docs" / "results" / "benchmark.md"
+
+BLOCKS = ("performance-highlights", "context-capacity", "known-good-bad")
+
+
+def mark(verdict: str) -> str:
+    return {"recommended": "✅", "caution": "⚠️", "avoid": "❌"}[verdict]
+
+
+def fmt(x, nd=1):
+    return f"{x:.{nd}f}" if x is not None else "—"
+
+
+def load_data() -> dict:
+    verdicts = json.loads(VERDICTS.read_text())
+    vmap = {c["id"]: c for c in verdicts["cells"]}
+    cells = {p.stem: json.loads(p.read_text()) for p in CELLS_DIR.glob("*.json")}
+    matrix = json.loads(MATRIX.read_text())
+    smoke = json.loads(SMOKE.read_text()) if SMOKE.exists() else None
+    return {"verdicts": verdicts, "vmap": vmap, "cells": cells,
+            "matrix": matrix, "smoke": smoke}
+
+
+def dist(data) -> dict:
+    d = {}
+    for c in data["verdicts"]["cells"]:
+        d[c["verdict"]] = d.get(c["verdict"], 0) + 1
+    return d
+
+
+def parse_kv_line(cell: dict) -> dict:
+    """Parse vLLM boot-log KV lines captured verbatim in the cell JSON."""
+    out = {}
+    for line in (cell.get("engine", {}).get("kv_and_load_lines") or []):
+        m = re.search(r"GPU KV cache size: ([\d,]+) tokens, "
+                      r"Maximum concurrency for ([\d,]+) tokens per request: "
+                      r"([\d.]+)x", line)
+        if m:
+            out["kv_tokens"] = int(m.group(1).replace(",", ""))
+            out["max_len"] = int(m.group(2).replace(",", ""))
+            out["concurrency_x"] = m.group(3)
+        m = re.search(r"Available KV cache memory: ([\d.]+) GiB", line)
+        if m:
+            out["kv_gib"] = float(m.group(1))
+        m = re.search(r"Model loading took ([\d.]+) GiB", line)
+        if m:
+            out["weights_gib"] = float(m.group(1))
+    return out
+
+
+def reasoning_moot_mark(cells: dict) -> str:
+    """METHODOLOGY §2 fold-in: the thinking-mode TPOT question is moot-marked
+    when every measured stream recorded reasoning_tokens = 0."""
+    nonzero = [s.get("reasoning_tokens") or 0
+               for c in cells.values() for s in c["client"]["streams"]
+               if (s.get("reasoning_tokens") or 0) > 0]
+    if nonzero:
+        return (f"NOT moot: {len(nonzero)} streams recorded reasoning tokens "
+                f"(thinking leaked into a cell) — investigate before trusting "
+                f"TTFT/TPOT comparability.")
+    return ("Moot-mark (METHODOLOGY §2): reasoning_tokens = 0 across all "
+            "measured cells — every cell ran the shared --no-thinking "
+            "instrument mode, so TPOT is visible-answer TPOT; thinking-mode "
+            "latency remains a declared non-goal of this session.")
+
+
+# ------------------------------------------------------------ README blocks
+
+def render_performance_highlights(data: dict) -> str:
+    v = data["vmap"]
+    d = dist(data)
+    gguf_reco = [v[i] for i in (
+        "gguf-udq4kxl-auto-mtp-c1-ctx131072",
+        "gguf-udq4kxl-auto-base-c1-ctx131072",
+        "gguf-udq4kxl-auto-base-c1-ctx32768",
+        "gguf-udq4kxl-auto-base-c1-ctx262144")]
+    lines = [
+        f"Measured 2026-08-16/17 on the reference host (gfx1151, ROCm 7.14, "
+        f"80 GiB GTT pool): **{len(data['verdicts']['cells'])} cells — "
+        f"{d.get('recommended', 0)} recommended / {d.get('caution', 0)} caution "
+        f"/ {d.get('avoid', 0)} avoid**. Verdicts: "
+        f"`configs/benchmark-verdicts.json`; raw receipts: "
+        f"`docs/results/matrix-714/cells/`; full tables: "
+        f"`docs/results/benchmark.md`.",
+        "",
+        "**Recommended — interactive chat (GGUF path, UD-Q4_K_XL):**",
+        "",
+        "| Config | Per-stream (median) | Aggregate | TTFT | Verdict |",
+        "|---|---|---|---|---|",
+    ]
+    for c in gguf_reco:
+        m = c["metrics"]
+        label = {
+            "gguf-udq4kxl-auto-mtp-c1-ctx131072":
+                "`WITH_MTP=1` mtp-c1 @131072 — +28% per-stream",
+            "gguf-udq4kxl-auto-base-c1-ctx131072":
+                "default boot base-c1 @131072",
+            "gguf-udq4kxl-auto-base-c1-ctx32768": "base-c1 @32768",
+            "gguf-udq4kxl-auto-base-c1-ctx262144":
+                "base-c1 @262144 (GTT +8.0 GiB)",
+        }[c["id"]]
+        lines.append(
+            f"| {label} | {fmt(m['per_stream_tok_s_median'])} tok/s "
+            f"(TPOT {fmt(m['tpot_ms_median'])} ms) | "
+            f"{fmt(m['aggregate_tok_s'])} tok/s | "
+            f"{fmt(m['ttft_ms_median'] / 1000)} s | {mark(c['verdict'])} "
+            f"{c['verdict']} |")
+    lines += [
+        "",
+        "**Caution — batch / throughput (vLLM BF16 @262144):** every measured "
+        "vLLM cell is below the 10 tok/s interactive floor (controller ruling "
+        "2026-08-17) — use this path for what it wins:",
+        "",
+        "| Config | Per-stream (median, min) | Aggregate | Verdict |",
+        "|---|---|---|---|",
+    ]
+    for cid, note in (
+            ("vllm-bf16-auto-base-c16-ctx262144", "best batch cell measured"),
+            ("vllm-bf16-auto-mtp-c8-ctx262144", "MTP beneficial through c8"),
+            ("vllm-bf16-auto-mtp-c1-ctx262144",
+             "+52.6% per-stream vs base (+45.5% aggregate, basis labeled in the verdict)")):
+        m = v[cid]["metrics"]
+        # min is only informative when there is more than one healthy stream
+        span = (f" (min {fmt(m['per_stream_tok_s_min'], 2)})"
+                if m.get("healthy_streams", 1) > 1 else "")
+        lines.append(
+            f"| {cid.removeprefix('vllm-bf16-auto-')} | "
+            f"{fmt(m['per_stream_tok_s_median'])}{span} tok/s | "
+            f"{fmt(m['aggregate_tok_s'])} tok/s | {mark('caution')} caution — "
+            f"{note} |")
+    best_batch = v["vllm-bf16-auto-base-c16-ctx262144"]["metrics"]
+    lines += [
+        "",
+        f"**Honesty clause (aggregate never headlines over UX):** the best "
+        f"aggregate on this host — vLLM base-c16, "
+        f"{fmt(best_batch['aggregate_tok_s'])} tok/s — runs each stream at "
+        f"{fmt(best_batch['per_stream_tok_s_median'])} tok/s median "
+        f"(min {fmt(best_batch['per_stream_tok_s_min'], 2)}): batch "
+        f"presentation only. GGUF c8/c16 aggregates (to 27.5 tok/s) are ❌ "
+        f"avoid cells — greedy decoding degrades after sustained multistream "
+        f"load (see Known good / known bad). Interactive chat → GGUF "
+        f"`WITH_MTP=1` (13.0 tok/s per stream).",
+    ]
+    return "\n".join(lines)
+
+
+def render_context_capacity(data: dict) -> str:
+    smoke = data["smoke"]
+    v = data["vmap"]
+    lines = [
+        "Boot ladder (S3) + deep-prompt retrieval smoke — GGUF path, needle "
+        "sentence at ~80% depth, judged by exact substring recall "
+        "(`docs/results/matrix-714/long-context-smoke.json`):",
+        "",
+        "| Path | Tier | Boots | GTT at load | Retrieval @~80% depth | Cell verdicts |",
+        "|---|---|---|---|---|---|",
+    ]
+    if smoke:
+        verdicts_by_tier = {
+            32768: "base-c1 ✅ (base-c4-ctx32768 ❌ — greedy pit)",
+            131072: "c1 base/mtp ✅; c4 ⚠️ (below floor); c8/c16 ❌ (greedy pit)",
+            262144: "base-c1 ✅ (+8.0 GiB GTT); base-c4 ⚠️ (below floor)",
+        }
+        for t in smoke["tiers"]:
+            recall = ("PASS" if t["recall"] else
+                      f"**FAIL — confident miss** (answered "
+                      f"\"{t['answer_excerpt']}\", finish_reason={t['finish_reason']})")
+            lines.append(
+                f"| gguf | {t['ctx_size']} | OK ({fmt(t['boot_wall_s'])} s) | "
+                f"{t['load']['gtt_mib']:,} MiB | "
+                f"{recall} @ {t['prompt_tokens']:,} prompt tokens "
+                f"(TTFT {fmt(t['ttft_ms'] / 1000)} s) | "
+                f"{verdicts_by_tier.get(t['ctx_size'], '')} |")
+    kv_base = parse_kv_line(data["cells"]["vllm-bf16-auto-base-c1-ctx262144"])
+    kv_mtp = parse_kv_line(data["cells"]["vllm-bf16-auto-mtp-c1-ctx262144"])
+    lines.append(
+        f"| vllm | 262144 | OK (171 s) | 75,040 MiB "
+        f"(weights {fmt(kv_base.get('weights_gib'), 1)}, KV "
+        f"{fmt(kv_base.get('kv_gib'), 2)} GiB) | not run on this path | "
+        f"8 cells ⚠️/❌ per the 2026-08-17 ruling (mtp-c16 ❌) |")
+    lines += [
+        "",
+        "**`max_usable_context`, honestly:** every tier boots on the GGUF "
+        "path, but functional retrieval is **non-monotonic in depth** — 30K "
+        "PASS, 120K confident miss, 247K PASS (one needle, one depth, one "
+        "seed) — so a reliable max_usable_context for deep-prompt retrieval "
+        "is **not established above ~30K** by this smoke; treat deep-context "
+        "answers as unverified until re-tested (METHODOLOGY §1 ruling).",
+        "",
+        f"**KV ceilings:** GGUF KV grows 64 KiB/token bf16 — +8.0 GiB per "
+        f"131,072 tokens, the closed form confirmed by the GTT ladder "
+        f"(26,548 → 34,742 MiB). vLLM @262144 budgets KV "
+        f"{fmt(kv_base.get('kv_gib'), 2)} GiB = "
+        f"{kv_base.get('kv_tokens', 0):,} tokens "
+        f"({kv_base.get('concurrency_x')}x max-len; MTP: "
+        f"{fmt(kv_mtp.get('kv_gib'), 2)} GiB, "
+        f"{kv_mtp.get('kv_tokens', 0):,} tokens, "
+        f"{kv_mtp.get('concurrency_x')}x) — **a single full-depth request "
+        f"fits; two concurrent full-depth streams do not** (deep-context "
+        f"concurrency is KV-budget-bound long before `max_num_seqs`).",
+    ]
+    return "\n".join(lines)
+
+
+def render_known_good_bad(data: dict) -> str:
+    v = data["vmap"]
+    cells = data["cells"]
+    pit_ids = [cid for cid, c in v.items()
+               if c["verdict"] == "avoid" and not c["metrics"]["anchor_ok"]]
+    lines = [
+        "**Known good** (verdict receipts in `configs/benchmark-verdicts.json`):",
+        "",
+        "- ✅ **GGUF interactive at c1** — all three ctx tiers recommended; "
+        "default boot (10.1 tok/s per stream) and `WITH_MTP=1` "
+        "(13.0 tok/s, +28% per-stream).",
+        "- ✅ **vLLM path anchor-clean in all 8 cells** — including anchors "
+        "run immediately after 16-stream benches: the GGUF greedy-degradation "
+        "pit does NOT reproduce here; the honest choice for 262144 context, "
+        "vision, and batch throughput (38.6 tok/s aggregate @base-c16).",
+        "- ✅ **Boot reliability** — every declared-priority cell booted (GGUF "
+        "4–6 s warm; vLLM 171/226 s); zero failed streams across all 20 cells.",
+        "",
+        "**Known bad / pits:**",
+        "",
+    ]
+    for cid in sorted(pit_ids):
+        m = v[cid]["metrics"]
+        lines.append(
+            f"- ❌ `{cid}` — greedy `'////'` corruption after sustained "
+            f"multistream load (anchor failed; per-stream median "
+            f"{fmt(m['per_stream_tok_s_median'])} tok/s, aggregate "
+            f"{fmt(m['aggregate_tok_s'])} tok/s recorded but secondary). "
+            f"Workaround: restart the server; multi-stream loads → vLLM. "
+            f"Upstream: llama.cpp HIP `4df29be4`, issue pending.")
+    lines += [
+        f"- ❌ `vllm-bf16-auto-mtp-c16-ctx262144` — MTP regresses vs baseline "
+        f"at c16 (31.1 vs 38.6 tok/s aggregate, per-stream min 1.85 tok/s); "
+        f"serve without `--mtp` at high concurrency.",
+        "- ⚠️ **vLLM encoder profiling** — boot OOMs at `--max-model-len "
+        "262144` without `--skip-mm-profiling` (ViT dummy batch scales with "
+        "max_model_len; attempted allocation 256 GiB vs the 80 GiB pool). "
+        "The flag is mandatory — and with it the encoder activation peak is "
+        "unbudgeted: the operator budgets image traffic "
+        "(`docs/results/rocm-7.14/vllm-validation.md` ## Vision).",
+        "- ⚠️ **GGUF ctx 262144 GTT growth** — +8.0 GiB over the 131072 boot "
+        "(34,742 vs 26,548 MiB; 64 KiB/token bf16 KV): capacity-OK, "
+        "caution-grade — fits the 80 GiB pool with headroom.",
+        "- ⚠️ **vLLM KV ceiling at 262144** — KV 19.57 GiB = 313,650 tokens "
+        "(1.20x max-len; MTP 1.06x): one full-depth stream fits, two don't.",
+        "- ⚠️ **Deep-context retrieval (GGUF)** — 120K tier returned a "
+        "confident miss; non-monotonic vs depth, unverified above ~30K (see "
+        "Context capacity).",
+        "",
+        "Every verdict with its full reason/conditions/workaround: "
+        "`configs/benchmark-verdicts.json`.",
+    ]
+    return "\n".join(lines)
+
+
+# ------------------------------------------------------------- benchmark.md
+
+def _row(cid: str, data: dict) -> str:
+    c = data["vmap"][cid]
+    m = c["metrics"]
+    auto = m.get("auto_verdict", "")
+    final = c["verdict"]
+    trail = auto if auto == final else f"{auto} → **{final}** (ruling)"
+    return (f"| [`{cid}`](matrix-714/cells/{cid}.json) | {mark(final)} "
+            f"{final} | {fmt(m['per_stream_tok_s_median'], 2)} | "
+            f"{fmt(m['per_stream_tok_s_min'], 2)} | "
+            f"{fmt(m['tpot_ms_median'])} | {fmt(m['aggregate_tok_s'], 2)} | "
+            f"{fmt(m['ttft_ms_median'] / 1000)} s | "
+            f"{'ok' if m['anchor_ok'] else 'FAILED'} | "
+            f"{m['gtt_mib']:,} | {trail} |")
+
+
+def render_benchmark_md(data: dict) -> str:
+    v = data["vmap"]
+    d = dist(data)
+    m = data["matrix"]
+    planned = sum(1 for c in m["cells"] if c["status"] == "planned")
+    dropped = sum(1 for c in m["cells"] if c["status"] == "dropped")
+    gguf_ids = sorted(i for i in v if i.startswith("gguf-"))
+    vllm_ids = sorted(i for i in v if i.startswith("vllm-"))
+
+    out = []
+    out.append("# Benchmark matrix results — Qwen3.8-27B on gfx1151 (ROCm 7.14)\n")
+    out.append("<!-- GENERATED FILE — do not hand-edit. "
+               "Regenerate: python3 scripts/render-readme-blocks.py -->\n")
+    out.append(
+        f"**{len(v)} measured cells: {d.get('recommended', 0)} recommended / "
+        f"{d.get('caution', 0)} caution / {d.get('avoid', 0)} avoid** "
+        f"({planned} planned — time-boxed session, machinery complete; "
+        f"{dropped} dropped — vLLM ctx-32768 tier not offered). "
+        f"Method: [`METHODOLOGY.md`](METHODOLOGY.md) (rules frozen before any "
+        f"measurement). Verdicts reviewed and recorded by "
+        f"`{data['verdicts']['reviewed_by']}`; ladder proposes, controller "
+        f"disposes.\n")
+    out.append("Generated by `scripts/gen-verdicts.py` + "
+               "`scripts/render-readme-blocks.py` from the raw cells under "
+               "`matrix-714/cells/` — every number below is reproducible from "
+               "those receipts.\n")
+
+    out.append("## Quickstart mapping (the UX guarantee)\n")
+    out.append("The user-facing defaults map to measured, verdicted cells — "
+               "a quickstart can never point at a pit (CI-enforced by "
+               "`tests/test_verdicts.py::test_quickstart_configs_are_recommended`):\n")
+    out.append("| User-facing default | Cell | Verdict |")
+    out.append("|---|---|---|")
+    for label, cid in (
+            ("`scripts/gguf-quickstart.sh` default boot (UD-Q4_K_XL, ctx 131072)",
+             "gguf-udq4kxl-auto-base-c1-ctx131072"),
+            ("`WITH_MTP=1` opt-in", "gguf-udq4kxl-auto-mtp-c1-ctx131072"),
+            ("`scripts/03-serve-vllm.sh` (`serve-args.conf`, 262144)",
+             "vllm-bf16-auto-base-c1-ctx262144"),
+            ("`scripts/03-serve-vllm.sh --mtp` (`serve-args-mtp.conf`)",
+             "vllm-bf16-auto-mtp-c1-ctx262144")):
+        c = v[cid]
+        out.append(f"| {label} | `{cid}` | {mark(c['verdict'])} "
+                   f"{c['verdict']} |")
+    out.append("\nController ruling (2026-08-17, binding): all 8 measured "
+               "vLLM cells are below the 10 tok/s interactive floor — the "
+               "vLLM c1 cells are `caution` **with non-empty conditions**: "
+               "\"per-stream < 10 tok/s on this host: use for 262144-context, "
+               "vision, and aggregate batch throughput (to 38.6 tok/s), and "
+               "as the greedy-degradation-free path; interactive chat → GGUF "
+               "path (mtp-c1 13.0 tok/s)\". README quickstart guidance points "
+               "at the GGUF path.\n")
+
+    out.append("## GGUF path (llama.cpp `4df29be4` HIP, UD-Q4_K_XL)\n")
+    out.append("Per-stream medians over **healthy streams only** (≥2 content "
+               "tokens — streams with <2 tokens carry no defined TPOT and "
+               "never count toward UX claims; see healthy-vs-total in the raw "
+               "cells).\n")
+    out.append("| Cell | Verdict | Per-stream med tok/s | min | TPOT med ms "
+               "| Aggregate tok/s | TTFT med | Anchor | GTT MiB | auto → final |")
+    out.append("|---|---|---|---|---|---|---|---|---|---|")
+    for cid in gguf_ids:
+        out.append(_row(cid, data))
+
+    out.append("\n## vLLM path (`4d2a68d`, BF16, ctx 262144)\n")
+    kv = parse_kv_line(data["cells"]["vllm-bf16-auto-base-c1-ctx262144"])
+    out.append(
+        f"Boots: base healthy in 171 s (GTT 75,040 MiB: weights "
+        f"{fmt(kv.get('weights_gib'))} GiB, KV {fmt(kv.get('kv_gib'), 2)} GiB, "
+        f"rest activations/buffers — KV = {kv.get('kv_tokens', 0):,} tokens "
+        f"= {kv.get('concurrency_x')}x the 262,144 max-len); mtp healthy in "
+        f"226 s (KV 18.59 GiB = 279,146 tokens = 1.06x). Engine args "
+        f"captured verbatim per cell; `max_num_seqs` never overridden (pin "
+        f"default 1024). All 8 greedy anchors `OK` — the GGUF §6 pit does "
+        f"not reproduce on this path.\n")
+    out.append("| Cell | Verdict | Per-stream med tok/s | min | TPOT med ms "
+               "| Aggregate tok/s | TTFT med | Anchor | GTT MiB | auto → final |")
+    out.append("|---|---|---|---|---|---|---|---|---|---|")
+    for cid in vllm_ids:
+        out.append(_row(cid, data))
+
+    out.append("\n## MTP effect (basis labeled)\n")
+    out.append("| Config | Per-stream basis | Aggregate basis | Verdict |")
+    out.append("|---|---|---|---|")
+    for cid in sorted(v):
+        g = v[cid]["metrics"].get("mtp_gain_vs_base")
+        if not g:
+            continue
+        base_cid = cid.replace("-mtp-", "-base-")
+        out.append(
+            f"| `{cid.removeprefix('gguf-udq4kxl-auto-').removeprefix('vllm-bf16-auto-')}` "
+            f"vs {base_cid} | {g['per_stream_pct']:+.1f}% "
+            f"({fmt(v[cid]['metrics']['per_stream_tok_s_median'], 2)} vs "
+            f"{fmt(g['base_per_stream_tok_s_median'], 2)} tok/s) | "
+            f"{g['aggregate_pct']:+.1f}% ({fmt(v[cid]['metrics']['aggregate_tok_s'], 2)} "
+            f"vs {fmt(g['base_aggregate_tok_s'], 2)} tok/s) | "
+            f"{mark(v[cid]['verdict'])} {v[cid]['verdict']} |")
+    out.append("\nRead: MTP is the interactive win on the GGUF path "
+               "(+28.2% per-stream at c1) and beneficial through c8 on the "
+               "vLLM path (+33%/+27% per-stream at c4/c8, aggregate "
+               "+21%/+9%), but inverts at vLLM c16 (−19.4% aggregate — the "
+               "avoid cell; muse-rocm DFlash lesson mirrored). On the GGUF "
+               "path the c8/c16 MTP cells are degraded by the §6 anchor pit, "
+               "so their negative deltas are pit artifacts, not MTP "
+               "evidence.\n")
+
+    out.append("## Context capacity & retrieval smoke\n")
+    out.append(render_context_capacity(data))
+    out.append("\n## Verdict rule application\n")
+    out.append(
+        "- Rung 1 (abort/OOM/hang): not triggered — no boot failures, zero "
+        "failed streams in any cell.\n"
+        "- Rung 1b (anchor drift, METHODOLOGY §6): 5 GGUF cells → avoid "
+        "(the `'////'` greedy-degradation pit; correlation with all-capped "
+        "benches stated honestly per the corrected §6 erratum — 4-of-5 "
+        "all-capped, mtp-c8 7-of-8).\n"
+        "- Rung 2 (interactive floor): every remaining below-floor cell → "
+        "caution (severity band <8 tok/s at c1 proposed avoid on the two "
+        "vLLM c1 cells; see overrides).\n"
+        "- Rung 3 (aggregate regression): 1 confirmed avoid — "
+        "`vllm-bf16-auto-mtp-c16-ctx262144` (31.11 vs 38.58 tok/s vs its "
+        "base counterpart, −19.4%).\n"
+        "- Controller overrides (recorded per cell in the verdicts JSON "
+        "`metrics.controller_override`): 3 — the two vLLM c1 cells "
+        "avoid→caution and mtp-c16 caution→avoid, all citing the "
+        "2026-08-17 ruling.\n")
+    out.append(reasoning_moot_mark(data["cells"]) + "\n")
+    out.append("\n## Raw receipts\n")
+    out.append("Every cell links from the tables above; the declaration "
+               "manifest is [`matrix-714/matrix.json`](matrix-714/matrix.json), "
+               "the measurement contract is "
+               "[`METHODOLOGY.md`](METHODOLOGY.md), and the long-context "
+               "smoke receipt is "
+               "[`matrix-714/long-context-smoke.json`](matrix-714/long-context-smoke.json).\n")
+    return "\n".join(out).rstrip() + "\n"
+
+
+# ------------------------------------------------------------------- plumbing
+
+def update_readme(data: dict, write: bool = True) -> bool:
+    """Replace the generated blocks; returns whether anything would change.
+    With write=False (check mode) nothing is written."""
+    text = README.read_text()
+    changed = False
+    rendered = {
+        "performance-highlights": render_performance_highlights(data),
+        "context-capacity": render_context_capacity(data),
+        "known-good-bad": render_known_good_bad(data),
+    }
+    for name in BLOCKS:
+        begin = f"<!-- BEGIN GENERATED: {name} -->"
+        end = f"<!-- END GENERATED: {name} -->"
+        if begin not in text or end not in text:
+            raise SystemExit(f"README.md missing generated-block markers for "
+                             f"{name!r} — add the marker pair by hand once, "
+                             f"then regenerate.")
+        pattern = re.compile(
+            re.escape(begin) + r"\n(?:.*?\n)?" + re.escape(end), re.S)
+        replacement = begin + "\n" + rendered[name] + "\n" + end
+        new_text, n = pattern.subn(replacement, text, count=1)
+        if n != 1:
+            raise SystemExit(f"README.md: could not substitute block {name!r}")
+        changed |= new_text != text
+        text = new_text
+    if changed and write:
+        README.write_text(text)
+    return changed
+
+
+def main(argv=None) -> int:
+    args = argv if argv is not None else sys.argv[1:]
+    check = "--check" in args
+    data = load_data()
+    readme_changed = update_readme(data, write=not check)
+    bench = render_benchmark_md(data)
+    bench_changed = not (BENCH_MD.exists() and BENCH_MD.read_text() == bench)
+    if bench_changed and not check:
+        BENCH_MD.write_text(bench)
+    if check:
+        stale = []
+        if readme_changed:
+            stale.append("README.md")
+        if bench_changed:
+            stale.append("docs/results/benchmark.md")
+        if stale:
+            print(f"STALE: {', '.join(stale)} differ from a fresh render — "
+                  f"rerun scripts/render-readme-blocks.py", file=sys.stderr)
+            return 1
+        print("fresh: README blocks + docs/results/benchmark.md")
+        return 0
+    print(f"README blocks {'updated' if readme_changed else 'unchanged'}; "
+          f"benchmark.md {'written' if bench_changed else 'unchanged'}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

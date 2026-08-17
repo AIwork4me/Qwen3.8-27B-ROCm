@@ -147,7 +147,10 @@ CONF_NAME="serve-args.conf"
 if [ "$MTP_PART" = "mtp" ]; then MTP_FLAG=(--mtp); CONF_NAME="serve-args-mtp.conf"; fi
 CONF="configs/$CONF_NAME"
 
-# Served model name + conf max-model-len come from the conf (never a guess).
+# Served model name + conf max-model-len come from the conf (the source of
+# truth). The SERVED fallback below only fires if the conf parse yields
+# nothing (malformed conf): it mirrors the validated conf value so the bench
+# can name the error, never to override what the conf says.
 SERVED="$(awk '$1=="--served-model-name"{print $2; exit}' "$CONF")"
 CONF_MAXLEN="$(awk '$1=="--max-model-len"{print $2; exit}' "$CONF")"
 SERVED="${SERVED:-qwen3.8-27b}"
