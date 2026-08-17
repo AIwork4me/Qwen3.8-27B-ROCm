@@ -119,6 +119,14 @@ the AMD nightly index) plus a small PyPI tail, and the build clones vLLM
 from GitHub (≈0.4 GiB checkout) — on throttled GitHub/CDN links budget an
 hour or more for acquisition before the compile itself starts.
 
+One measured first-run trap on constrained networks: the cold sync can
+loop-fail forever on a few small PyPI packages (`numpy`, `transformers`,
+`pillow`) — repeated `Downloading …` lines, no install — while the ~2 GiB
+of large wheels in the same run succeed. It does not resolve on its own;
+route uv through a proxy (`export http_proxy=… https_proxy=…`) or set
+`UV_INDEX_URL` to a reachable mirror, and the tail finishes in seconds
+([troubleshooting: cold uv sync loop-fail](troubleshooting.md#uv-sync-loop-fail)).
+
 MTP variant (+52.6% per-stream single-stream, 6.5 vs 4.3 tok/s — still below
 the interactive floor; use GGUF for chat):
 

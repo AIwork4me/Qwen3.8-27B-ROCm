@@ -23,6 +23,7 @@ the full tables in [`results/benchmark.md`](results/benchmark.md).
 | Kernel floor (UMA) | kernels < 6.16.9 fail env-check on Strix Halo | [#uma-bug](#uma-bug) |
 | vLLM amdsmi import | source builds need the pinned patch + `.pth` shim | [#amdsmi](#amdsmi) |
 | Dirty llama.cpp checkout | rebuild refuses to discard your uncommitted changes | [#dirty-llama-cpp-checkout](#dirty-llama-cpp-checkout) |
+| Cold `uv sync` loop-fail | 3 small PyPI packages retry forever while ~2 GiB of wheels succeed | [#uv-sync-loop-fail](#uv-sync-loop-fail) |
 
 ## llama.cpp HIP greedy degradation (`'////'` tails)
 <a id="greedy-degradation"></a>
@@ -367,3 +368,54 @@ script, `git stash pop` later. Discard them:
 echoed by the failing message itself, `scripts/lib/llama_build.sh`.)
 
 **Upstream tracking.** None — project-side safety behavior.
+
+## Cold `uv sync` loop-fails on small PyPI packages while large wheels succeed
+<a id="uv-sync-loop-fail"></a>
+
+**Symptom.** A cold-cache `uv sync --group vllm` downloads every large
+TheRock wheel cleanly — `Downloading torch (669.4MiB)`,
+`Downloading rocm-sdk-libraries-gfx1151 (574.0MiB)`,
+`Downloading rocm-sdk-core (394.8MiB)`, `Downloading triton (329.0MiB)`,
+each with its ` Downloaded …` confirmation (~2 GiB total) — then loops
+endlessly on the same three small PyPI files:
+
+```
+Downloading pillow (6.6MiB)
+Downloading numpy (15.9MiB)
+Downloading transformers (11.2MiB)
+Downloading transformers (11.2MiB)
+Downloading numpy (15.9MiB)
+Downloading pillow (6.6MiB)
+```
+
+No error is printed and no install phase ever starts; after ~60 min the
+command exits having installed **nothing** (the venv has no `torch`).
+
+**Reproduction conditions.** Cold uv cache (`UV_CACHE_DIR` pointing at an
+empty dir), `uv sync --group vllm`, no `http_proxy`/`https_proxy` in the
+environment, on this host's constrained network. Deterministic here: two
+independent no-proxy attempts loop-failed on exactly these three files
+while a third attempt with a proxy fetched all three in ~26 s and completed
+the full install (`+ torch==2.10.0+rocm7.13.0a20260513`,
+`+ triton==3.6.0+rocm7.13.0a20260513`, `rc=0`) in under a minute.
+
+**Root cause / diagnosis state.** Network route failure on specific PyPI
+CDN files, not a uv or package defect: the direct route to those three
+files' CDN endpoints stalls while every large-wheel download from the AMD
+nightly index (a different host) succeeds in the same run. uv's retry loop
+restarts the file from zero each time, so it never converges. Which files
+loop depends on the network; the pattern (few small PyPI files fail,
+everything else succeeds) is the signature.
+
+**Workaround.** Route uv through a reachable proxy —
+`export http_proxy=http://… https_proxy=http://…` — or point uv at a
+reachable mirror with `UV_INDEX_URL=https://mirror/…`. Either resolves the
+loop immediately (the three files then download in seconds and the cached
+~2 GiB of wheels installs without refetching). If you hit this, kill the
+looping sync first; it will not succeed on its own.
+
+**Upstream tracking.** None filed — local network path issue, recorded as
+first-run reality in
+[getting-started Path B](getting-started.md) and measured in the one-pass
+rehearsal receipt
+([`results/rocm-7.14/one-pass-rehearsal.md`](results/rocm-7.14/one-pass-rehearsal.md) ## Steps followed (d)).
