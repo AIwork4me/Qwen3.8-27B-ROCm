@@ -233,6 +233,27 @@ GGUF_PIT_WORKAROUND = ("Restart the server to restore greedy decoding; for "
                        "anchors stayed clean, including anchors run "
                        "immediately after 16-stream benches (METHODOLOGY §7).")
 
+# Final-review caveat (2026-08-17, controller ruling — CAVEAT route, no new
+# matrix cell, no post-freeze matrix edit): the stock quickstart's 4-slot
+# default under 4 concurrent users (unified default boot, ctx 131072) is an
+# UNMEASURED configuration. It is recorded as a caveat on the two recommended
+# quickstart c1 cells (mirrored in the README quickstart); measuring it is
+# deferred to the release plan. Honesty basis: bracketed below by the
+# c4@32768 greedy pit (unified boot — degraded) and above by the clean
+# split-mode c4@131072 cell; single-stream use is unaffected (all c1 cells
+# anchor-clean at every ctx tier).
+QUICKSTART_C4_CAVEAT_CELLS = (
+    "gguf-udq4kxl-auto-base-c1-ctx131072",
+    "gguf-udq4kxl-auto-mtp-c1-ctx131072",
+)
+QUICKSTART_C4_CAVEAT = (
+    "Caveat (2026-08-17 final review): unified-default-boot c4 at ctx 131072 "
+    "(the stock quickstart's 4-slot default under 4 concurrent users) was "
+    "NOT measured — bracketed by the c4@32768 greedy pit (unified boot, "
+    "degraded) and the clean split-mode c4@131072 cell; single-stream use is "
+    "unaffected."
+)
+
 
 def _pit_correlation(m: dict) -> str:
     n, capped = m["streams"], m["capped_streams"]
@@ -408,6 +429,8 @@ def compose_verdict(cid: str, cell: dict, m: dict, base_m: dict | None,
         if parts["ctx"] == 32768:
             conditions += (" Long-context retrieval smoke PASSED at this tier "
                            "(needle recalled at ~30K-token depth).")
+        if cid in QUICKSTART_C4_CAVEAT_CELLS:
+            conditions = f"{conditions} {QUICKSTART_C4_CAVEAT}"
 
     if override:
         reason += f" [{override['note']}]"

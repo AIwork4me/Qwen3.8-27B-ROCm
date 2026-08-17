@@ -78,9 +78,17 @@ established above ~30K by this smoke alone (one needle, one depth, one
 seed); the honest presentation is the per-tier receipts + this caveat, and
 a caution-grade verdict for deep-prompt interactive use.
 
-Every cell additionally runs the **arithmetic anchor** (greedy, temperature
-0, `expect_exact` byte check) so greedy decoding is byte-identical across
-paths and configs — a drift there invalidates cross-path comparisons.
+Every cell additionally runs the **greedy anchor** (temperature 0) so greedy
+decoding stays byte-comparable across paths and configs — a drift there
+invalidates cross-path comparisons. **Erratum (2026-08-17, final review):**
+as implemented (`scripts/prompt-sets/default.json` + `bench_client.py
+--anchor-only`) the instrument is an **echo anchor judged by substring
+match**, not an arithmetic prompt with a byte check: the prompt is "Reply
+with exactly: OK" and the judge is the literal `OK` appearing in the
+completion (`anchor_ok`). The instrument is exact enough for its purpose —
+it is what caught the `'////'` greedy-degradation pit (§6). (The design spec
+§4.3 still says "arithmetic anchor"; correcting the spec is release-plan
+scope, deliberately not edited here.)
 
 ## 2. Metrics (per cell, recorded in `cells/<id>.json`)
 
@@ -184,6 +192,10 @@ The rule-bearing Global Constraints of
 order; the first matching rung wins):
 
 1. Any abort / OOM / hang / boot failure → **`avoid`**.
+1b. *(Numbered here by the 2026-08-17 final-review erratum below — at freeze
+    time this rung lived in §6 by cross-reference only.)* Greedy
+    byte-identity anchor drift — the greedy-degradation pit (§6) →
+    **`avoid`**: the floor is moot when correctness is untrustworthy.
 2. Per-stream TPOT < 10 tok/s at a tier the configuration is presented for
    interactively (S1 always; S2 tiers per the journey framing) → **`caution`
    or `avoid`** (severity by distance below the floor: 8–10 tok/s → caution
@@ -206,6 +218,33 @@ disposes — every generated verdict is reviewed for honesty (especially
 `avoid`/`caution`: `reason` + `workaround` + `conditions` filled), and the
 review is recorded in the verdicts JSON `reviewed_by` field
 (`controller-<date>`). Auto-verdicts are never shipped unreviewed.
+
+**Erratum (2026-08-17, final-review erratum):** the implementation of the
+ladder in `scripts/gen-verdicts.py` resolved three points the frozen text
+above left open. They are recorded here as interpretations, not rule
+changes, and **the headline verdicts are unaffected** (no cell's verdict
+moved because of them):
+
+- **(a) Rung-2 severity band is scoped to c=1.** The "< 8 tok/s → avoid"
+  severity band is applied **at c=1 (S1) only**. At the S2 concurrency tiers
+  (c ≥ 4) a below-floor cell is presented with the per-journey aggregate
+  framing (the honesty clause above), so below-floor at c ≥ 4 yields
+  `caution` **with conditions**, not `avoid`. (The two cells where the
+  banded S1 rule proposed `avoid` were vLLM c1 cells and were disposed
+  `caution` by recorded controller override, not by this scoping.)
+- **(b) Rung 1b was numbered into the ladder above.** At freeze time the
+  anchor-drift / greedy-degradation pit → `avoid` rule lived in §6 and was
+  reached by cross-reference; it is now the numbered rung 1b above so the
+  ladder is self-contained. No behavior change — the generator applied it
+  from the first cell.
+- **(c) Rung 3 compares against the base counterpart too.** The regression
+  check is applied against (i) the same family's best lower-concurrency
+  aggregate (the frozen text) **and** (ii) for MTP cells, the **base
+  counterpart at the same concurrency** (MTP is a pure add-on; regressing vs
+  its own baseline is the pre-declared avoid-candidate form). This is
+  disclosed in the generator's docstring; the one verdict it moved
+  (`vllm-bf16-auto-mtp-c16-ctx262144`) went through the recorded controller
+  override in the verdicts JSON (`metrics.controller_override`).
 
 ## 4. Memory methodology
 
@@ -409,8 +448,13 @@ greedy-degeneration pit of §6 does NOT reproduce on the vLLM path.
 
 Declared by `scripts/gen-matrix.py` (deterministic: fixed iteration order,
 `generated_at` is a date, no timestamps inside cells) into
-`docs/results/matrix-714/matrix.json`; regenerate with
-`python3 scripts/gen-matrix.py` — output is byte-stable.
+`docs/results/matrix-714/matrix.json`. **Guarded regeneration (2026-08-17,
+final-review erratum): plain `python3 scripts/gen-matrix.py` REFUSES to
+write while any committed cell is `measured`** — a bare regeneration would
+silently reset the measurement manifest back to the declaration — and names
+the cells it would reset; use `--check` (compares a fresh regeneration
+against the committed file: no-op → exit 0, otherwise exit 1) or pass
+`--force` deliberately to re-emit the declaration.
 
 - **Universe:** the §1 id grammar with the path-bound weight dimension
   applied by construction — `gguf↔udq4kxl` (UD-Q4_K_XL is a GGUF-only

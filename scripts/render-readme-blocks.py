@@ -307,6 +307,30 @@ def _row(cid: str, data: dict) -> str:
             f"{m['gtt_mib']:,} | {trail} |")
 
 
+def gguf_c4_slot_note(cells: dict) -> str:
+    """Footnote for the GGUF table: the `c4` rows are NOT one configuration
+    across ctx tiers (METHODOLOGY §6) — derived from each cell's recorded
+    `slot_info` so the note can never drift from the receipts."""
+    rows = []
+    for ctx in (32768, 131072, 262144):
+        cell = cells.get(f"gguf-udq4kxl-auto-base-c4-ctx{ctx}")
+        s = (cell or {}).get("slot_info") or {}
+        if not s:
+            continue
+        if s.get("kv_unified") == "true":
+            mode = (f"unified default boot (`kv_unified='true'`, per-slot "
+                    f"window = full ctx {s.get('n_ctx_slot')} over one "
+                    f"shared KV pool)")
+        else:
+            mode = (f"split boot (`-np 4` explicit, `kv_unified='false'`, "
+                    f"per-slot window {s.get('n_ctx_slot')} = ctx/4)")
+        rows.append(f"ctx {ctx}: {mode}")
+    return ("Note on the `c4` rows (slot semantics, METHODOLOGY §6): `c4` is "
+            "not one configuration across ctx tiers — " + "; ".join(rows) +
+            ". Compare like with like (and see the quickstart caveat: "
+            "unified-default-boot c4 at ctx 131072 was not measured).")
+
+
 def render_benchmark_md(data: dict) -> str:
     v = data["vmap"]
     d = dist(data)
@@ -370,6 +394,8 @@ def render_benchmark_md(data: dict) -> str:
     out.append("|---|---|---|---|---|---|---|---|---|---|")
     for cid in gguf_ids:
         out.append(_row(cid, data))
+
+    out.append("\n" + gguf_c4_slot_note(data["cells"]) + "\n")
 
     out.append("\n## vLLM path (`4d2a68d`, BF16, ctx 262144)\n")
     kv = parse_kv_line(data["cells"]["vllm-bf16-auto-base-c1-ctx262144"])

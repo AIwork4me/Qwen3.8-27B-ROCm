@@ -27,11 +27,16 @@ Usage (host only; the default out path is committed evidence):
   python3 scripts/long-context-smoke.py [--out docs/results/matrix-714/long-context-smoke.json]
 
 Output JSON shape:
-  {"description", "needle", "judge", "path", "generated_utc",
+  {"description", "needle", "judge", "path", "argv", "generated_utc",
    "tiers": [{"ctx_size", "target_prompt_tokens", "prompt_tokens", "recall",
               "ttft_ms", "completion_tokens", "finish_reason",
               "answer_excerpt", "haystack", "load": {"vram_mib", "gtt_mib"},
               "boot_wall_s", "ok", "error"}]}
+
+``argv`` is the verbatim ``sys.argv`` of the invocation, so every future
+receipt self-documents its exact tier/timeout flags (the committed 247K-tier
+receipt predates this field — its run had to raise --request-timeout above
+the default; METHODOLOGY §1 records the finding, do not re-run to backfill).
 """
 from __future__ import annotations
 
@@ -223,6 +228,25 @@ def run_tier(ctx, target_tokens, port, health_timeout_s, request_timeout_s):
             time.sleep(3)
 
 
+def result_skeleton(argv=None):
+    """Top-level receipt fields, including the verbatim invocation argv so
+    every future receipt self-documents its exact tier/timeout flags."""
+    return {
+        "description": ("S3 long-context retrieval smoke: needle 'The validation "
+                        "codename is STRIX-HALO-7741.' at ~80% depth of a synthetic "
+                        "filler haystack; prompt asks only for the codename; "
+                        "temperature 0, max_tokens 64; judge = exact substring "
+                        "'STRIX-HALO-7741' in the answer (METHODOLOGY.md S1/S3)."),
+        "needle": NEEDLE_DEFAULT,
+        "judge": f"exact substring '{JUDGE_SUBSTRING}' in the completion",
+        "path": "gguf (scripts/gguf-quickstart.sh, default unified boot, CTX_SIZE per tier)",
+        "instrument_mode": "no-thinking (chat_template_kwargs enable_thinking=false; METHODOLOGY 2 erratum)",
+        "argv": list(sys.argv if argv is None else argv),
+        "generated_utc": datetime.now(timezone.utc).isoformat(),
+        "tiers": [],
+    }
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(
         description="Long-context needle-in-haystack smoke (S3) on the GGUF path.")
@@ -242,19 +266,7 @@ def main(argv=None):
         ctx, target = spec.split(":")
         tiers.append((int(ctx), int(target)))
 
-    result = {
-        "description": ("S3 long-context retrieval smoke: needle 'The validation "
-                        "codename is STRIX-HALO-7741.' at ~80% depth of a synthetic "
-                        "filler haystack; prompt asks only for the codename; "
-                        "temperature 0, max_tokens 64; judge = exact substring "
-                        "'STRIX-HALO-7741' in the answer (METHODOLOGY.md S1/S3)."),
-        "needle": NEEDLE_DEFAULT,
-        "judge": f"exact substring '{JUDGE_SUBSTRING}' in the completion",
-        "path": "gguf (scripts/gguf-quickstart.sh, default unified boot, CTX_SIZE per tier)",
-        "instrument_mode": "no-thinking (chat_template_kwargs enable_thinking=false; METHODOLOGY 2 erratum)",
-        "generated_utc": datetime.now(timezone.utc).isoformat(),
-        "tiers": [],
-    }
+    result = result_skeleton()
     for ctx, target in tiers:
         print(f"== tier ctx={ctx} target~{target} tokens ==", flush=True)
         rec = run_tier(ctx, target, args.port, args.health_timeout,

@@ -317,3 +317,20 @@ def test_long_context_smoke_builder_places_needle_at_80_percent():
     prompt2, _ = mod.build_haystack(1000, count, needle="The validation codename is STRIX-HALO-7741.",
                                     question=needle_q, template_margin=64)
     assert prompt2 == prompt
+
+
+def test_long_context_smoke_receipt_records_invocation_argv():
+    # Final-review fix (2026-08-17): every future receipt self-documents its
+    # exact invocation (tiers/timeouts), verbatim sys.argv of the run. The
+    # committed receipt predates the field (its 247K tier needed a raised
+    # --request-timeout); do not re-run to backfill.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "long_context_smoke", ROOT / "scripts" / "long-context-smoke.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    argv = ["long-context-smoke.py", "--tiers", "262144:228000",
+            "--request-timeout", "5400"]
+    rec = mod.result_skeleton(argv)
+    assert rec["argv"] == argv, "argv must be recorded verbatim"
+    assert isinstance(rec["tiers"], list) and rec["needle"] in rec["description"]

@@ -27,9 +27,14 @@ WITH_MTP=1 bash scripts/gguf-quickstart.sh   # +28% per-stream: 13.0 tok/s per s
 Point any OpenAI-compatible client at `http://127.0.0.1:8080/v1`. For
 262144-token context, vision, or aggregate batch throughput (to 38.6 tok/s),
 serve vLLM instead (`scripts/03-serve-vllm.sh`, port 8000) — it is the
-greedy-degradation-free path but not interactive on this host. Multi-stream
-GGUF loads (c8/c16) hit a greedy-degradation pit; see
-[Known good / known bad](#known-good--known-bad).
+greedy-degradation-free path but not interactive on this host. The measured
+greedy-degradation pit hits the c8/c16 split-mode loads (`-np 8`/`-np 16` at
+ctx 131072) **and** c4 on the unified default boot at ctx 32768
+(`gguf-udq4kxl-auto-base-c4-ctx32768`); see
+[Known good / known bad](#known-good--known-bad). Caveat: unified-default-boot
+c4 at ctx 131072 (the stock quickstart's 4-slot default under 4 concurrent
+users) was **not measured** — bracketed by the c4@32768 pit and the clean
+split-mode c4@131072 cell; single-stream use is unaffected.
 
 ## Serving paths
 

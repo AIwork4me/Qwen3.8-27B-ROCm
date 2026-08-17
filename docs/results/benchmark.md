@@ -38,6 +38,9 @@ Per-stream medians over **healthy streams only** (≥2 content tokens — stream
 | [`gguf-udq4kxl-auto-mtp-c4-ctx131072`](matrix-714/cells/gguf-udq4kxl-auto-mtp-c4-ctx131072.json) | ⚠️ caution | 9.02 | 6.87 | 110.9 | 10.89 | 21.7 s | ok | 29,272 | caution |
 | [`gguf-udq4kxl-auto-mtp-c8-ctx131072`](matrix-714/cells/gguf-udq4kxl-auto-mtp-c8-ctx131072.json) | ❌ avoid | 2.07 | 1.89 | 483.7 | 10.66 | 44.8 s | FAILED | 31,712 | avoid |
 
+Note on the `c4` rows (slot semantics, METHODOLOGY §6): `c4` is not one configuration across ctx tiers — ctx 32768: unified default boot (`kv_unified='true'`, per-slot window = full ctx 32768 over one shared KV pool); ctx 131072: split boot (`-np 4` explicit, `kv_unified='false'`, per-slot window 32768 = ctx/4); ctx 262144: unified default boot (`kv_unified='true'`, per-slot window = full ctx 262144 over one shared KV pool). Compare like with like (and see the quickstart caveat: unified-default-boot c4 at ctx 131072 was not measured).
+
+
 ## vLLM path (`4d2a68d`, BF16, ctx 262144)
 
 Boots: base healthy in 171 s (GTT 75,040 MiB: weights 51.1 GiB, KV 19.57 GiB, rest activations/buffers — KV = 313,650 tokens = 1.20x the 262,144 max-len); mtp healthy in 226 s (KV 18.59 GiB = 279,146 tokens = 1.06x). Engine args captured verbatim per cell; `max_num_seqs` never overridden (pin default 1024). All 8 greedy anchors `OK` — the GGUF §6 pit does not reproduce on this path.

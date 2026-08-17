@@ -31,7 +31,7 @@
         "avoid_candidate": false,
         "controller_override": null
       },
-      "conditions": "Single-user interactive chat at the validated defaults (UD-Q4_K_XL, ctx 131072). TTFT 5.1 s on ~1.4K-token prompts; concurrency demotes per-stream below the floor (see the c4 cells)."
+      "conditions": "Single-user interactive chat at the validated defaults (UD-Q4_K_XL, ctx 131072). TTFT 5.1 s on ~1.4K-token prompts; concurrency demotes per-stream below the floor (see the c4 cells). Caveat (2026-08-17 final review): unified-default-boot c4 at ctx 131072 (the stock quickstart's 4-slot default under 4 concurrent users) was NOT measured — bracketed by the c4@32768 greedy pit (unified boot, degraded) and the clean split-mode c4@131072 cell; single-stream use is unaffected."
     },
     {
       "id": "gguf-udq4kxl-auto-base-c1-ctx262144",
@@ -291,7 +291,7 @@
           "base_aggregate_tok_s": 8.45
         }
       },
-      "conditions": "+28.2% is the PER-STREAM basis (13.0 vs 10.1 tok/s median, c1 ctx 131072); aggregate basis +20.8% (10.2 vs 8.4 tok/s). Payoff shrinks under concurrency: c4 median 9.0 tok/s (below floor), and c8/c16 hit the anchor-degradation pit (avoid cells)."
+      "conditions": "+28.2% is the PER-STREAM basis (13.0 vs 10.1 tok/s median, c1 ctx 131072); aggregate basis +20.8% (10.2 vs 8.4 tok/s). Payoff shrinks under concurrency: c4 median 9.0 tok/s (below floor), and c8/c16 hit the anchor-degradation pit (avoid cells). Caveat (2026-08-17 final review): unified-default-boot c4 at ctx 131072 (the stock quickstart's 4-slot default under 4 concurrent users) was NOT measured — bracketed by the c4@32768 greedy pit (unified boot, degraded) and the clean split-mode c4@131072 cell; single-stream use is unaffected."
     },
     {
       "id": "gguf-udq4kxl-auto-mtp-c16-ctx131072",

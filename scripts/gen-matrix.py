@@ -5,8 +5,16 @@ Deterministic by construction: fixed iteration order, no timestamps inside
 cells, `generated_at` is a constant date. Re-running reproduces the same
 bytes (until the constants below change). This emits the DECLARATION (all
 valid cells `planned`, unsupported tiers `dropped`); Tasks 3/4 flip statuses
-to `measured` as cells run — regenerating resets to the declaration, which
-is the intended semantics of a declaration generator.
+to `measured` as cells run — regenerating resets those statuses back to the
+declaration. That reset is a CLOBBER of the measurement manifest, so since
+the 2026-08-17 final-review guard a plain run REFUSES to write while any
+committed cell is `measured`:
+
+    python3 scripts/gen-matrix.py            # guarded: refuses if measured cells
+                                             # would be reset (names them)
+    python3 scripts/gen-matrix.py --check    # exit 0 iff regeneration is a
+                                             # no-op vs the committed file
+    python3 scripts/gen-matrix.py --force    # re-emit the declaration anyway
 
 Cell id grammar (shared with schemas/benchmark-verdicts.schema.json and the
 cell runners — keep the literal in sync):
@@ -27,6 +35,7 @@ Rules encoded here (see docs/results/METHODOLOGY.md §8):
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -100,12 +109,11 @@ def build_cells() -> list[dict]:
     return cells
 
 
-def main() -> None:
+def build_matrix() -> dict:
     cells = build_cells()
     ids = [c["id"] for c in cells]
     assert len(ids) == len(set(ids)), "duplicate cell ids"
-
-    matrix = {
+    return {
         "generated_at": GENERATED_AT,
         "generator": "scripts/gen-matrix.py",
         "notes": [
@@ -117,17 +125,82 @@ def main() -> None:
         ],
         "cells": cells,
     }
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(matrix, indent=2) + "\n")
 
+
+def render_matrix(matrix: dict) -> str:
+    return json.dumps(matrix, indent=2) + "\n"
+
+
+def committed_measured_cells(out_path: Path | None = None) -> list[str]:
+    """Ids of cells recorded 'measured' in the committed matrix, if any."""
+    out_path = OUT if out_path is None else out_path  # read at call time
+    if not out_path.exists():
+        return []
+    try:
+        committed = json.loads(out_path.read_text())
+    except json.JSONDecodeError:
+        return []  # unreadable committed file: --check is the honest reporter
+    return [c["id"] for c in committed.get("cells", [])
+            if c.get("status") == "measured"]
+
+
+def summary(cells: list[dict]) -> str:
     n_prio = sum(1 for c in cells if c["priority"])
     counts: dict[str, int] = {}
     for c in cells:
         counts[c["status"]] = counts.get(c["status"], 0) + 1
-    print(f"wrote {OUT.relative_to(ROOT)}: {len(cells)} cells "
-          f"({counts.get('planned', 0)} planned, {counts.get('dropped', 0)} dropped), "
-          f"{n_prio} priority")
+    return (f"{len(cells)} cells ({counts.get('planned', 0)} planned, "
+            f"{counts.get('dropped', 0)} dropped), {n_prio} priority")
+
+
+def rel(path: Path) -> str:
+    """Repo-relative display path (full path when outside the repo, e.g. a
+    test sandbox redirecting OUT)."""
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = argv if argv is not None else sys.argv[1:]
+    force = "--force" in args
+    check = "--check" in args
+    matrix = build_matrix()
+    text = render_matrix(matrix)
+
+    if check:
+        committed = OUT.read_text() if OUT.exists() else ""
+        if committed != text:
+            print(f"STALE: {rel(OUT)} differs from a fresh declaration "
+                  f"(regeneration would NOT be a no-op).", file=sys.stderr)
+            print("Note: a plain rerun refuses while measured cells exist — "
+                  "re-run with --force only if resetting the measurement "
+                  "manifest is intended.", file=sys.stderr)
+            return 1
+        print(f"fresh: {rel(OUT)} is byte-identical to a fresh declaration "
+              f"({summary(matrix['cells'])})")
+        return 0
+
+    measured = committed_measured_cells()
+    if measured and not force:
+        print(f"REFUSING to write {rel(OUT)}: regeneration would reset "
+              f"{len(measured)} committed 'measured' cell(s) back to the "
+              f"declaration:", file=sys.stderr)
+        for cid in measured:
+            print(f"  would reset: {cid}", file=sys.stderr)
+        print("Re-emit deliberately with --force (statuses must then be "
+              "re-flipped by the cell runners), or compare only with "
+              "--check.", file=sys.stderr)
+        return 1
+
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    OUT.write_text(text)
+    print(f"wrote {rel(OUT)}: {summary(matrix['cells'])}"
+          + (" (--force: measurement manifest reset to the declaration)"
+             if measured else ""))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
