@@ -186,7 +186,13 @@
       same "printed page" as the copyright notice for easier
       identification within third-party archives.
 
+   Copyright 2026 Qwen3.8-27B-ROCm contributors
    Copyright 2026 Muse-Glimmer-30B-ROCm contributors
+
+   This work includes portions derived from Muse-Glimmer-30B-ROCm
+   (Apache-2.0), retained and attributed per Apache License, Version 2.0,
+   Section 4(c): the ROCm side-by-side installer pattern, script UX
+   scaffolding, and evidence-ledger conventions.
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.

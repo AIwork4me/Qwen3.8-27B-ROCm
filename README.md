@@ -12,6 +12,14 @@
 
 Design spec: `docs/superpowers/specs/2026-08-16-qwen3.8-27b-rocm-design.md`
 
+## Documentation
+
+- [Getting started](docs/getting-started.md) — prerequisites, disk budget, both serving paths with the exact validated commands
+- [Troubleshooting](docs/troubleshooting.md) — every measured pit in the standard symptom → repro → diagnosis → workaround → upstream format
+- [Adaptation map](docs/adaptation.md) — MI-series/Day-0 → RDNA gfx1151 deltas, classified by durability
+- [Results index](docs/results/README.md) — one line per validation track (spike, receipts, matrix, method)
+- [Hardware validation protocol](docs/hardware-validation.md) — adding other AMD GPUs as community evidence
+
 ## Quick start (interactive chat: the GGUF path)
 
 The benchmark matrix (20 measured cells; verdicts in
