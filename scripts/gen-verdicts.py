@@ -226,8 +226,23 @@ CONTROLLER_OVERRIDES: dict[str, dict] = {
 # Per-cell review prose (merged into reasons/conditions on top of the
 # metrics-derived text; numbers are interpolated from the raw cells so this
 # prose can never drift from the receipts).
-GGUF_PIT_UPSTREAM = ("llama.cpp HIP build 4df29be4 on gfx1151 — issue pending "
-                     "(exact mechanism unresolved at session close; METHODOLOGY §6)")
+# Updated 2026-08-18 (step 2c): the upstream control experiments
+# (docs/results/upstream-controls/) established the pit is live at master HEAD
+# 01818e495 and that candidate fix PR #25863 removes it on this host; existing
+# trackers #25992 (primary, same host — maintainer invited PR testing) and
+# #23577 (////-family) cover us, so no new issue is filed.
+GGUF_PIT_UPSTREAM = ("llama.cpp HIP on gfx1151 — live at master HEAD 01818e495 "
+                     "(2026-08-17), same pit as the 4df29be4 pin; candidate fix "
+                     "PR #25863 https://github.com/ggml-org/llama.cpp/pull/25863 "
+                     "differentially verified on this host (patched 2/2 anchor "
+                     "PASS vs unpatched 3/3 FAIL on the idle host; receipts "
+                     "docs/results/upstream-controls/); tracked upstream in "
+                     "#25992 https://github.com/ggml-org/llama.cpp/issues/25992 "
+                     "(primary — same-host bisect, maintainer invited testing "
+                     "of the PR) and #23577 "
+                     "https://github.com/ggml-org/llama.cpp/issues/23577 "
+                     "(////-family); exact mechanism unresolved at session "
+                     "close (METHODOLOGY §6)")
 GGUF_PIT_WORKAROUND = ("Restart the server to restore greedy decoding; for "
                        "multi-stream loads use the vLLM path — all 8 vLLM "
                        "anchors stayed clean, including anchors run "

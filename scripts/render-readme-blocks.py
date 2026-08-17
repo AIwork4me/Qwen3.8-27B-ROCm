@@ -276,13 +276,18 @@ def render_known_good_bad(data: dict) -> str:
     ]
     for cid in sorted(pit_ids):
         m = v[cid]["metrics"]
+        # Single source of truth: the upstream pointer comes from the verdict's
+        # own `upstream` field (GGUF_PIT_UPSTREAM in gen-verdicts.py), so the
+        # README block can never drift from configs/benchmark-verdicts.json.
+        up = v[cid].get("upstream")
+        up_txt = f"Upstream: {up}." if up else "Upstream: see verdicts."
         lines.append(
             f"- ❌ `{cid}` — greedy `'////'` corruption after sustained "
             f"multistream load (anchor failed; per-stream median "
             f"{fmt(m['per_stream_tok_s_median'])} tok/s, aggregate "
             f"{fmt(m['aggregate_tok_s'])} tok/s recorded but secondary). "
             f"Workaround: restart the server; multi-stream loads → vLLM. "
-            f"Upstream: llama.cpp HIP `4df29be4`, issue pending.")
+            f"{up_txt}")
     lines += [
         f"- ❌ `vllm-bf16-auto-mtp-c16-ctx262144` — MTP regresses vs baseline "
         f"at c16 (31.1 vs 38.6 tok/s aggregate, per-stream min 1.85 tok/s); "

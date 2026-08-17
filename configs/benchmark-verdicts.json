@@ -126,7 +126,7 @@
       },
       "conditions": "Pit correlation, stated honestly per the corrected §6 erratum: every stream hit the 256-token length cap in this bench (16-of-16), while all clean cells had early-stopping streams; the exact trigger is unresolved (not split-KV-specific: this reproduces on the unified default boot too).",
       "workaround": "Restart the server to restore greedy decoding; for multi-stream loads use the vLLM path — all 8 vLLM anchors stayed clean, including anchors run immediately after 16-stream benches (METHODOLOGY §7).",
-      "upstream": "llama.cpp HIP build 4df29be4 on gfx1151 — issue pending (exact mechanism unresolved at session close; METHODOLOGY §6)"
+      "upstream": "llama.cpp HIP on gfx1151 — live at master HEAD 01818e495 (2026-08-17), same pit as the 4df29be4 pin; candidate fix PR #25863 https://github.com/ggml-org/llama.cpp/pull/25863 differentially verified on this host (patched 2/2 anchor PASS vs unpatched 3/3 FAIL on the idle host; receipts docs/results/upstream-controls/); tracked upstream in #25992 https://github.com/ggml-org/llama.cpp/issues/25992 (primary — same-host bisect, maintainer invited testing of the PR) and #23577 https://github.com/ggml-org/llama.cpp/issues/23577 (////-family); exact mechanism unresolved at session close (METHODOLOGY §6)"
     },
     {
       "id": "gguf-udq4kxl-auto-base-c4-ctx131072",
@@ -221,7 +221,7 @@
       },
       "conditions": "Pit correlation, stated honestly per the corrected §6 erratum: every stream hit the 256-token length cap in this bench (4-of-4), while all clean cells had early-stopping streams; the exact trigger is unresolved (not split-KV-specific: this reproduces on the unified default boot too).",
       "workaround": "Restart the server to restore greedy decoding; for multi-stream loads use the vLLM path — all 8 vLLM anchors stayed clean, including anchors run immediately after 16-stream benches (METHODOLOGY §7).",
-      "upstream": "llama.cpp HIP build 4df29be4 on gfx1151 — issue pending (exact mechanism unresolved at session close; METHODOLOGY §6)"
+      "upstream": "llama.cpp HIP on gfx1151 — live at master HEAD 01818e495 (2026-08-17), same pit as the 4df29be4 pin; candidate fix PR #25863 https://github.com/ggml-org/llama.cpp/pull/25863 differentially verified on this host (patched 2/2 anchor PASS vs unpatched 3/3 FAIL on the idle host; receipts docs/results/upstream-controls/); tracked upstream in #25992 https://github.com/ggml-org/llama.cpp/issues/25992 (primary — same-host bisect, maintainer invited testing of the PR) and #23577 https://github.com/ggml-org/llama.cpp/issues/23577 (////-family); exact mechanism unresolved at session close (METHODOLOGY §6)"
     },
     {
       "id": "gguf-udq4kxl-auto-base-c8-ctx131072",
@@ -254,7 +254,7 @@
       },
       "conditions": "Pit correlation, stated honestly per the corrected §6 erratum: every stream hit the 256-token length cap in this bench (8-of-8), while all clean cells had early-stopping streams; the exact trigger is unresolved (not split-KV-specific: this reproduces on the unified default boot too).",
       "workaround": "Restart the server to restore greedy decoding; for multi-stream loads use the vLLM path — all 8 vLLM anchors stayed clean, including anchors run immediately after 16-stream benches (METHODOLOGY §7).",
-      "upstream": "llama.cpp HIP build 4df29be4 on gfx1151 — issue pending (exact mechanism unresolved at session close; METHODOLOGY §6)"
+      "upstream": "llama.cpp HIP on gfx1151 — live at master HEAD 01818e495 (2026-08-17), same pit as the 4df29be4 pin; candidate fix PR #25863 https://github.com/ggml-org/llama.cpp/pull/25863 differentially verified on this host (patched 2/2 anchor PASS vs unpatched 3/3 FAIL on the idle host; receipts docs/results/upstream-controls/); tracked upstream in #25992 https://github.com/ggml-org/llama.cpp/issues/25992 (primary — same-host bisect, maintainer invited testing of the PR) and #23577 https://github.com/ggml-org/llama.cpp/issues/23577 (////-family); exact mechanism unresolved at session close (METHODOLOGY §6)"
     },
     {
       "id": "gguf-udq4kxl-auto-mtp-c1-ctx131072",
@@ -330,7 +330,7 @@
       },
       "conditions": "Pit correlation, stated honestly per the corrected §6 erratum: every stream hit the 256-token length cap in this bench (16-of-16), while all clean cells had early-stopping streams; the exact trigger is unresolved (not split-KV-specific: this reproduces on the unified default boot too).",
       "workaround": "Restart the server to restore greedy decoding; for multi-stream loads use the vLLM path — all 8 vLLM anchors stayed clean, including anchors run immediately after 16-stream benches (METHODOLOGY §7).",
-      "upstream": "llama.cpp HIP build 4df29be4 on gfx1151 — issue pending (exact mechanism unresolved at session close; METHODOLOGY §6)"
+      "upstream": "llama.cpp HIP on gfx1151 — live at master HEAD 01818e495 (2026-08-17), same pit as the 4df29be4 pin; candidate fix PR #25863 https://github.com/ggml-org/llama.cpp/pull/25863 differentially verified on this host (patched 2/2 anchor PASS vs unpatched 3/3 FAIL on the idle host; receipts docs/results/upstream-controls/); tracked upstream in #25992 https://github.com/ggml-org/llama.cpp/issues/25992 (primary — same-host bisect, maintainer invited testing of the PR) and #23577 https://github.com/ggml-org/llama.cpp/issues/23577 (////-family); exact mechanism unresolved at session close (METHODOLOGY §6)"
     },
     {
       "id": "gguf-udq4kxl-auto-mtp-c4-ctx131072",
@@ -406,7 +406,7 @@
       },
       "conditions": "Pit correlation, stated honestly per the corrected §6 erratum: 7-of-8 streams hit the 256-token cap; the remaining stream(s) stopped early (content degraded anyway), while all clean cells had early-stopping streams; the exact trigger is unresolved (not split-KV-specific: this reproduces on the unified default boot too).",
       "workaround": "Restart the server to restore greedy decoding; for multi-stream loads use the vLLM path — all 8 vLLM anchors stayed clean, including anchors run immediately after 16-stream benches (METHODOLOGY §7).",
-      "upstream": "llama.cpp HIP build 4df29be4 on gfx1151 — issue pending (exact mechanism unresolved at session close; METHODOLOGY §6)"
+      "upstream": "llama.cpp HIP on gfx1151 — live at master HEAD 01818e495 (2026-08-17), same pit as the 4df29be4 pin; candidate fix PR #25863 https://github.com/ggml-org/llama.cpp/pull/25863 differentially verified on this host (patched 2/2 anchor PASS vs unpatched 3/3 FAIL on the idle host; receipts docs/results/upstream-controls/); tracked upstream in #25992 https://github.com/ggml-org/llama.cpp/issues/25992 (primary — same-host bisect, maintainer invited testing of the PR) and #23577 https://github.com/ggml-org/llama.cpp/issues/23577 (////-family); exact mechanism unresolved at session close (METHODOLOGY §6)"
     },
     {
       "id": "vllm-bf16-auto-base-c1-ctx262144",

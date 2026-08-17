@@ -80,9 +80,19 @@ benches (METHODOLOGY §7). Single-stream interactive use of the GGUF
 quickstart is unaffected (all `c1` cells anchor-clean,
 [`results/benchmark.md`](results/benchmark.md)).
 
-**Upstream tracking.** llama.cpp HIP build `4df29be4` on gfx1151 (ROCm 7.14,
-toolchain per [`configs/validated-stack.json`](../configs/validated-stack.json)).
-Issue pending — the filing draft with the committed evidence is
+**Upstream tracking.** llama.cpp HIP on gfx1151 (ROCm 7.14, toolchain per
+[`configs/validated-stack.json`](../configs/validated-stack.json)): reproduced
+at the pin `4df29be4` and **live at master HEAD `01818e495`** (2026-08-17) —
+control receipts in [`results/upstream-controls/`](results/upstream-controls/README.md).
+Candidate fix [PR #25863](https://github.com/ggml-org/llama.cpp/pull/25863)
+(avoid direct ROCm_Host compute on HIP integrated GPUs, OPEN) removes it on
+this host: patched 2/2 greedy-anchor PASS vs unpatched 3/3 FAIL on the idle
+host. Tracked upstream in [#25992](https://github.com/ggml-org/llama.cpp/issues/25992)
+(primary — same-host gfx1151 bisect to the HIP `prop.integrated` path; the
+AMD maintainer invited testing of the fix) and [#23577](https://github.com/ggml-org/llama.cpp/issues/23577)
+(`'////'`-family tracker); cross-linked there, **no new issue** (llama.cpp
+closes duplicates without questions; its AI policy requires owner-written
+posts). Evidence pack + owner-action brief:
 [`upstream/llama-cpp-hip-greedy-degradation.md`](upstream/llama-cpp-hip-greedy-degradation.md).
 
 ## MTP speculative decoding inverts at high concurrency

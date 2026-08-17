@@ -1,123 +1,164 @@
-# Upstream issue draft — llama.cpp (HIP) greedy-decoding degradation on gfx1151
+# llama.cpp (HIP) greedy-degradation on gfx1151 — evidence pack + owner-action brief
 
-**Status: draft, not yet filed.** Filing is an owner action (see the push
-checklist); this document is written so the issue can be posted as-is, with
-every claim traceable to a committed receipt in this repository.
+**This is not a ready-to-file issue text.** llama.cpp's
+[AI usage policy](https://github.com/ggml-org/llama.cpp/blob/master/CONTRIBUTING.md#ai-usage-policy)
+prohibits AI-written bug reports and comments (undisclosed AI usage may result
+in a permanent ban), so the text posted upstream must be written by the owner,
+in the owner's words. This document is what the repo owes the owner instead:
+the committed evidence, the links, the recommended action, and facts-only
+source notes to write from. See "Policy" below before posting anything.
 
----
+**Status (2026-08-18).** The pit measured at our pin ([METHODOLOGY §6]
+(../results/METHODOLOGY.md), five `avoid` cells) is **live at llama.cpp master
+HEAD `01818e495`** (2026-08-17) on gfx1151 / ROCm 7.14 — control E1 failed the
+greedy anchor with the identical `'////'` tail. Open PR
+[ggml-org/llama.cpp#25863](https://github.com/ggml-org/llama.cpp/pull/25863)
+("ggml-cuda: avoid direct ROCm_Host compute on HIP integrated GPUs",
+`fix/hip-apu-host-buffer`, +25/−2 in `ggml-cuda.cu`) is **differentially
+verified as a candidate fix on this host**: with the PR applied, the anchor
+passed 2/2 runs under the same load; without it, 3/3 FAILs across two upstream
+commits (idle-host tally, E0/E1/E3 vs E2). Existing trackers cover our case —
+**no new issue should be filed** (duplicate policy).
 
-**Proposed title:**
+## Control-experiment receipts (E0–E3, 2026-08-18)
 
-> [Bug] llama-server greedy decoding degenerates into `'////'` repetition
-> after sustained multi-stream load (HIP backend, gfx1151)
+Same host, model, flags, and byte-identical load sequence across all four;
+full narratives in [`../results/upstream-controls/README.md`](../results/upstream-controls/README.md).
 
-## Summary
+| Exp | Build | mmproj | Anchor after 8-stream bench | Verdict | Receipt |
+|---|---|---|---|---|---|
+| E0 | build-714 @ `4df29be4` (the pin, no rebuild) | on | FAIL, tail `"////////////////"` | pit reproduced (reference) | [`../results/upstream-controls/e0-build714-4df29be4.json`](../results/upstream-controls/e0-build714-4df29be4.json) |
+| E1 | master HEAD `01818e495` (fresh clone, HIP build) | on | FAIL, tail `"////////////////"` | **pit live at master** | [`../results/upstream-controls/e1-master-01818e49.json`](../results/upstream-controls/e1-master-01818e49.json) |
+| E2 | master HEAD `01818e495` + PR #25863 patch (head `ce82541a`) | on | PASS `"OK"` — 2/2 runs | **pit absent with the PR** | [`../results/upstream-controls/e2-master-pr25863.json`](../results/upstream-controls/e2-master-pr25863.json) |
+| E3 | master HEAD `01818e495` (patch reverted) | **off** | FAIL, tail `"////////////////"` | pit reproduces without mmproj | [`../results/upstream-controls/e3-master-nommproj.json`](../results/upstream-controls/e3-master-nommproj.json) |
 
-After a sustained multi-stream benchmark on a single `llama-server`
-instance, all subsequent greedy (temperature 0) requests on that instance
-degenerate into a `'////'` repetition loop. The server keeps serving (no
-crash, no error in the log); a restart restores correct greedy decoding.
-Reproduced on both KV modes (unified default boot and explicit `-np` split
-boots). Not reproduced on the vLLM path serving the same model on the same
-host (see Scope).
+## Recommended owner action
 
-## Environment
+1. **Comment on [#25992](https://github.com/ggml-org/llama.cpp/issues/25992)
+   (primary).** It is the same-host tracker: gfx1151 / Radeon 8060S, ROCm 7.14,
+   parallel-slot corruption bisected to the HIP `prop.integrated` path
+   (`c7d87229`), with `'////'` degeneration already logged in-thread as a
+   secondary symptom. Its author (AMD contributor liminfei-amd) wrote PR #25863
+   and explicitly invited affected gfx1150/gfx1151 users to test it and share
+   results — E1/E2 are exactly that test, plus the master-HEAD liveness datum.
+2. **Cross-link from [#23577](https://github.com/ggml-org/llama.cpp/issues/23577)**,
+   the `////`-family tracker where ggerganov is collecting hardware /
+   CUDA-ROCm / llama.cpp versions from sufferers: a short comment noting the
+   gfx1151 + ROCm 7.14 data sits in the #25992 thread, with our receipts.
+3. **Do NOT file a new issue.** CONTRIBUTING.md: duplicates are closed without
+   questions, and both symptom families are already maintainer-attended. A new
+   issue would also carry the AI-written-body risk this pack exists to avoid.
 
-| Component | Value |
-|---|---|
-| llama.cpp | `4df29be4f4c3673f428170fda944a5b19f743bb8` (server banner: `version: 0.1.0-dev (build 1, commit 4df29be4f)`) |
-| Build | HIP backend, `-DGPU_TARGETS=gfx1151`, toolchain ROCm 7.14.0 (`~/rocm-7.14.0`) |
-| Host | AMD Ryzen AI MAX+ PRO 395 / Radeon 8060S (`gfx1151`), 94 GiB system RAM, 80 GiB GPU-visible GTT pool; kernel `6.17.0-1032-oem` |
-| Model | `Qwen3.8-27B-UD-Q4_K_XL.gguf` (unsloth UD-Q4_K_XL, 16.69 GiB, arch `qwen35` — hybrid GDN linear attention + 16 full-attention layers + 1 MTP block) with `mmproj-F16.gguf` attached |
-| Server flags (default boot) | `--ctx-size 131072 -ngl 99 --jinja` (+ `--mmproj mmproj-F16.gguf`) |
-| Server flags (concurrency cells) | the above plus `-np 8` / `-np 16`; MTP variants add `--spec-type draft-mtp` |
+Sequencing: comment only **after the repo is public and pushed**
+([PUSH-CHECKLIST.md](PUSH-CHECKLIST.md) steps 2/4) so the receipt links in
+"Public receipt URLs" below resolve for maintainers.
 
-Pins and build provenance: [`configs/validated-stack.json`](../../configs/validated-stack.json).
+## Source notes for an owner-written comment — FACTS ONLY
 
-## Reproduction
+*(These are reference facts drawn from committed receipts, not comment prose.
+llama.cpp prohibits AI-written reports/comments: the posted text must be the
+owner's own writing; any AI assistance must be disclosed per the policy. No
+ready-to-paste comment is provided here on purpose.)*
 
-The exact sequence, quoted verbatim from the measurement methodology
-([`results/METHODOLOGY.md`](../results/METHODOLOGY.md) §6, "Measured pit at
-the pin"):
+Host / stack (all experiments):
 
-> after a sustained multi-stream bench, greedy decoding on the SAME server
-> instance degenerates into a `'////…'` repetition loop — the byte-identity
-> anchor fails persistently (every subsequent greedy request, streaming or
-> not). Reproduced deterministically on `-np 8` (fresh boot → 8-stream bench
-> → first greedy anchor fails; with and without mmproj) and measured in cells
-> `base-c4-ctx32768` (unified boot — NOT split-specific), `base-c8`,
-> `base-c16`, `mtp-c8`, `mtp-c16` @131072.
+- AMD Ryzen AI MAX+ PRO 395 / Radeon 8060S iGPU (`gfx1151`), 94 GiB RAM,
+  ~80 GiB GPU-visible GTT pool; kernel `6.17.0-1032-oem`.
+- ROCm 7.14.0 toolchain at `~/rocm-7.14.0` (pins in
+  [`../../configs/validated-stack.json`](../../configs/validated-stack.json)).
+- Model `Qwen3.8-27B-UD-Q4_K_XL.gguf` (unsloth UD-Q4_K_XL, 16.69 GiB, arch
+  `qwen35` — hybrid GDN linear attention + 16 full-attention layers + MTP
+  block), `mmproj-F16.gguf` attached except in E3.
+- Server flags all runs: `--ctx-size 131072 -ngl 99 --jinja -np 8` (+ mmproj
+  unless E3); every boot logged `n_slots = 8, n_ctx_slot = 16384,
+  kv_unified = 'false'` (split mode).
+- Load: 8 concurrent `/v1/chat/completions` streams, deterministic 8-prompt
+  set (~1.3–1.5K prompt tokens/stream), generation capped at 256 tokens,
+  temperature 0.7 / top_p 0.95, `--no-thinking`; gate afterwards = one greedy
+  anchor `Reply with exactly: OK` (temperature 0), judged by the receipt's
+  `anchor_ok` + verbatim `content_tail`.
 
-Concretely:
+Per experiment:
 
-1. Boot `llama-server` with the flags above (fresh process).
-2. Run a sustained multi-stream load: N concurrent `/v1/chat/completions`
-   streams (N = 4/8/16 measured), deterministic prompt set — 8 prompts,
-   ~1.3–1.5K prompt tokens per stream — generation capped at 256 tokens,
-   temperature 0.7 / top_p 0.95 (instrument:
-   [`scripts/bench_client.py`](../../scripts/bench_client.py), prompt set
-   [`scripts/prompt-sets/default.json`](../../scripts/prompt-sets/default.json)).
-3. After the bench completes, issue a single greedy request:
-   `"Reply with exactly: OK"` with `temperature: 0`, `max_tokens: 256`.
-4. Observed: the completion is a run of `/` characters instead of `OK`, on
-   every subsequent greedy request, for the remainder of the server process's
-   lifetime. Streaming and non-streaming behave the same.
+- **E0 (pin reference)** — existing `third_party/llama.cpp` build-714 binary
+  at `4df29be4f4c3…` (fingerprinted `scripts/05-build-llama.sh` build; server
+  banner `0.1.0-dev (build 1, commit 4df29be4f)`), no rebuild. Load shape:
+  8/8 streams capped at 256 tokens (`finish_reason=length`), aggregate
+  17.9 tok/s, 0 failed streams. Anchor FAIL, tail `"////////////////"`
+  (16 `/` characters = the whole completion; the runner records the last 200).
+  **Load-interference caveat:** attempt 1 ran while a 16-job HIP compile
+  saturated the host and PASSED (6/8 capped, 2 early stops); attempt 2 on the
+  idle host reproduced the pit. All FAIL verdicts cited are idle-host runs.
+- **E1 (master HEAD)** — fresh clone at `/tmp/lc-master` (pin untouched),
+  built with flags identical to `05-build-llama.sh`: `-DGGML_HIP=ON
+  -DAMDGPU_TARGETS=gfx1151 -DGPU_TARGETS=gfx1151 -DCMAKE_BUILD_TYPE=Release
+  -DROCM_PATH=…/rocm-7.14.0`; HEAD `01818e4956858…` (2026-08-17, banner
+  `0.1.1-dev (build 10480, commit 01818e495)`). Load shape: 8/8 capped,
+  aggregate 17.7 tok/s, 0 failed. Anchor FAIL, tail `"////////////////"` —
+  the pit is NOT fixed at master.
+- **E2 (candidate fix)** — the E1 tree with PR #25863 applied (`git apply`,
+  clean tree verified first; hunks offset +148..+175; incremental rebuild;
+  patch compiles into `libggml-hip.so`, `llama-server` binary is an unchanged
+  launcher). PR state at test time: OPEN, unmerged, head `ce82541a`, branch
+  `fix/hip-apu-host-buffer`, diffstat +25/−2, file `ggml/src/ggml-cuda/ggml-cuda.cu`.
+  Load shape: 7/8 capped + 1 early stop (205 tok), aggregate 16.9 tok/s — the
+  shape of the degraded `mtp-c8` matrix cell. Anchor PASS `"OK"` **2/2 runs**
+  (attempt 2: 7/8 capped + 1 early stop at 190 tok, 16.2 tok/s; raw repeat at
+  `/tmp/e2-repeat.json`, uncommitted).
+- **E3 (attribution control)** — E1 build, patch reverted, tree verified
+  clean, booted `WITH_MMPROJ=0` (no `--mmproj`). Load shape: 8/8 capped,
+  aggregate 17.9 tok/s. Anchor FAIL, tail `"////////////////"` — the vision
+  projector is not the trigger.
 
-**Slot semantics at this commit** (source-verified and confirmed by the boot
-line `srv load_model: initializing, n_slots = …, n_ctx_slot = …,
-kv_unified = '…'` recorded in every cell receipt; details in METHODOLOGY §6):
-the default boot (no `-np`) resolves auto `n_parallel = 4` and forces
-`kv_unified = true` — 4 slots each seeing the full `--ctx-size` window over
-one shared KV pool. An explicit `-np N` keeps `kv_unified = false` — split
-mode, each slot's window = `--ctx-size`/N. **The pit reproduces in both
-modes**, so it is not specific to split KV.
+Idle-host tally: unpatched 3/3 FAIL across two upstream commits (`4df29be4`,
+`01818e495`); patched 2/2 PASS. Samples are small; receipts carry per-attempt
+bench shapes.
 
-## Observed (committed evidence)
+Original matrix evidence (the pin-era record the comment can point to):
+five degraded cells — `base-c4-ctx32768` (unified default boot),
+`base-c8`/`base-c16`, `mtp-c8`/`mtp-c16` @131072 — all anchors FAILED with
+the same tail; clean cells the same day: every `c1` tier, `-np 4` @131072,
+unified c4 @262144; vLLM path serving the same model: 8/8 cells anchor-clean
+including anchors immediately after 16-stream benches. Cells in
+[`../results/matrix-714/cells/`](../results/matrix-714/cells/), tables in
+[`../results/benchmark.md`](../results/benchmark.md), pit entry in
+[`../troubleshooting.md`](../troubleshooting.md) (#greedy-degradation).
 
-All five degraded cells record `anchor: {ok: false, content_tail:
-"////////////////"}` and `degraded: true` — the tail is the last 200
-characters of the anchor completion as captured by the runner, so the entire
-completion was 16 `/` characters. Throughput numbers are recorded but
-secondary (correctness is untrustworthy):
+Not claimed (keep this honesty in the owner's text): mechanism inside
+llama.cpp is not analyzed beyond the patch-on/patch-off differential; no
+CPU/CUDA/other-GPU/other-quant data; correlation between all-capped benches
+and the pit is stated as correlation only; the all-capped observation is
+confounded by the E0 load-interference caveat above.
 
-| Cell | Boot (`n_slots`/`n_ctx_slot`/`kv_unified`) | Bench streams | Anchor | Receipt |
-|---|---|---|---|---|
-| `gguf-udq4kxl-auto-base-c4-ctx32768` | unified: 4 / 32768 / `'true'` | 4-of-4 hit the 256-token cap (`finish_reason=length`) | FAILED | [`../results/matrix-714/cells/gguf-udq4kxl-auto-base-c4-ctx32768.json`](../results/matrix-714/cells/gguf-udq4kxl-auto-base-c4-ctx32768.json) |
-| `gguf-udq4kxl-auto-base-c8-ctx131072` | split: 8 / 16384 / `'false'` | 8-of-8 capped | FAILED | [`../results/matrix-714/cells/gguf-udq4kxl-auto-base-c8-ctx131072.json`](../results/matrix-714/cells/gguf-udq4kxl-auto-base-c8-ctx131072.json) |
-| `gguf-udq4kxl-auto-base-c16-ctx131072` | split: 16 / 8192 / `'false'` | 16-of-16 capped | FAILED | [`../results/matrix-714/cells/gguf-udq4kxl-auto-base-c16-ctx131072.json`](../results/matrix-714/cells/gguf-udq4kxl-auto-base-c16-ctx131072.json) |
-| `gguf-udq4kxl-auto-mtp-c8-ctx131072` | split + draft-mtp: 8 / 16384 / `'false'` | 7-of-8 capped (one stream stopped at 2 tokens, `finish_reason=stop`) | FAILED | [`../results/matrix-714/cells/gguf-udq4kxl-auto-mtp-c8-ctx131072.json`](../results/matrix-714/cells/gguf-udq4kxl-auto-mtp-c8-ctx131072.json) |
-| `gguf-udq4kxl-auto-mtp-c16-ctx131072` | split + draft-mtp: 16 / 8192 / `'false'` | 16-of-16 capped | FAILED | [`../results/matrix-714/cells/gguf-udq4kxl-auto-mtp-c16-ctx131072.json`](../results/matrix-714/cells/gguf-udq4kxl-auto-mtp-c16-ctx131072.json) |
+## Policy
 
-Clean cells on the same build/host same day (for contrast): every `c1` cell
-at ctx 32768/131072/262144, `-np 4` @131072, and the unified c4 @262144 —
-all anchors `OK`, and all of their benches had early-stopping streams.
-Full tables: [`../results/benchmark.md`](../results/benchmark.md).
+- [CONTRIBUTING.md — AI usage policy](https://github.com/ggml-org/llama.cpp/blob/master/CONTRIBUTING.md#ai-usage-policy):
+  "It is strictly prohibited to use AI to write your posts for you (bug
+  reports, feature requests, …)"; undisclosed AI usage may result in a
+  permanent ban. The comment must be owner-written; disclose AI assistance if
+  any was used in producing it.
+- [CONTRIBUTING.md — duplicates](https://github.com/ggml-org/llama.cpp/blob/master/CONTRIBUTING.md):
+  search first; duplicates are likely closed without questions — hence
+  comment-on-trackers, not a new issue.
+- Trackers/fix this pack concerns:
+  [#25992](https://github.com/ggml-org/llama.cpp/issues/25992) (primary;
+  same-host bisect → HIP `prop.integrated`; maintainer invited testing of the
+  fix), [#23577](https://github.com/ggml-org/llama.cpp/issues/23577)
+  (`////`-family; ggerganov collecting hardware/versions),
+  [PR #25863](https://github.com/ggml-org/llama.cpp/pull/25863) (candidate
+  fix, differentially verified here).
 
-## Scope
+## Public receipt URLs (valid once `main` is pushed)
 
-- **Both KV modes affected** (unified default boot and `-np` split boots;
-  see the table).
-- **Server-lifetime persistence**: once degraded, every subsequent greedy
-  request on that process fails the anchor; a fresh process is clean until
-  the next sustained multistream load.
-- **Correlation, stated as correlation**: the degraded cells' benches were
-  all-capped (every stream hit the 256-token generation cap) in 4 of 5
-  cells, 7-of-8 in the fifth, while every clean cell's bench had
-  early-stopping streams. We make no claim about the mechanism.
-- **Not reproduced on vLLM** serving the same model on the same host
-  (different backend, so not an equivalence claim): all 8 vLLM cells'
-  greedy anchors returned `OK`, including anchors run immediately after
-  16-stream benches (METHODOLOGY §7).
-- **Not investigated**: CPU/CUDA backends, other GPUs, other quants, other
-  architectures — out of this session's scope.
+For pasting into the GitHub comments (verify they resolve from an incognito
+session first, per PUSH-CHECKLIST step 6):
 
-## Environment artifacts available on request
+```text
+https://raw.githubusercontent.com/AIwork4me/Qwen3.8-27B-ROCm/main/docs/results/upstream-controls/e0-build714-4df29be4.json
+https://raw.githubusercontent.com/AIwork4me/Qwen3.8-27B-ROCm/main/docs/results/upstream-controls/e1-master-01818e49.json
+https://raw.githubusercontent.com/AIwork4me/Qwen3.8-27B-ROCm/main/docs/results/upstream-controls/e2-master-pr25863.json
+https://raw.githubusercontent.com/AIwork4me/Qwen3.8-27B-ROCm/main/docs/results/upstream-controls/e3-master-nommproj.json
+```
 
-Server boot logs and per-cell logs are retained by the reporter; the
-committed evidence set (cell JSONs with verbatim boot lines, stream records,
-anchor tails; methodology; validation receipts for the build) is in this
-repository: [`../results/matrix-714/cells/`](../results/matrix-714/cells/),
-[`../results/METHODOLOGY.md`](../results/METHODOLOGY.md),
-[`../results/rocm-7.14/gguf-validation.md`](../results/rocm-7.14/gguf-validation.md).
-Project-side tracking: [`../troubleshooting.md`](../troubleshooting.md)
-(greedy-degradation section).
+Index with method and findings:
+[`docs/results/upstream-controls/README.md`](../results/upstream-controls/README.md).

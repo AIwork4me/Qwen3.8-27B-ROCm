@@ -73,7 +73,8 @@ flags identical to `scripts/05-build-llama.sh`
 
 These experiments CHANGE nothing in the committed matrix or verdicts: the
 `avoid` grades for the five degraded cells stand as measured at the pin
-(`4df29be4`). They do add the upstream story the issue draft
-([`../../upstream/llama-cpp-hip-greedy-degradation.md`](../../upstream/llama-cpp-hip-greedy-degradation.md))
-needs: the pit persists at master HEAD `01818e495` (2026-08-17) and is a
-candidate differential for PR #25863, which was open at that HEAD.
+(`4df29be4`). They are the backbone of the upstream evidence pack +
+owner-action brief
+([`../../upstream/llama-cpp-hip-greedy-degradation.md`](../../upstream/llama-cpp-hip-greedy-degradation.md)):
+the pit persists at master HEAD `01818e495` (2026-08-17) and is a candidate
+differential for PR #25863, which was open at that HEAD.

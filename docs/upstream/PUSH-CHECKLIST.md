@@ -2,8 +2,8 @@
 
 Everything on this page requires the owner's GitHub account or an owner
 decision; the release-prep agent deliberately did none of it. Work top to
-bottom: merge, tag, push, watch CI, then the upstream issue and the verdicts
-update.
+bottom: merge, tag, push, watch CI, then the upstream comments and the
+verdicts update.
 
 **No secrets.** Never put a token in this tree, in a command line, or in a
 commit message. Authenticate once via `gh auth login` or the git credential
@@ -47,7 +47,7 @@ Suggested target, following the org precedent of
 - **`AIwork4me/Qwen3.8-27B-ROCm`** — create it as an **empty** repository
   (no README, no .gitignore, no license — this tree already carries them, and
   a seeded README would collide with the push). Visibility is an owner
-  decision; note that the upstream issue in step 6 links receipts by URL, so
+  decision; note that the upstream comments in step 6 link receipts by URL, so
   it presumes the repo is readable by the llama.cpp maintainers.
 
 Then:
@@ -105,42 +105,56 @@ scripts/*.sh scripts/lib/*.sh`, `uv run --no-sync actionlint`,
 push again — nothing here needs a workflow edit unless actionlint flags the
 YAML itself.
 
-## 6. File the llama.cpp upstream issue (owner account)
+## 6. Post upstream (owner account, owner-written text only)
 
-The draft is `docs/upstream/llama-cpp-hip-greedy-degradation.md` — written to
-be posted **as-is** (title, environment, reproduction sequence, committed
-evidence table, scope statement). File it from the owner's account against
-`ggml.org/llama.cpp` → Issues → Bug report. Pre-flight:
+**Do not file a new issue.** The control experiments
+(`docs/results/upstream-controls/`) showed the pit is live at master HEAD
+`01818e495` and disappears with candidate fix PR #25863 applied — i.e. our
+bug belongs to the already-tracked #25992/#25863 cluster, and llama.cpp
+closes duplicates without questions. The action is:
 
-- Verify the receipt links in the draft resolve from an incognito session
+1. Comment on [ggml-org/llama.cpp#25992](https://github.com/ggml-org/llama.cpp/issues/25992)
+   (primary — same host; the AMD maintainer invited affected users to test
+   the fix PR and share results).
+2. Cross-link from [#23577](https://github.com/ggml-org/llama.cpp/issues/23577)
+   (the `'////'`-family tracker) pointing at your #25992 comment.
+
+The evidence pack is `docs/upstream/llama-cpp-hip-greedy-degradation.md` —
+receipts table, recommended action, facts-only source notes, and the public
+receipt URLs. **Write the comment yourself**: llama.cpp's
+[AI usage policy](https://github.com/ggml-org/llama.cpp/blob/master/CONTRIBUTING.md#ai-usage-policy)
+prohibits AI-written bug reports and comments (undisclosed AI usage may mean
+a permanent ban); disclose any AI assistance if you used it. Pre-flight:
+
+- Verify the receipt links in the pack resolve from an incognito session
   (they point into this repository — step 2's visibility decision matters).
-- Keep the draft's honesty: correlation stated as correlation; the
-  "not investigated" list stays.
+- Keep the pack's honesty: correlation stated as correlation; the
+  "not claimed" list stays; small samples stay small.
 
-Record the filed issue URL — step 7 consumes it.
+Record the posted comment URLs — step 7's constant already points at the
+trackers, but any future wording change follows the same mechanism.
 
-## 7. Update the verdicts' `upstream` fields — the actual mechanism
+## 7. The verdicts' `upstream` fields — the actual mechanism
 
-How it is really wired (verified against the code at release prep, in
-`scripts/gen-verdicts.py`): the release **plan** described "an
-`UPSTREAM_ISSUE_URL` env or configs value", but no such wiring was shipped —
-the per-cell `upstream` string emitted into
-`configs/benchmark-verdicts.json` (and the README known-bad block) is the
-module-level constant **`GGUF_PIT_UPSTREAM`** in `scripts/gen-verdicts.py`,
-currently reading *"…issue pending (exact mechanism unresolved at session
-close; METHODOLOGY §6)"*. So the real post-filing step is:
+How it is wired (verified against the code at release prep, in
+`scripts/gen-verdicts.py`): the per-cell `upstream` string emitted into
+`configs/benchmark-verdicts.json` (and the README known-bad block, which
+renders it verbatim from the verdicts) is the module-level constant
+**`GGUF_PIT_UPSTREAM`** in `scripts/gen-verdicts.py`. Updated at step 2c
+(2026-08-18): it now points at #25992 (primary tracker), #23577 (family),
+PR #25863 (candidate fix, differentially verified), and the receipts path
+`docs/results/upstream-controls/` — no filed-issue URL exists because no new
+issue is filed. If you ever need to update it again:
 
-1. Edit `GGUF_PIT_UPSTREAM` in `scripts/gen-verdicts.py` to carry the filed
-   issue URL (keep the existing precision about the unresolved mechanism).
+1. Edit `GGUF_PIT_UPSTREAM` in `scripts/gen-verdicts.py`.
 2. Regenerate: `python3 scripts/gen-verdicts.py` (rewrites
    `configs/benchmark-verdicts.json`).
 3. Propagate: `python3 scripts/render-readme-blocks.py` (README blocks +
    `docs/results/benchmark.md`).
 4. Gate: both `--check` runs from step 0 plus
    `uv run --no-sync pytest -m "not gpu and not server"`.
-5. Commit (e.g. `docs: record filed llama.cpp issue URL in verdicts`) and
-   push. A commit after the tag is fine — it records post-filing status; cut
-   it before step 3 instead if you file the issue first.
+5. Commit and push. A commit after the tag is fine — it records post-filing
+   status.
 
 ## 8. Announce (optional)
 
@@ -158,5 +172,5 @@ community forums, Qwen discussions/discord.
 | Remote name / org | `AIwork4me/Qwen3.8-27B-ROCm` (suggested; muse-rocm precedent) |
 | Repo visibility | Owner call; step 6 presumes maintainers can read the receipts |
 | Merge style | `--no-ff` (fast-forward acceptable) |
-| Issue filing order | After push (links must resolve); re-tag not needed either way |
+| Upstream comments | After push (links must resolve); on #25992 + #23577, no new issue; re-tag not needed |
 | Announcement | Optional, host-scoped claims only |
