@@ -28,8 +28,10 @@ evidence, never a project claim.
   is a historical fallback). Install it with the manifest-driven installer:
   `bash scripts/install-rocm-7.14.sh` (URL/size/SHA256 come from
   [`configs/rocm-7.14.json`](../configs/rocm-7.14.json)).
-- **Host tools:** `git`, `curl`, `python3` (and `cmake`/`ninja` for builds;
-  the scripts print the distro package for anything missing).
+- **Host tools:** `git`, `curl`, `python3`, and `cmake` for the llama.cpp
+  build (the build script prints the distro package for whichever command
+  is missing). The vLLM path self-installs its build tools (`cmake`, `ninja`)
+  into the venv — no host install needed.
 - **uv** (the vLLM path): https://docs.astral.sh/uv/ — `uv` manages the venv
   the serve scripts run through.
 
@@ -42,10 +44,10 @@ evidence, never a project claim.
 | GGUF set (`models/Qwen3.8-27B-GGUF`: UD-Q4_K_XL + mmproj-F16 + config) | 17.56 GiB | GGUF path |
 | ROCm 7.14 SDK at `~/rocm-7.14.0` | ≈10 GiB (1.6 GiB verified archive + ~8.3 GiB extracted tree) | both paths |
 | llama.cpp checkout + HIP build (`third_party/llama.cpp`) | ≈1.3 GiB + build dir | GGUF path |
-| vLLM checkout + venv (`third_party/vllm`, `.venv`) | ≈0.4 GiB + build artifacts | vLLM path |
+| vLLM checkout + venv (`third_party/vllm`, `.venv`) | ≈0.4 GiB checkout + ≈5.7 GiB venv after `uv sync` (TheRock torch; ≈7.5 GiB after the vLLM build) | vLLM path |
 
-GGUF-only start: ~29 GiB plus the SDK. Both paths: ~69 GiB plus the SDK and
-builds.
+GGUF-only start: ~29 GiB plus the SDK. Both paths: ~69 GiB of models plus
+the SDK, the ≈7.5 GiB venv, and the build directories.
 
 ## Step 0 — environment check (both paths)
 
@@ -73,10 +75,16 @@ Three commands; the quickstart serves the validated quant with the pinned,
 fingerprinted build:
 
 ```bash
-bash scripts/05-build-llama.sh              # pinned HIP build @ 4df29be4 for gfx1151 (~minutes, cached by fingerprint)
+bash scripts/05-build-llama.sh              # pinned HIP build @ 4df29be4 for gfx1151 (compile ~7 min; source download on first run)
 SET=gguf bash scripts/02-fetch-model.sh     # UD-Q4_K_XL + mmproj-F16, SHA256-verified against the manifest
 bash scripts/gguf-quickstart.sh             # serves on http://127.0.0.1:8080/v1
 ```
+
+First run of the build downloads the llama.cpp source from GitHub (a
+≈60 MiB blobless clone with automatic retry and a tarball fallback). On
+throttled GitHub links that download — not the ~7 min compile — dominates:
+measured ≈14 min at ≈45 KiB/s during the one-pass rehearsal on this host's
+network.
 
 Optional +28% per-stream throughput (13.0 vs 10.1 tok/s, single stream):
 
@@ -105,6 +113,11 @@ bash scripts/01-build-vllm.sh               # source build @ 4d2a68d, patches + 
 SET=bf16 bash scripts/02-fetch-model.sh     # 18-shard BF16 checkpoint, SHA256-verified
 bash scripts/03-serve-vllm.sh               # serves on http://127.0.0.1:8000/v1 (conf: configs/serve-args.conf)
 ```
+
+First-run downloads to budget time for: `uv sync` pulls ≈5.6 GiB (fast from
+the AMD nightly index) plus a small PyPI tail, and the build clones vLLM
+from GitHub (≈0.4 GiB checkout) — on throttled GitHub/CDN links budget an
+hour or more for acquisition before the compile itself starts.
 
 MTP variant (+52.6% per-stream single-stream, 6.5 vs 4.3 tok/s — still below
 the interactive floor; use GGUF for chat):
