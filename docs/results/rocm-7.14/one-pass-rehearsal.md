@@ -13,8 +13,9 @@ literally from a clean shell, recording every deviation.
 > records the measured outcomes. The harness logs are session artifacts under
 > `/tmp/q38-rehearsal-logs/` (not committed); their load-bearing lines are
 > quoted verbatim below. A later reconciliation pass folded in the two
-> remaining friction fixes (`3c2125e`, F8) and the implementer's independent
-> fresh-compile confirmation of the vLLM build (Step d, second build row).
+> remaining friction fixes (`3c2125e`/F8, `0420a11`/F9) and the
+> implementer's independent fresh-compile confirmation of the vLLM build
+> (Step d, second build row).
 
 ## Setup
 
@@ -97,7 +98,7 @@ first-draft claims; this section records the measured sequence.
 | cold `uv sync` **attempt 2** (same cache = big wheels warm, still no proxy) | first line after resolve is already the small-package loop; killed as a no-progress duplicate after ~1 min (partial log `uv-sync-cold-retry.log`; a separate no-proxy probe at 22:01, `uv-sync-cold2.log`, showed the identical loop) | FAIL (deterministic, not transient) |
 | cold `uv sync` **attempt 3** (same cache + `http_proxy`/`https_proxy=http://127.0.0.1:7897`) | rc=0 in **under 1 minute** (`rc=0 wall_min=0`); only the 3 missing files were fetched, then the full stack installed from the warm cache | PASS with network caveat (pit below) |
 | `bash scripts/01-build-vllm.sh` — controller's run (clean env, proxy set, vLLM source via recorded substitution) | after **two substitution-artifact corrections** (below): **rc=0, wall 6 min** (`rc=0 wall_min=6`), registry smoke `REGISTRY-OK` | PASS |
-| `bash scripts/01-build-vllm.sh` — implementer's independent re-run (clean `env -i` shell, 22:42, no proxy; fresh-compile confirmation) | same pinned-HEAD + patch checks; **fresh compile observed live** (clang++ mid-compile on `csrc/rocm/attention.hip` into a new `/tmp/*.build-temp`; every `vllm/*.abi3.so` rewritten 22:42:32–22:48:30, e.g. `_rocm_C.abi3.so` 110 MB), `Prepared 1 package without build isolation in 6m 07s`. The rehearsal harness's task reaper killed the script's tail steps (numpy pin-back + smoke) at ~15 min; those two idempotent steps were then run verbatim by hand: `+ numpy==1.26.4 + scipy==1.13.1`, `registry OK`, `import vllm` → `0.1.dev1+g4d2a68d64.d20260817` | PASS (fresh compile ≈6 min — far inside the 90-min budget; the plan's 30–90 min estimate is conservative on this 32-core host) |
+| `bash scripts/01-build-vllm.sh` — implementer's independent re-run (clean `env -i` shell, 22:42, no proxy; fresh-compile confirmation) | same pinned-HEAD + patch checks; **fresh compile observed live** (clang++ mid-compile on `csrc/rocm/attention.hip` into a new `/tmp/*.build-temp`; every `vllm/*.abi3.so` rewritten 22:42:32–22:48:30, e.g. `_rocm_C.abi3.so` 110 MB), `Prepared 1 package without build isolation in 6m 07s`. The rehearsal harness's task reaper killed the script's tail steps (numpy pin-back + smoke) at ~15 min; those two idempotent steps were then run verbatim by hand: `+ numpy==1.26.4 + scipy==1.13.1`, `registry OK`, `import vllm` → `0.1.dev1+g4d2a68d64.d20260817` | PASS (fresh compile ≈6 min — far inside the 90-min budget; the plan's 30–90 min estimate is conservative on this 32-thread (16-core) host) |
 
 **The network pit (stranger-facing).** On this host's network the *direct*
 route to those three PyPI files fails while ~2 GiB of large-wheel downloads
@@ -206,6 +207,7 @@ compile in `6m 07s` with every extension rebuilt (live compile observation
 verbatim:
 
 ```
+ - numpy==2.3.5
  + numpy==1.26.4
  - scipy==1.18.0
  + scipy==1.13.1
@@ -311,7 +313,7 @@ attempt) + a source build whose fresh compile was confirmed live
 (`attention.hip` observed mid-compile; every `vllm/*.abi3.so` rewritten)
 and measured at **6m 06s / 6m 07s** across the two runs — far inside the
 90-min rehearsal budget; the plan's 30–90 min estimate is conservative on
-this 32-core host. **Network caveat (this host's network only):** the
+this 32-thread (16-core) host. **Network caveat (this host's network only):** the
 no-proxy cold `uv sync` does not merely crawl — it hard loop-fails on
 three small PyPI packages (`numpy`, `transformers`, `pillow`) while every
 large TheRock wheel succeeds, and exits after ~60 min with nothing
