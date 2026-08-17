@@ -1,0 +1,85 @@
+{
+  "description": "S3 long-context retrieval smoke: needle 'The validation codename is STRIX-HALO-7741.' at ~80% depth of a synthetic filler haystack; prompt asks only for the codename; temperature 0, max_tokens 64; judge = exact substring 'STRIX-HALO-7741' in the answer (METHODOLOGY.md S1/S3).",
+  "needle": "The validation codename is STRIX-HALO-7741.",
+  "judge": "exact substring 'STRIX-HALO-7741' in the completion",
+  "path": "gguf (scripts/gguf-quickstart.sh, default unified boot, CTX_SIZE per tier)",
+  "instrument_mode": "no-thinking (chat_template_kwargs enable_thinking=false; METHODOLOGY 2 erratum)",
+  "generated_utc": "2026-08-16T23:30:06.135401+00:00",
+  "tiers": [
+    {
+      "ctx_size": 32768,
+      "target_prompt_tokens": 28000,
+      "ok": true,
+      "error": null,
+      "boot_wall_s": 14.0,
+      "load": {
+        "vram_mib": 1131,
+        "gtt_mib": 20406
+      },
+      "haystack": {
+        "filler_paragraphs": 377,
+        "filler_paragraph_tokens": 74,
+        "needle_after_paragraph": 302,
+        "needle_depth_fraction": 0.8003,
+        "estimated_prompt_tokens": 29602
+      },
+      "request_wall_s": 138.4,
+      "prompt_tokens": 29614,
+      "completion_tokens": 10,
+      "finish_reason": "stop",
+      "ttft_ms": 137408.6,
+      "recall": true,
+      "answer_excerpt": "STRIX-HALO-7741"
+    },
+    {
+      "ctx_size": 131072,
+      "target_prompt_tokens": 112000,
+      "ok": true,
+      "error": null,
+      "boot_wall_s": 4.0,
+      "load": {
+        "vram_mib": 1131,
+        "gtt_mib": 26546
+      },
+      "haystack": {
+        "filler_paragraphs": 1512,
+        "filler_paragraph_tokens": 74,
+        "needle_after_paragraph": 1210,
+        "needle_depth_fraction": 0.7994,
+        "estimated_prompt_tokens": 120293
+      },
+      "request_wall_s": 1013.5,
+      "prompt_tokens": 120305,
+      "completion_tokens": 11,
+      "finish_reason": "stop",
+      "ttft_ms": 1012109.2,
+      "recall": false,
+      "answer_excerpt": "No validation codename is mentioned in the documents."
+    },
+    {
+      "ctx_size": 262144,
+      "target_prompt_tokens": 228000,
+      "ok": true,
+      "error": null,
+      "boot_wall_s": 6.0,
+      "load": {
+        "vram_mib": 1528,
+        "gtt_mib": 34736
+      },
+      "haystack": {
+        "filler_paragraphs": 3079,
+        "filler_paragraph_tokens": 74,
+        "needle_after_paragraph": 2463,
+        "needle_depth_fraction": 0.7995,
+        "estimated_prompt_tokens": 247220
+      },
+      "request_wall_s": 3458.9,
+      "prompt_tokens": 247232,
+      "completion_tokens": 10,
+      "finish_reason": "stop",
+      "ttft_ms": 3457274.8,
+      "recall": true,
+      "answer_excerpt": "STRIX-HALO-7741"
+    }
+  ]
+}

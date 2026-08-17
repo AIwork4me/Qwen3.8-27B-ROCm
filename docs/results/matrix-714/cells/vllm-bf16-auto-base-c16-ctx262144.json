@@ -1,0 +1,259 @@
+{
+  "id": "vllm-bf16-auto-base-c16-ctx262144",
+  "label": "vllm-bf16-auto-base-c16-ctx262144",
+  "base_url": "http://127.0.0.1:8000",
+  "started_utc": "2026-08-16T23:05:58Z",
+  "server_flags": {
+    "conf": "configs/serve-args.conf",
+    "mtp": false,
+    "serve_script": "scripts/03-serve-vllm.sh",
+    "served_model_name": "qwen3.8-27b",
+    "max_model_len_conf": 262144,
+    "max_model_len_override": null,
+    "port": 8000,
+    "concurrency": 16,
+    "conf_flags_verbatim": [
+      "--served-model-name qwen3.8-27b",
+      "--max-model-len 262144",
+      "--gpu-memory-utilization 0.92",
+      "--kv-cache-dtype auto",
+      "--attention-backend TRITON_ATTN",
+      "--dtype bfloat16",
+      "--port 8000",
+      "--skip-mm-profiling",
+      "--reasoning-parser qwen3"
+    ]
+  },
+  "engine": {
+    "non_default_args": "(APIServer pid=3537786) INFO 08-17 07:06:07 [api_utils.py:272] non-default args: {'model_tag': '/home/amd/Desktop/Qwen3.8-27B-ROCm/models/Qwen3.8-27B', 'model': '/home/amd/Desktop/Qwen3.8-27B-ROCm/models/Qwen3.8-27B', 'dtype': 'bfloat16', 'max_model_len': 262144, 'served_model_name': ['qwen3.8-27b'], 'attention_backend': 'TRITON_ATTN', 'reasoning_parser': 'qwen3', 'skip_mm_profiling': True}",
+    "engine_init_excerpt": "(EngineCore pid=3538136) INFO 08-17 07:06:22 [core.py:122] Initializing a V1 LLM engine (v0.1.dev1+g4d2a68d64.d20260816) with config: model='/home/amd/Desktop/Qwen3.8-27B-ROCm/models/Qwen3.8-27B', speculative_config=None, tokenizer='/home/amd/Desktop/Qwen3.8-27B-ROCm/models/Qwen3.8-27B', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=262144, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=True, quantization=None, quantization_config=None, enforce_eager=False, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='qwen3', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_m",
+    "kv_and_load_lines": [
+      "(EngineCore pid=3538136) INFO 08-17 07:07:12 [gpu_model_runner.py:5515] Model loading took 51.1 GiB memory and 40.367674 seconds",
+      "(EngineCore pid=3538136) INFO 08-17 07:07:32 [gpu_worker.py:578] Available KV cache memory: 19.57 GiB",
+      "(EngineCore pid=3538136) INFO 08-17 07:07:32 [kv_cache_utils.py:1869] GPU KV cache size: 313,650 tokens, Maximum concurrency for 262,144 tokens per request: 1.20x",
+      "(EngineCore pid=3538136) INFO 08-17 07:08:26 [core.py:347] init engine (profile, create kv cache, warmup model) took 74.73 s (compilation: 7.44 s)"
+    ],
+    "max_num_seqs_note": "absent from the non-default args line -> the pin default applied (max_num_seqs=1024, max_num_batched_tokens=8192; vllm/engine/arg_utils.py:2592-2601, METHODOLOGY 7)"
+  },
+  "instrument_mode": {
+    "no_thinking": true,
+    "mechanism": "chat_template_kwargs {'enable_thinking': false} (bench_client --no-thinking)",
+    "reasoning_parser": "qwen3 (from the conf; splits <think> into message.reasoning \u2014 with thinking disabled no reasoning deltas are produced)",
+    "comparability": "same visible-answer instrument mode as the gguf cells (METHODOLOGY 2 erratum)"
+  },
+  "load": {
+    "vram_mib": 1134,
+    "gtt_mib": 75040
+  },
+  "boot": {
+    "ok": true,
+    "health_wall_s": 171,
+    "shared_boot": {
+      "cells": [
+        "vllm-bf16-auto-base-c1-ctx262144",
+        "vllm-bf16-auto-base-c4-ctx262144",
+        "vllm-bf16-auto-base-c8-ctx262144",
+        "vllm-bf16-auto-base-c16-ctx262144"
+      ],
+      "this_cell_index": 4
+    }
+  },
+  "client": {
+    "label": "vllm-bf16-auto-base-c16-ctx262144",
+    "concurrency": 16,
+    "started_utc": "2026-08-16T23:12:45.144467+00:00",
+    "streams": [
+      {
+        "ttft_ms": 20837.938993994612,
+        "tpot_ms": 317.91002258472935,
+        "completion_tokens": 237,
+        "prompt_tokens": 1412,
+        "reasoning_tokens": 0,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 26192.628733988386,
+        "tpot_ms": 296.06379849411655,
+        "completion_tokens": 256,
+        "prompt_tokens": 1474,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 15767.71473698318,
+        "tpot_ms": 342.74194423513796,
+        "completion_tokens": 218,
+        "prompt_tokens": 1298,
+        "reasoning_tokens": 0,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 15767.84891798161,
+        "tpot_ms": 334.97452937253735,
+        "completion_tokens": 256,
+        "prompt_tokens": 1469,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 20834.9853939726,
+        "tpot_ms": 316.09420465880675,
+        "completion_tokens": 256,
+        "prompt_tokens": 1336,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 5895.996592997108,
+        "tpot_ms": 371.5451749292768,
+        "completion_tokens": 256,
+        "prompt_tokens": 1516,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 20834.31072003441,
+        "tpot_ms": 316.09018446270414,
+        "completion_tokens": 256,
+        "prompt_tokens": 1462,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 10818.936440977268,
+        "tpot_ms": 363.8602279862517,
+        "completion_tokens": 219,
+        "prompt_tokens": 1408,
+        "reasoning_tokens": 0,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 1997.549350024201,
+        "tpot_ms": 387.9977987286435,
+        "completion_tokens": 248,
+        "prompt_tokens": 1412,
+        "reasoning_tokens": 0,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 26187.326585990377,
+        "tpot_ms": 296.06386658041646,
+        "completion_tokens": 256,
+        "prompt_tokens": 1474,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 10816.426911973394,
+        "tpot_ms": 353.2899980588506,
+        "completion_tokens": 256,
+        "prompt_tokens": 1298,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 10815.87493797997,
+        "tpot_ms": 353.29088329031663,
+        "completion_tokens": 256,
+        "prompt_tokens": 1469,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 26186.153741029557,
+        "tpot_ms": 296.0627732743674,
+        "completion_tokens": 256,
+        "prompt_tokens": 1336,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 5891.31798298331,
+        "tpot_ms": 371.541789964791,
+        "completion_tokens": 256,
+        "prompt_tokens": 1516,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 28027.91961299954,
+        "tpot_ms": 289.74517775293185,
+        "completion_tokens": 256,
+        "prompt_tokens": 1462,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 15759.592688002158,
+        "tpot_ms": 349.28170437297246,
+        "completion_tokens": 194,
+        "prompt_tokens": 1408,
+        "reasoning_tokens": 0,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      }
+    ],
+    "aggregate": {
+      "tok_per_s": 38.5785716397903,
+      "wall_s": 101.92186576302629,
+      "ok_streams": 16,
+      "failed_streams": 0
+    }
+  },
+  "anchor": {
+    "ok": true,
+    "content_tail": "OK"
+  },
+  "log_excerpt": [
+    "Serving /home/amd/Desktop/Qwen3.8-27B-ROCm/models/Qwen3.8-27B (serve-args.conf) on http://127.0.0.1:8000/v1 ...",
+    "/home/amd/Desktop/Qwen3.8-27B-ROCm/.venv/lib/python3.12/site-packages/tvm_ffi/_optional_torch_c_dlpack.py:181: UserWarning: Failed to JIT torch c dlpack extension, EnvTensorAllocator will not be enabled.",
+    "warnings.warn(",
+    "(APIServer pid=3537786) INFO 08-17 07:06:07 [api_utils.py:272] non-default args: {'model_tag': '/home/amd/Desktop/Qwen3.8-27B-ROCm/models/Qwen3.8-27B', 'model': '/home/amd/Desktop/Qwen3.8-27B-ROCm/models/Qwen3.8-27B', 'dtype': 'bfloat16', 'max_model_len': 262144, 'served_model_name': ['qwen3.8-27b']",
+    "(APIServer pid=3537786) INFO 08-17 07:06:07 [model.py:672] Resolved architecture: Qwen3_5ForConditionalGeneration",
+    "(APIServer pid=3537786) [ERROR] `min_frames` is part of Qwen3VLVideoProcessorInitKwargs, but not documented. Make sure to add it to the docstring of the function in /home/amd/Desktop/Qwen3.8-27B-ROCm/.venv/lib/python3.12/site-packages/transformers/models/qwen3_vl/video_processing_qwen3_vl.py.",
+    "(APIServer pid=3537786) [ERROR] `max_frames` is part of Qwen3VLVideoProcessorInitKwargs, but not documented. Make sure to add it to the docstring of the function in /home/amd/Desktop/Qwen3.8-27B-ROCm/.venv/lib/python3.12/site-packages/transformers/models/qwen3_vl/video_processing_qwen3_vl.py.",
+    "(EngineCore pid=3538136) INFO 08-17 07:06:22 [core.py:122] Initializing a V1 LLM engine (v0.1.dev1+g4d2a68d64.d20260816) with config: model='/home/amd/Desktop/Qwen3.8-27B-ROCm/models/Qwen3.8-27B', speculative_config=None, tokenizer='/home/amd/Desktop/Qwen3.8-27B-ROCm/models/Qwen3.8-27B', skip_tokeni",
+    "(EngineCore pid=3538136) [ERROR] `min_frames` is part of Qwen3VLVideoProcessorInitKwargs, but not documented. Make sure to add it to the docstring of the function in /home/amd/Desktop/Qwen3.8-27B-ROCm/.venv/lib/python3.12/site-packages/transformers/models/qwen3_vl/video_processing_qwen3_vl.py.",
+    "(EngineCore pid=3538136) [ERROR] `max_frames` is part of Qwen3VLVideoProcessorInitKwargs, but not documented. Make sure to add it to the docstring of the function in /home/amd/Desktop/Qwen3.8-27B-ROCm/.venv/lib/python3.12/site-packages/transformers/models/qwen3_vl/video_processing_qwen3_vl.py.",
+    "(EngineCore pid=3538136) WARNING 08-17 07:06:29 [activation.py:808] [ROCm] PyTorch's native GELU with tanh approximation is unstable. Falling back to GELU(approximate='none').",
+    "(EngineCore pid=3538136) WARNING 08-17 07:06:31 [compilation.py:1348] Op 'sparse_attn_indexer' not present in model, enabling with '+sparse_attn_indexer' has no effect",
+    "(EngineCore pid=3538136) INFO 08-17 07:07:12 [gpu_model_runner.py:5515] Model loading took 51.1 GiB memory and 40.367674 seconds",
+    "(EngineCore pid=3538136) INFO 08-17 07:07:32 [gpu_worker.py:578] Available KV cache memory: 19.57 GiB",
+    "(EngineCore pid=3538136) INFO 08-17 07:07:32 [kv_cache_utils.py:1869] GPU KV cache size: 313,650 tokens, Maximum concurrency for 262,144 tokens per request: 1.20x",
+    "(EngineCore pid=3538136) INFO 08-17 07:08:26 [core.py:347] init engine (profile, create kv cache, warmup model) took 74.73 s (compilation: 7.44 s)",
+    "(APIServer pid=3537786) WARNING 08-17 07:08:46 [model.py:1713] Default vLLM sampling parameters have been overridden by the model's `generation_config.json`: `{'temperature': 1.0, 'top_k': 20, 'top_p': 0.95}`. If this is not intended, please relaunch vLLM instance with `--generation-config vllm`."
+  ],
+  "degraded": false,
+  "degraded_reason": null
+}

@@ -231,29 +231,25 @@
     },
     {
       "id": "vllm-bf16-auto-base-c1-ctx262144",
-      "status": "planned",
-      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-vllm.sh",
       "priority": true
     },
     {
       "id": "vllm-bf16-auto-base-c4-ctx262144",
-      "status": "planned",
-      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-vllm.sh",
       "priority": true
     },
     {
       "id": "vllm-bf16-auto-base-c8-ctx262144",
-      "status": "planned",
-      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-vllm.sh",
       "priority": true
     },
     {
       "id": "vllm-bf16-auto-base-c16-ctx262144",
-      "status": "planned",
-      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-vllm.sh",
       "priority": true
     },
@@ -315,29 +311,25 @@
     },
     {
       "id": "vllm-bf16-auto-mtp-c1-ctx262144",
-      "status": "planned",
-      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-vllm.sh",
       "priority": true
     },
     {
       "id": "vllm-bf16-auto-mtp-c4-ctx262144",
-      "status": "planned",
-      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-vllm.sh",
       "priority": true
     },
     {
       "id": "vllm-bf16-auto-mtp-c8-ctx262144",
-      "status": "planned",
-      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-vllm.sh",
       "priority": true
     },
     {
       "id": "vllm-bf16-auto-mtp-c16-ctx262144",
-      "status": "planned",
-      "reason": "declared priority subset for this session (see METHODOLOGY.md \u00a78)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-vllm.sh",
       "priority": true
     }

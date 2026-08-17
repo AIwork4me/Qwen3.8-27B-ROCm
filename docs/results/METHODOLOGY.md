@@ -62,6 +62,22 @@ K      ∈ {32768, 131072, 262144}  # vllm: {131072, 262144}; 32768 not offered 
   degraded" false positives that raw throughput cannot catch. Prompt sizes
   ~30K / ~120K / ~240K tokens for the 32768 / 131072 / 262144 rungs.
 
+**Measured (Task 4, 2026-08-17 — receipts
+`docs/results/matrix-714/long-context-smoke.json`, tool
+`scripts/long-context-smoke.py`, GGUF path, default unified boot):**
+recall is **non-monotonic in depth** — 30K tier PASS (29,614 prompt tokens,
+TTFT 137 s), **120K tier FAIL** (120,305 tokens, TTFT 1,012 s; confident
+wrong answer "No validation codename is mentioned in the documents.",
+finish_reason=stop), 247K tier PASS (247,232 tokens, TTFT 3,457 s). All
+tiers booted (GTT 20,406 / 26,546 / 34,736 MiB — matching the §4 ladder)
+and answered cleanly; the miss is a retrieval failure, not a boot or
+transport failure. Ruling for Task 5's context-capacity table: deep-context
+retrieval on the GGUF path at the validated defaults is **unreliable, not
+depth-capped** — max_usable_context for functional retrieval is not
+established above ~30K by this smoke alone (one needle, one depth, one
+seed); the honest presentation is the per-tier receipts + this caveat, and
+a caution-grade verdict for deep-prompt interactive use.
+
 Every cell additionally runs the **arithmetic anchor** (greedy, temperature
 0, `expect_exact` byte check) so greedy decoding is byte-identical across
 paths and configs — a drift there invalidates cross-path comparisons.
@@ -96,6 +112,26 @@ cells send `chat_template_kwargs {"enable_thinking": false}` per request
 so every cell measures the visible-answer stream both paths share.
 Thinking-mode latency remains a legitimate study — declared a non-goal for
 this session rather than silently mixed into the cells.
+
+**vLLM instrument probe (2026-08-17, Task 4, on-host against the validated
+conf boot):** the pin accepts `chat_template_kwargs` — verified live, three
+streaming probes on :8000 (`serve-args.conf` as committed). (a) Thinking ON
+(no kwarg): the conf's `--reasoning-parser qwen3` splits the stream into
+`delta.reasoning` first (field name at this pin is `reasoning`, NOT the
+llama.cpp-style `reasoning_content`) with `delta.content` deferred until the
+think phase completes — measured 10.5 s and 21.1 s to first content on two
+trivial 65-token prompts, i.e. TTFT-to-content is dominated by thinking,
+and a longer think consumes the whole 256-token budget before any content
+(the exact GGUF erratum failure, now on the packaging level too).
+(b) Thinking OFF (`enable_thinking: false`): accepted, `reasoning_tokens=0`,
+first content delta at 0.5 s. (c) Greedy anchor with thinking off: content
+delta `"OK"` as the very first delta (2 completion tokens,
+`finish_reason=stop`). Ruling: **vLLM cells run the same `--no-thinking`
+instrument mode as the GGUF cells** — cross-path comparability holds with no
+mode divergence; the mode is recorded per cell in the cell JSON
+(`instrument_mode`), and the bench client's TTFT clock (first
+content-bearing delta) is correct in both shapes because `reasoning` deltas
+are neither content nor `reasoning_content`.
 
 ## 3. Verdict rules — pre-declared, verbatim
 
@@ -319,9 +355,14 @@ greedy anchor fails; with and without mmproj) and measured in cells
 `base-c4-ctx32768` (unified boot — NOT split-specific), `base-c8`,
 `base-c16`, `mtp-c8`, `mtp-c16` @131072. Clean cells all passed the anchor
 (`c1` everywhere, `-np 4` @131072, unified c4 @262144). Correlation noted
-for upstream reporting: every degraded cell's bench had ALL streams hit the
-256-token length cap, while clean c4 benches had early-stopping streams.
-These cells are recorded `measured(degraded)` with the reason verbatim;
+for upstream reporting: the degraded cells' benches were all-capped (every
+stream hit the 256-token length cap) in 4 of the 5 degraded cells, and
+7-of-8 in the fifth (`mtp-c8`: stream s1 stopped at 2 tokens,
+`finish_reason=stop`), while clean c4 benches had early-stopping streams.
+(Erratum, 2026-08-17, Task 3 review: an earlier draft of this note claimed
+ALL streams capped in every degraded cell; the mtp-c8 cell JSON is the
+source of truth.) These cells are recorded `measured(degraded)` with the
+reason verbatim;
 per §1 the anchor drift invalidates cross-path comparison for them, and
 per §3 the ladder demotes (upstream: llama.cpp `4df29be4` HIP build on
 gfx1151; exact mechanism unresolved at session close).
@@ -346,6 +387,23 @@ boot log** — the `api_utils.py` "non-default args" line and the `core.py`
 each verdict is auditable against the exact engine configuration that
 produced it (attention backend, KV dtype, prefix caching, chunked prefill,
 speculative config).
+
+**Measured (Task 4, 2026-08-17 — the recording obligation fulfilled).** All
+8 priority vLLM cells ran via `scripts/run-cell-vllm.sh` in BATCH MODE (one
+boot per server config serving all four concurrency cells sequentially — 2
+boots total instead of 8; wall: base batch ≈ 13 min, mtp batch ≈ 16 min):
+`max_num_seqs` appears in NO boot's non-default args line → the pin default
+(1024, §7 above) applied, exactly as declared; every cell JSON carries the
+verbatim `non_default_args`, an `engine_init_excerpt`, and the KV-cache
+lines. Boot receipts: base healthy in 171 s, load **GTT 75,040 MiB**
+(weights 51.1 GiB + KV 19.57 GiB = 313,650 KV tokens = 1.20x the 262,144
+max-len); mtp healthy in 226 s, **GTT 76,072 MiB** (MTP head +~1.0 GiB;
+KV 18.59 GiB = 279,146 tokens = 1.06x). Note the engine's own concurrency
+ceiling at max-len: a SINGLE 262,144-token request fits (1.06–1.20x), but
+two full-depth streams cannot — deep-context concurrency is KV-budget-bound
+long before `max_num_seqs` matters. All 8 greedy anchors returned `OK`
+(including anchors run immediately after 16-stream benches) — the GGUF
+greedy-degeneration pit of §6 does NOT reproduce on the vLLM path.
 
 ## 8. Matrix declaration (this session)
 

@@ -1,6 +1,6 @@
-"""Task 3: GGUF cell runner (scripts/run-cell-gguf.sh) — CI-safe contract.
+"""Task 3+4: cell runners (run-cell-gguf.sh, run-cell-vllm.sh) — CI-safe contract.
 
-Everything here runs WITHOUT a GPU: the runner is exercised only on its
+Everything here runs WITHOUT a GPU: the runners are exercised only on their
 refusal paths (unknown/malformed ids) and on --dry-run, which must resolve
 and print the plan without launching anything. The matrix<->cells pairing
 test keeps the committed receipts honest once host execution flips statuses.
@@ -10,10 +10,16 @@ import json
 import subprocess
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = ROOT / "scripts" / "run-cell-gguf.sh"
+VSCRIPT = ROOT / "scripts" / "run-cell-vllm.sh"
 MATRIX = ROOT / "docs" / "results" / "matrix-714" / "matrix.json"
 CELLS_DIR = ROOT / "docs" / "results" / "matrix-714" / "cells"
+# Branch point of feature/benchmark-matrix (main @ 2bb00ba): the serve confs
+# must stay byte-stable across the whole branch — cells override via env only.
+BRANCH_BASE = "2bb00ba"
 
 # Cell id grammar, shared with gen-matrix.py and the verdicts schema.
 ID_RE_PARTS = ("gguf", "udq4kxl", "auto", "{base|mtp}", "c{1,4,8,16}",
@@ -126,7 +132,7 @@ def test_matrix_measured_cells_pair_with_cell_files():
     for cid in sorted(measured):
         cell = json.loads((CELLS_DIR / f"{cid}.json").read_text())
         for key in ("id", "label", "base_url", "started_utc", "server_flags",
-                    "slot_info", "load", "client", "anchor", "log_excerpt"):
+                    "load", "client", "anchor", "log_excerpt"):
             assert key in cell, f"{cid}.json missing {key!r}"
         assert isinstance(cell["anchor"].get("ok"), bool)
         assert isinstance(cell["log_excerpt"], list)
@@ -137,6 +143,177 @@ def test_matrix_measured_cells_pair_with_cell_files():
             # metrics: slot/load/client may be null, but the reason must be.
             assert cell.get("degraded_reason"), f"{cid}.json degraded without reason"
             continue
-        assert set(cell["slot_info"]) >= {"n_slots", "n_ctx_slot", "kv_unified"}
         assert set(cell["load"]) >= {"vram_mib", "gtt_mib"}
         assert cell["load"]["gtt_mib"] is not None, f"{cid}.json has no GTT split"
+        if cid.startswith("gguf-"):
+            # llama.cpp slot semantics from the server log (METHODOLOGY 6).
+            assert set(cell["slot_info"]) >= {"n_slots", "n_ctx_slot", "kv_unified"}
+        else:
+            # vLLM engine args captured verbatim from the boot log
+            # (METHODOLOGY 7) + the instrument mode record (Task 4 contract).
+            assert cell.get("engine", {}).get("non_default_args"), \
+                f"{cid}.json missing engine.non_default_args capture"
+            assert isinstance(cell.get("instrument_mode"), dict), \
+                f"{cid}.json missing instrument_mode"
+
+
+# --------------------------------------------------------------- Task 4 (vLLM)
+
+def run_vllm_runner(args, timeout=60):
+    return subprocess.run(["bash", str(VSCRIPT)] + args,
+                          capture_output=True, text=True, timeout=timeout,
+                          cwd=ROOT)
+
+
+def test_vllm_runner_script_exists_and_names_the_contract():
+    src = VSCRIPT.read_text()
+    # Same lifecycle pattern as the gguf runner: matrix resolve, boot via the
+    # serve script (confs untouched), health poll, rocm-smi split, bench
+    # client + greedy anchor, cell JSON, matrix flip.
+    assert "bench_client.py" in src
+    assert "matrix-714/matrix.json" in src
+    assert "rocm-smi" in src
+    assert "--anchor-only" in src
+    assert "03-serve-vllm.sh" in src
+    assert "/health" in src
+    # vLLM-specific: served model name comes from the conf, engine args are
+    # captured from the boot log, the instrument mode is recorded per cell.
+    assert "served-model-name" in src
+    assert "non-default args" in src
+    assert "instrument_mode" in src
+    # Client-side concurrency (no -np analog); --no-thinking instrument mode.
+    assert "--concurrency" in src
+    assert "--no-thinking" in src
+    # vLLM concurrency is client-parallel: no llama.cpp -np/EXTRA_ARGS path.
+    assert "EXTRA_ARGS" not in src
+
+
+def test_vllm_runner_enforces_id_format():
+    src = VSCRIPT.read_text()
+    for part in ("vllm-bf16-auto-", "(base|mtp)", "c(1|4|8|16)",
+                 "ctx(131072|262144)"):
+        assert part in src, f"vllm runner must encode id grammar part {part!r}"
+
+
+def test_vllm_runner_refuses_unknown_id_not_in_matrix():
+    # Grammar-valid (c3 outside the declared N set) but never declared.
+    r = run_vllm_runner(["vllm-bf16-auto-base-c3-ctx262144"])
+    assert r.returncode != 0
+    combined = r.stdout + r.stderr
+    assert "matrix" in combined.lower()
+    assert "unknown" in combined.lower() or "not declared" in combined.lower()
+
+
+def test_vllm_runner_refuses_wrong_path_id():
+    # A real matrix id, but for the OTHER path: the vllm runner must refuse it.
+    r = run_vllm_runner(["gguf-udq4kxl-auto-base-c1-ctx131072"])
+    assert r.returncode != 0
+
+
+def test_vllm_runner_refuses_ctx32768_tier():
+    # Dropped tier for the vllm path: grammar-refused (no 32768 in the grammar).
+    r = run_vllm_runner(["vllm-bf16-auto-base-c1-ctx32768"])
+    assert r.returncode != 0
+
+
+def test_vllm_runner_dry_run_prints_plan_without_launching():
+    before_matrix = MATRIX.read_bytes()
+    before_files = sorted(p.name for p in CELLS_DIR.glob("*.json"))
+    r = run_vllm_runner(["vllm-bf16-auto-base-c1-ctx262144", "--dry-run"])
+    assert r.returncode == 0, r.stderr
+    out = r.stdout
+    assert "dry run" in out.lower()
+    # Plan: conf-driven boot on :8000, served model from the conf, the exact
+    # bench command (client-side concurrency, no-thinking instrument), anchor.
+    assert "serve-args.conf" in out
+    assert "03-serve-vllm.sh" in out
+    assert "8000" in out
+    assert "qwen3.8-27b" in out
+    assert "--concurrency 1" in out
+    assert "--no-thinking" in out
+    assert "--anchor-only" in out
+    # The validated conf boots max-model-len 262144 already: no override
+    # needed for a ctx262144 cell (confs stay the validated defaults).
+    assert "MAX_MODEL_LEN" not in out
+    assert MATRIX.read_bytes() == before_matrix, "dry run must not touch matrix.json"
+    after_files = sorted(p.name for p in CELLS_DIR.glob("*.json"))
+    assert after_files == before_files, "dry run must not write cell files"
+
+
+def test_vllm_runner_dry_run_mtp_conf_batch_and_ctx_override():
+    # mtp cell -> serve-args-mtp.conf via --mtp.
+    r = run_vllm_runner(["vllm-bf16-auto-mtp-c1-ctx262144", "--dry-run"])
+    assert r.returncode == 0, r.stderr
+    assert "serve-args-mtp.conf" in r.stdout
+    assert "--mtp" in r.stdout
+
+    # Batch mode: one boot serves every listed cell of the same server config.
+    r = run_vllm_runner(["vllm-bf16-auto-base-c1-ctx262144",
+                         "vllm-bf16-auto-base-c4-ctx262144",
+                         "vllm-bf16-auto-base-c8-ctx262144",
+                         "vllm-bf16-auto-base-c16-ctx262144", "--dry-run"])
+    assert r.returncode == 0, r.stderr
+    out = r.stdout
+    assert "1 boot" in out or "one boot" in out.lower()
+    assert "--concurrency 16" in out
+
+    # A ctx131072 cell (declared, non-priority) needs the documented
+    # MAX_MODEL_LEN env pass-through; the conf itself is never edited.
+    r = run_vllm_runner(["vllm-bf16-auto-base-c1-ctx131072", "--dry-run"])
+    assert r.returncode == 0, r.stderr
+    assert "MAX_MODEL_LEN=131072" in r.stdout
+
+    # Mixed server configs in one invocation are refused (would need 2 boots).
+    r = run_vllm_runner(["vllm-bf16-auto-base-c1-ctx262144",
+                         "vllm-bf16-auto-mtp-c4-ctx262144", "--dry-run"])
+    assert r.returncode != 0
+    assert "same server config" in (r.stdout + r.stderr).lower()
+
+
+def test_serve_confs_byte_stable_across_branch():
+    # The matrix cells override nothing in the confs (env pass-through only,
+    # METHODOLOGY 3 "confs stay the validated defaults"): both serve confs
+    # must be byte-identical to their state at the branch point.
+    try:
+        verify = subprocess.run(["git", "rev-parse", "--verify",
+                                 f"{BRANCH_BASE}^{{commit}}"],
+                                cwd=ROOT, capture_output=True)
+    except FileNotFoundError:
+        pytest.skip("git unavailable")
+    if verify.returncode != 0:
+        pytest.skip(f"branch base {BRANCH_BASE} not in this clone")
+    for conf in ("serve-args.conf", "serve-args-mtp.conf"):
+        old = subprocess.run(["git", "show", f"{BRANCH_BASE}:configs/{conf}"],
+                             cwd=ROOT, capture_output=True)
+        assert old.returncode == 0, f"configs/{conf} missing at {BRANCH_BASE}"
+        current = (ROOT / "configs" / conf).read_bytes()
+        assert current == old.stdout, (
+            f"configs/{conf} drifted from the branch point — cells must "
+            f"override via documented env (03-serve-vllm.sh), never conf edits")
+
+
+def test_long_context_smoke_builder_places_needle_at_80_percent():
+    # Task 4 (S3): the haystack builder is deterministic and puts the needle
+    # paragraph at ~80% depth with the retrieval question at the very end.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "long_context_smoke", ROOT / "scripts" / "long-context-smoke.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    para_tokens = 50
+    counts = []
+
+    def count(text):
+        counts.append(text)
+        return para_tokens * (text.count("maintenance log for sector") or 1)
+
+    needle_q = "What is the validation codename?"
+    prompt, meta = mod.build_haystack(1000, count, needle="The validation codename is STRIX-HALO-7741.",
+                                      question=needle_q, template_margin=64)
+    depth = prompt.index("STRIX-HALO-7741") / len(prompt)
+    assert 0.75 <= depth <= 0.85, f"needle at {depth:.2f}, expected ~0.80"
+    assert prompt.rstrip().endswith(needle_q)
+    # Deterministic: same inputs -> byte-identical prompt.
+    prompt2, _ = mod.build_haystack(1000, count, needle="The validation codename is STRIX-HALO-7741.",
+                                    question=needle_q, template_margin=64)
+    assert prompt2 == prompt

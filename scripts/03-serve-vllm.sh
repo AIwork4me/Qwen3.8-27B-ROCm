@@ -24,7 +24,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         -h|--help)
             sed -n '2,8p' "$0" >&2
-            echo "Usage: scripts/03-serve-vllm.sh [--mtp]  (env: MODEL_DIR=...)" >&2
+            echo "Usage: scripts/03-serve-vllm.sh [--mtp]  (env: MODEL_DIR=..., MAX_MODEL_LEN=<override of the conf --max-model-len>)" >&2
             exit 0
             ;;
         *)
@@ -52,6 +52,24 @@ while IFS= read -r line; do
     read -r -a words <<<"$line"
     SERVE_ARGS+=("${words[@]}")
 done < "$HERE/configs/$CONF_NAME"
+
+# MAX_MODEL_LEN env pass-through (benchmark matrix, Task 4): documented,
+# minimal override for the cell runner — the confs themselves are NEVER
+# edited (they stay the validated defaults; a CI test asserts they are
+# byte-stable across the branch). Unset by default → conf boot unchanged.
+# Replaces any conf --max-model-len in place (last-wins would also work, but
+# a single occurrence keeps the echoed flags honest).
+if [ -n "${MAX_MODEL_LEN:-}" ]; then
+    FILTERED_ARGS=()
+    skip_next=0
+    for a in "${SERVE_ARGS[@]}"; do
+        if [ "$skip_next" = "1" ]; then skip_next=0; continue; fi
+        if [ "$a" = "--max-model-len" ]; then skip_next=1; continue; fi
+        FILTERED_ARGS+=("$a")
+    done
+    SERVE_ARGS=("${FILTERED_ARGS[@]}" --max-model-len "$MAX_MODEL_LEN")
+    echo "MAX_MODEL_LEN override: --max-model-len $MAX_MODEL_LEN (conf value replaced; conf file untouched)"
+fi
 
 # Task 5's validation client talks to http://127.0.0.1:8000/v1/chat/completions;
 # the confs pin --port 8000. Echo the effective port for the operator.
