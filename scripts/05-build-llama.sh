@@ -167,15 +167,22 @@ from pathlib import Path
 
 stack_path, repo, commit, arch, prefix = sys.argv[1:6]
 stack = json.loads(Path(stack_path).read_text(encoding="utf-8"))
-stack["llama_cpp"] = {
+# Merge, never replace: llama_cpp.validated (ctx default for gguf-quickstart,
+# evidence receipt for tests) must survive a rebuild — only the build facts
+# are updated, and the file is rewritten only when content actually changes
+# (idempotent re-runs leave a clean git tree).
+lc = stack.setdefault("llama_cpp", {})
+lc.update({
     "source_repo": repo,
     "commit": commit,
     "build_arch": arch,
     "toolchain": prefix,
     "backend": "HIP",
     "built_at": dt.date.today().isoformat(),
-}
-Path(stack_path).write_text(json.dumps(stack, indent=2) + "\n", encoding="utf-8")
+})
+new_text = json.dumps(stack, indent=2) + "\n"
+if new_text != Path(stack_path).read_text(encoding="utf-8"):
+    Path(stack_path).write_text(new_text, encoding="utf-8")
 PY
 
 echo "OK: llama-server built at $BUILD_DIR/bin/llama-server (commit $COMMIT, $ROCM_VER, $AMDGPU_TARGETS)"
