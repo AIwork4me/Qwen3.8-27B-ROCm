@@ -49,6 +49,9 @@ echo "llama.cpp build  : $BUILD_DIR"
 for cmd in cmake git python3 curl tar; do
     command -v "$cmd" >/dev/null 2>&1 || {
         echo "ERROR: required command not found: $cmd" >&2
+        echo "  Debian/Ubuntu:  sudo apt-get install $cmd" >&2
+        echo "  Fedora/RHEL:    sudo dnf install $cmd" >&2
+        echo "  Arch:           sudo pacman -S $cmd" >&2
         exit 1
     }
 done
