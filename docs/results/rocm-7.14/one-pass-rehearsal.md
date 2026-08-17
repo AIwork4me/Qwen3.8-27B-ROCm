@@ -253,10 +253,15 @@ No BLOCKERs remain outstanding; F5 is fixed and re-verified.
 | `3c2125e` | `fix(protocol): community cell namespace — CELLS_DIR override, no project-matrix writes` — community cell runs write to their own `CELLS_DIR` and never flip the project matrix (+ tests). |
 | `0420a11` | `docs(rehearsal): corrected one-pass receipt — real cold-path outcomes + troubleshooting entry` — the cold-sync loop-fail pit (F9) recorded in `docs/troubleshooting.md#uv-sync-loop-fail` and as a first-run note in getting-started Path B; also this receipt's Step-(d) correction. |
 
-Each fix was pulled into the scratch clone
+The four fixes landed during the rehearsal (`acb8507`, `aacd9ab`,
+`7e7511e`, `373c9d7`) were each pulled into the scratch clone
 (`git -C /tmp/q38-rehearsal pull /home/amd/Desktop/Qwen3.8-27B-ROCm feature/release-v0.1`)
 and the affected step re-run there (F1/F3/F5 directly re-rehearsed; F2/F4
-are statements of the measurements above).
+are statements of the measurements above). The two later fixes (`3c2125e`,
+`0420a11`) were not pulled into the scratch clone (the scratch reflog stops
+at `373c9d7`): F8 was verified via the tests added with `3c2125e` in the
+main repo, and F9 is a docs change — the troubleshooting pit entry and
+getting-started first-run note cited in the table above.
 
 ## Unrehearsed surfaces (honest list)
 

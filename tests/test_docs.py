@@ -9,7 +9,8 @@ Guards the docs suite the way the verdict schema guards the benchmark:
     format (symptom -> reproduction -> root cause/diagnosis state ->
     workaround -> upstream tracking);
 (c) ``docs/adaptation.md`` cites at least six committed receipt paths;
-(d) ``CITATION.cff`` parses and names the project;
+(d) ``CITATION.cff`` parses, names the project, and stays consistent with
+    the CHANGELOG version heading and the repository name;
 (e) ``docs/getting-started.md`` quickstart commands literally match the
     scripts it documents, including both servers' verify curls;
 (f) the v0.1.0 release artifacts (Task 4): ``CHANGELOG.md`` has the required
@@ -202,6 +203,29 @@ def test_citation_cff_parses_and_names_the_project() -> None:
         assert required in keywords, f"keyword {required!r} missing from {keywords}"
     # authors block must exist (a name or family/given entries)
     assert re.search(r"(?m)^authors:", text), "authors block missing"
+
+
+def test_citation_consistent_with_changelog_and_repo_name() -> None:
+    """Plan Task 4 (explicit): the CITATION must describe the release it
+    ships with — version equal to the CHANGELOG's version heading, title
+    equal to the repository name."""
+    cff_text = (ROOT / "CITATION.cff").read_text(encoding="utf-8")
+
+    def field(key: str) -> str:
+        m = re.search(rf"(?m)^{re.escape(key)}:\s*(.*)$", cff_text)
+        assert m, f"CITATION.cff lacks the {key} field"
+        return m.group(1).strip().strip('"')
+
+    heading = re.search(r"(?m)^## v(\d+(?:\.\d+)+)\b",
+                        CHANGELOG.read_text(encoding="utf-8"))
+    assert heading, "CHANGELOG.md has no '## vX.Y.Z ...' version heading"
+    changelog_version = heading.group(1)
+    assert field("version") == changelog_version, (
+        f"CITATION.cff version {field('version')!r} != CHANGELOG heading "
+        f"version {changelog_version!r}")
+    title = field("title")
+    assert title == ROOT.name, (
+        f"CITATION.cff title {title!r} != repository name {ROOT.name!r}")
 
 
 def test_license_carries_dual_attribution() -> None:

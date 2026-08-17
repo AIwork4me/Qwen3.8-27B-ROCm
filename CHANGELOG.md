@@ -48,7 +48,7 @@ Benchmark → Explain → Reproduce. Design spec:
   checker profile, generated README matrix row, and GitHub issue template
   ([§ Community hardware validation](#community-hardware-validation) below).
 - **One-pass reproduce rehearsal** — a stranger's first run rehearsed in a
-  fresh clone from a clean shell; 1 blocker + 4 annoyances found and fixed, 2
+  fresh clone from a clean shell; 1 blocker + 6 annoyances found and fixed, 2
   cosmetics ledgered; unrehearsed surfaces listed honestly
   ([§ One-pass rehearsal](#one-pass-rehearsal) below).
 
@@ -166,9 +166,9 @@ not silently rewritten). Summary, per the corrected receipt:
   succeeds; workaround `http_proxy`/`https_proxy` or `UV_INDEX_URL`
   ([pit entry](docs/troubleshooting.md#uv-sync-loop-fail)).
 - **Friction found and fixed:** 1 blocker (F5: build script stripped the
-  committed `validated` block — `373c9d7`) + 4 annoyances (F1 `acb8507`,
-  F2/F4 `aacd9ab`, F3 `7e7511e`); 2 cosmetics ledgered (F6, F7). No
-  blockers outstanding.
+  committed `validated` block — `373c9d7`) + 6 annoyances (F1 `acb8507`,
+  F2/F4 `aacd9ab`, F3 `7e7511e`, F8 `3c2125e`, F9 `0420a11`); 2 cosmetics
+  ledgered (F6, F7). No blockers outstanding.
 - **Unrehearsed surfaces (honest list):** cold OS/ROCm install,
   GitHub-hosted CI first run, fresh 51.77 GiB BF16 + 17.56 GiB GGUF model
   downloads, the stranger's actual vLLM GitHub clone (substituted; the
