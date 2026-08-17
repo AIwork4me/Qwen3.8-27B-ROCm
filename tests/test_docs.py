@@ -25,10 +25,35 @@ from __future__ import annotations
 import json
 import os
 import re
+import subprocess
 from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+
+
+def _expected_repo_name() -> str:
+    """The repository name the CITATION title must match.
+
+    Derived from the ``origin`` remote URL (basename, ``.git`` stripped) so a
+    clone checked out under any directory name still cites the repository it
+    tracks; falls back to the checkout dirname when no ``origin`` remote
+    exists (the stranger-clone failure the verifier reproduced keyed off
+    ``ROOT.name`` alone).
+    """
+    try:
+        url = subprocess.run(
+            ["git", "-C", str(ROOT), "remote", "get-url", "origin"],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return ROOT.name
+    if not url:
+        return ROOT.name
+    name = url.rstrip("/").rsplit("/", 1)[-1]
+    if name.endswith(".git"):
+        name = name[: -len(".git")]
+    return name or ROOT.name
 
 # A docs/ path as it appears in shell scripts (echo strings, comments) and in
 # the README (prose or markdown links), optionally with a GitHub-style anchor.
@@ -208,7 +233,8 @@ def test_citation_cff_parses_and_names_the_project() -> None:
 def test_citation_consistent_with_changelog_and_repo_name() -> None:
     """Plan Task 4 (explicit): the CITATION must describe the release it
     ships with — version equal to the CHANGELOG's version heading, title
-    equal to the repository name."""
+    equal to the repository name (from the ``origin`` remote, checkout
+    dirname only as the no-remote fallback)."""
     cff_text = (ROOT / "CITATION.cff").read_text(encoding="utf-8")
 
     def field(key: str) -> str:
@@ -224,8 +250,9 @@ def test_citation_consistent_with_changelog_and_repo_name() -> None:
         f"CITATION.cff version {field('version')!r} != CHANGELOG heading "
         f"version {changelog_version!r}")
     title = field("title")
-    assert title == ROOT.name, (
-        f"CITATION.cff title {title!r} != repository name {ROOT.name!r}")
+    repo_name = _expected_repo_name()
+    assert title == repo_name, (
+        f"CITATION.cff title {title!r} != repository name {repo_name!r}")
 
 
 def test_license_carries_dual_attribution() -> None:

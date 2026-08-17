@@ -13,13 +13,14 @@ rotate it.
 ## 0. Preconditions (read-only)
 
 ```bash
-uv run --no-sync pytest -m "not gpu and not server" -v   # expect 122 passed, 2 deselected
+uv run --no-sync pytest -m "not gpu and not server" -v   # expect 123 passed, 2 deselected
 python3 scripts/render-readme-blocks.py --check
 python3 scripts/gen-verdicts.py --check
 ```
 
-122 = the 117-passed pre-release baseline + the 5 release-artifact tests
-added by the release-prep commit. The two `--check` gates prove the generated
+123 = the 117-passed pre-release baseline + the 5 release-artifact tests
+added by the release-prep commit + the CITATION-consistency test added by
+the verifier follow-up (`8539f5f`). The two `--check` gates prove the generated
 README blocks and `configs/benchmark-verdicts.json` are fresh. Also confirm
 the tree is clean (`git status`) and you are on `feature/release-v0.1` at the
 release-prep commit.
@@ -89,9 +90,13 @@ What to expect:
 - Steps in order: checkout → install uv → `uv sync --only-group ci --locked`
   → assert `torch` is NOT installed → `bash -n` on `scripts/*.sh` →
   **shellcheck** → **actionlint** → **pytest** `-m "not gpu and not server"`.
-- Expected pytest outcome: the same suite as step 0 — **122 passed,
-  2 deselected** (the GPU/server-marked tests are the deselects; the job
-  asserts no GPU runtime is present).
+- Expected pytest outcome: **122 passed, 1 skipped, 2 deselected** (the
+  GPU/server-marked tests are the deselects; the job asserts no GPU runtime
+  is present). One fewer pass than step 0's local count because
+  `tests/test_cell_runner.py` skips its branch-base comparison when the
+  shallow CI clone does not carry the `BRANCH_BASE` commit — locally, on a
+  full clone, that test runs and the count is step 0's **123 passed,
+  2 deselected**.
 
 If a step fails, every step maps to a local equivalent you can run before
 pushing a fix: `bash -n scripts/<x>.sh`, `uv run --no-sync shellcheck -x
