@@ -5,6 +5,8 @@ version: 0.1.0
 date-released: "2026-08-17"
 authors:
   - name: AIwork4me
+repository-code: "https://github.com/AIwork4me/Qwen3.8-27B-ROCm"
+url: "https://github.com/AIwork4me/Qwen3.8-27B-ROCm"
 keywords: [rocm, amd, llama.cpp, vllm, qwen, gfx1151]
 license: Apache-2.0
 description: >-

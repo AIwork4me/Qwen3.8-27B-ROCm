@@ -221,6 +221,14 @@ def test_citation_cff_parses_and_names_the_project() -> None:
     assert field("license") == "Apache-2.0"
     assert field("version"), "version missing"
     assert "AIwork4me" in text, "the AIwork4me organization is not named"
+    # The public code-repo and page URLs (cff 1.2.0): the citation must point
+    # readers at the GitHub repository that ships it.
+    PUBLIC_URL = "https://github.com/AIwork4me/Qwen3.8-27B-ROCm"
+    for url_field in ("repository-code", "url"):
+        value = field(url_field)
+        assert value, f"CITATION.cff lacks the {url_field} field"
+        assert value.strip('"') == PUBLIC_URL, (
+            f"CITATION.cff {url_field} is {value!r}, expected {PUBLIC_URL!r}")
     kw_line = field("keywords") or ""
     assert kw_line.startswith("["), f"keywords must be a flow list, got: {kw_line!r}"
     keywords = [k.strip() for k in kw_line.strip("[]").split(",") if k.strip()]

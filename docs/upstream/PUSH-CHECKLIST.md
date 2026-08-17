@@ -153,7 +153,7 @@ issue is filed. If you ever need to update it again:
    `docs/results/benchmark.md`).
 4. Gate: both `--check` runs from step 0 plus
    `uv run --no-sync pytest -m "not gpu and not server"`.
-5. Commit and push. A commit after the tag is fine — it records post-filing
+5. Commit and push. A commit after the tag is fine — it records post-comment
    status.
 
 ## 8. Announce (optional)
