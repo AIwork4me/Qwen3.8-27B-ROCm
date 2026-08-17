@@ -7,6 +7,7 @@ test keeps the committed receipts honest once host execution flips statuses.
 """
 
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -268,6 +269,61 @@ def test_vllm_runner_dry_run_mtp_conf_batch_and_ctx_override():
                          "vllm-bf16-auto-mtp-c4-ctx262144", "--dry-run"])
     assert r.returncode != 0
     assert "same server config" in (r.stdout + r.stderr).lower()
+
+
+# --------------------------------------- community cell namespace (T1 gap fix)
+# Independent-verification gap: a community submitter following
+# docs/hardware-validation.md must be able to run the SAME runners without
+# writing into the project namespace. Contract (string-level, matching the
+# runner tests above):
+#   - CELLS_DIR defaults to the project cells dir but is overridable;
+#   - MATRIX_FILE defaults to the project matrix manifest;
+#   - any CELLS_DIR outside the project default skips the matrix flip
+#     entirely (community submissions never edit the project matrix).
+
+CELLS_DIR_DEFAULT_LINE = 'CELLS_DIR="${CELLS_DIR:-docs/results/matrix-714/cells}"'
+MATRIX_FILE_DEFAULT_LINE = 'MATRIX_FILE="${MATRIX_FILE:-docs/results/matrix-714/matrix.json}"'
+SKIP_MATRIX_RULE_LINE = '[ "$CELLS_DIR" = "docs/results/matrix-714/cells" ] || UPDATE_MATRIX=0'
+
+
+def test_runner_declares_community_cells_namespace():
+    src = SCRIPT.read_text()
+    assert CELLS_DIR_DEFAULT_LINE in src
+    assert MATRIX_FILE_DEFAULT_LINE in src
+    assert SKIP_MATRIX_RULE_LINE in src
+    assert "never edit the project matrix" in src
+
+
+def test_vllm_runner_declares_community_cells_namespace():
+    src = VSCRIPT.read_text()
+    assert CELLS_DIR_DEFAULT_LINE in src
+    assert MATRIX_FILE_DEFAULT_LINE in src
+    assert SKIP_MATRIX_RULE_LINE in src
+    assert "never edit the project matrix" in src
+
+
+def test_runners_dry_run_honor_community_cells_dir(tmp_path):
+    # Functional check (CI-safe: --dry-run only): with CELLS_DIR outside the
+    # project default the plan writes cells there and says the matrix stays
+    # untouched; with the default env the matrix flip is still in the plan.
+    community = tmp_path / "community-cells"
+    before_matrix = MATRIX.read_bytes()
+    for runner, cell in ((SCRIPT, "gguf-udq4kxl-auto-base-c4-ctx131072"),
+                         (VSCRIPT, "vllm-bf16-auto-base-c1-ctx262144")):
+        r = subprocess.run(["bash", str(runner), cell, "--dry-run"],
+                           capture_output=True, text=True, timeout=60, cwd=ROOT,
+                           env=dict(os.environ, CELLS_DIR=str(community)))
+        assert r.returncode == 0, r.stderr
+        assert str(community) in r.stdout, "plan must name the override CELLS_DIR"
+        assert "matrix untouched" in r.stdout
+        assert "never edit the project matrix" in r.stdout
+        r2 = subprocess.run(
+            ["bash", str(runner), cell, "--dry-run"],
+            capture_output=True, text=True, timeout=60, cwd=ROOT)
+        assert r2.returncode == 0, r2.stderr
+        assert "matrix status flip" in r2.stdout, \
+            "default CELLS_DIR must keep the matrix flip in the plan"
+    assert MATRIX.read_bytes() == before_matrix, "dry run must not touch matrix.json"
 
 
 def test_serve_confs_byte_stable_across_branch():

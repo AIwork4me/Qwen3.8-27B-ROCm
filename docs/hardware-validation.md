@@ -116,6 +116,30 @@ docs/results/matrix-714/community/<platform-id>/
 └── cells/                 # raw runner-written cell JSONs
 ```
 
+## Producing your cells
+
+Run the same runners the project uses, with `CELLS_DIR` pointed at your
+community namespace:
+
+```bash
+CELLS_DIR=docs/results/matrix-714/community/<platform-id>/cells \
+  bash scripts/run-cell-gguf.sh gguf-udq4kxl-auto-base-c4-ctx131072
+
+CELLS_DIR=docs/results/matrix-714/community/<platform-id>/cells \
+  bash scripts/run-cell-vllm.sh vllm-bf16-auto-base-c1-ctx262144
+```
+
+With any `CELLS_DIR` other than the project default
+(`docs/results/matrix-714/cells`), the runners **do not touch the project
+matrix** — no status flip, no notes: they only resolve your cell ids against
+it (read-only) and write each cell JSON into your `CELLS_DIR`, right next to
+your `rocm-smi` receipts. A `MATRIX_FILE` override exists for the same
+reason, but you should not need it.
+
+Never edit `docs/results/matrix-714/matrix.json` or
+`configs/benchmark-verdicts.json` — community evidence enters this
+repository only through `configs/community/platforms.json`.
+
 ## Review criteria (maintainer)
 
 A submission is accepted when the maintainer can, from the PR alone:

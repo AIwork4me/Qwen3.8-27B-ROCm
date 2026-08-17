@@ -12,9 +12,11 @@
 # scripts/bench_client.py per cell (throughput run + --anchor-only greedy
 # anchor, gated on the JSON's anchor_ok field, never the exit code), kill
 # the server, wait for GTT drain, write one raw cell JSON per id to
-# docs/results/matrix-714/cells/<id>.json and flip each matrix cell to
-# `measured` (degraded runs keep `measured` + a degraded note; the
-# auto-verdict ladder in METHODOLOGY.md §3 does the demoting).
+# $CELLS_DIR/<id>.json (default docs/results/matrix-714/cells) and flip each
+# matrix cell to `measured` (degraded runs keep `measured` + a degraded
+# note; the auto-verdict ladder in METHODOLOGY.md §3 does the demoting).
+# With a non-default CELLS_DIR (community run) the matrix flip is skipped —
+# community submissions never edit the project matrix.
 #
 # BATCH MODE (Task 4): vLLM has no -np analog — concurrency is CLIENT-side
 # (bench_client opens N parallel SSE streams; METHODOLOGY.md §7). All cells
@@ -38,7 +40,10 @@
 # The mode actually used is recorded per cell in cell JSON "instrument_mode".
 #
 # Environment knobs (rarely needed): PORT (8000), HEALTH_TIMEOUT_S (900 —
-# vLLM boot is ~5 min), BENCH_TIMEOUT_S (2400 per cell).
+# vLLM boot is ~5 min), BENCH_TIMEOUT_S (2400 per cell), CELLS_DIR (default
+# docs/results/matrix-714/cells; a non-default value means a community run
+# and SKIPS the matrix flip — see docs/hardware-validation.md), MATRIX_FILE
+# (default docs/results/matrix-714/matrix.json).
 #
 # CI note: --dry-run resolves and prints the plan without launching
 # anything; the test suite only exercises --dry-run and the refusal paths.
@@ -47,8 +52,15 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-MATRIX="docs/results/matrix-714/matrix.json"
-CELLS_DIR="docs/results/matrix-714/cells"
+MATRIX_FILE="${MATRIX_FILE:-docs/results/matrix-714/matrix.json}"
+CELLS_DIR="${CELLS_DIR:-docs/results/matrix-714/cells}"
+# Community cell namespace (docs/hardware-validation.md, "Producing your
+# cells"): point CELLS_DIR at your own cells dir to keep the run out of the
+# project namespace. Any CELLS_DIR outside the project default skips the
+# matrix flip entirely — community submissions never edit the project
+# matrix (evidence enters only via configs/community/platforms.json).
+UPDATE_MATRIX=1
+[ "$CELLS_DIR" = "docs/results/matrix-714/cells" ] || UPDATE_MATRIX=0
 SERVE="scripts/03-serve-vllm.sh"
 BENCH="scripts/bench_client.py"
 PROMPTS="scripts/prompt-sets/default.json"
@@ -90,7 +102,7 @@ fi
 # cell" message; both refusals are binding either way — the matrix is the
 # source of truth)
 for CELL_ID in "${CELL_IDS[@]}"; do
-    MATRIX_STATUS="$(python3 - "$MATRIX" "$CELL_ID" <<'PY'
+    MATRIX_STATUS="$(python3 - "$MATRIX_FILE" "$CELL_ID" <<'PY' || true
 import json, sys
 try:
     cells = json.load(open(sys.argv[1]))["cells"]
@@ -106,7 +118,7 @@ PY
 )"
     case "$MATRIX_STATUS" in
         UNKNOWN)
-            echo "ERROR: cell id '$CELL_ID' is not declared in $MATRIX (unknown id; the matrix is the source of truth — see scripts/gen-matrix.py)." >&2
+            echo "ERROR: cell id '$CELL_ID' is not declared in $MATRIX_FILE (unknown id; the matrix is the source of truth — see scripts/gen-matrix.py)." >&2
             exit 3 ;;
         ERROR*) echo "$MATRIX_STATUS" >&2; exit 3 ;;
     esac
@@ -178,7 +190,11 @@ print_plan() {
         echo "cell[$i]      : python3 $BENCH --base-url $BASE_URL --concurrency ${CONCS[$i]} --prompts $PROMPTS --max-tokens 256 --label ${CELL_IDS[$i]} --model $SERVED --no-thinking"
         echo "             + python3 $BENCH --anchor-only --prompts $PROMPTS --model $SERVED --no-thinking  [gate: anchor_ok in the JSON]"
     done
-    echo "outputs      : $CELLS_DIR/{${CELL_IDS[*]}}.json + matrix status flips to measured"
+    if [ "$UPDATE_MATRIX" = "1" ]; then
+        echo "outputs      : $CELLS_DIR/{${CELL_IDS[*]}}.json + matrix status flips to measured"
+    else
+        echo "outputs      : $CELLS_DIR/{${CELL_IDS[*]}}.json (matrix untouched: community submissions never edit the project matrix — docs/hardware-validation.md)"
+    fi
 }
 
 if [ "$DRY_RUN" = "1" ]; then
@@ -274,12 +290,21 @@ wait_gtt_drain() { # vLLM holds ~74 GiB of the 80 GiB GTT pool; block until it
 }
 
 write_cell_and_matrix() { # write_cell_and_matrix <assembled-json-path> <cell-id>
-    CELL_DIR="$CELLS_DIR" python3 - "$MATRIX" "$2" "$1" <<'PY'
+    CELL_DIR="$CELLS_DIR" python3 - "$2" "$1" <<'PY'
 import json, os, shutil, sys
-matrix_path, cell_id, assembled = sys.argv[1:4]
-cell = json.load(open(assembled))
+cell_id, assembled = sys.argv[1:3]
 dest = os.path.join(os.environ["CELL_DIR"], cell_id + ".json")
 shutil.copyfile(assembled, dest)
+print(f"cell json   -> {dest}")
+PY
+    if [ "$UPDATE_MATRIX" != "1" ]; then
+        echo "matrix      -> not touched (CELLS_DIR '$CELLS_DIR' is outside the project default; community submissions never edit the project matrix — docs/hardware-validation.md)"
+        return 0
+    fi
+    python3 - "$MATRIX_FILE" "$2" "$1" <<'PY'
+import json, sys
+matrix_path, cell_id, assembled = sys.argv[1:4]
+cell = json.load(open(assembled))
 m = json.load(open(matrix_path))
 for c in m["cells"]:
     if c["id"] == cell_id:
@@ -296,7 +321,6 @@ for c in m["cells"]:
 with open(matrix_path, "w") as f:
     json.dump(m, f, indent=2)
     f.write("\n")
-print(f"cell json   -> {dest}")
 print(f"matrix      -> {cell_id}: measured" + (" (degraded)" if cell.get("degraded") else ""))
 PY
 }
@@ -528,7 +552,7 @@ PY
     write_cell_and_matrix "$CELL_TMP" "$CELL_ID"
     if [ "$DEGRADED" = "1" ]; then
         ANY_DEGRADED=1
-        echo "CELL DEGRADED: $CELL_ID — $DEGRADED_REASON (cell + matrix updated with the degraded note)"
+        echo "CELL DEGRADED: $CELL_ID — $DEGRADED_REASON (degraded note recorded in the cell JSON)"
     else
         echo "CELL OK: $CELL_ID"
     fi

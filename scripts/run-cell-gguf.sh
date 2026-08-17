@@ -12,9 +12,11 @@
 # records the ACTUAL slot semantics from the server log (n_slots /
 # n_ctx_slot / kv_unified — METHODOLOGY.md §6 obligation), kills the server,
 # waits for GPU memory to drain, writes the raw cell JSON to
-# docs/results/matrix-714/cells/<id>.json and flips the matrix cell to
-# `measured` (degraded runs keep `measured` status + a degraded note, per
-# plan Task 3; the auto-verdict ladder in METHODOLOGY §3 does the demoting).
+# $CELLS_DIR/<id>.json (default docs/results/matrix-714/cells) and flips the
+# matrix cell to `measured` (degraded runs keep `measured` status + a
+# degraded note, per plan Task 3; the auto-verdict ladder in METHODOLOGY §3
+# does the demoting). With a non-default CELLS_DIR (community run) the matrix
+# flip is skipped — community submissions never edit the project matrix.
 #
 # Cell -> server env derivation (binding, METHODOLOGY.md §1/§6):
 #   CTX_SIZE  = the id's ctx. The cell ctx is ALWAYS the server --ctx-size,
@@ -32,7 +34,10 @@
 #
 # Environment knobs (rarely needed): PORT (8080), HEALTH_TIMEOUT_S (420),
 # BENCH_TIMEOUT_S (1800), KEEP_SERVER (1 = leave the server up after the
-# cell, for interactive follow-ups; the caller owns killing it).
+# cell, for interactive follow-ups; the caller owns killing it), CELLS_DIR
+# (default docs/results/matrix-714/cells; a non-default value means a
+# community run and SKIPS the matrix flip — see docs/hardware-validation.md),
+# MATRIX_FILE (default docs/results/matrix-714/matrix.json).
 #
 # CI note: --dry-run resolves and prints the plan without launching anything;
 # the test suite only exercises --dry-run and the refusal paths.
@@ -41,8 +46,15 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-MATRIX="docs/results/matrix-714/matrix.json"
-CELLS_DIR="docs/results/matrix-714/cells"
+MATRIX_FILE="${MATRIX_FILE:-docs/results/matrix-714/matrix.json}"
+CELLS_DIR="${CELLS_DIR:-docs/results/matrix-714/cells}"
+# Community cell namespace (docs/hardware-validation.md, "Producing your
+# cells"): point CELLS_DIR at your own cells dir to keep the run out of the
+# project namespace. Any CELLS_DIR outside the project default skips the
+# matrix flip entirely — community submissions never edit the project
+# matrix (evidence enters only via configs/community/platforms.json).
+UPDATE_MATRIX=1
+[ "$CELLS_DIR" = "docs/results/matrix-714/cells" ] || UPDATE_MATRIX=0
 QUICKSTART="scripts/gguf-quickstart.sh"
 BENCH="scripts/bench_client.py"
 PROMPTS="scripts/prompt-sets/default.json"
@@ -82,7 +94,7 @@ fi
 # ------------------------------------------------------------ matrix resolve
 # (before the grammar refusal so undeclared ids get the clearer "unknown
 # cell" message; both refusals are binding either way)
-MATRIX_STATUS="$(python3 - "$MATRIX" "$CELL_ID" <<'PY'
+MATRIX_STATUS="$(python3 - "$MATRIX_FILE" "$CELL_ID" <<'PY' || true
 import json, sys
 try:
     cells = json.load(open(sys.argv[1]))["cells"]
@@ -98,7 +110,7 @@ PY
 )"
 case "$MATRIX_STATUS" in
     UNKNOWN)
-        echo "ERROR: cell id '$CELL_ID' is not declared in $MATRIX (unknown id; the matrix is the source of truth — see scripts/gen-matrix.py)." >&2
+        echo "ERROR: cell id '$CELL_ID' is not declared in $MATRIX_FILE (unknown id; the matrix is the source of truth — see scripts/gen-matrix.py)." >&2
         exit 3 ;;
     ERROR*) echo "$MATRIX_STATUS" >&2; exit 3 ;;
 esac
@@ -147,7 +159,11 @@ print_plan() {
     echo "bench         : ${BENCH_CMD[*]}"
     echo "anchor        : ${ANCHOR_CMD[*]}  [gate: anchor_ok in the JSON, not exit code]"
     echo "slot record   : n_slots / n_ctx_slot / kv_unified grepped from the server log (METHODOLOGY 6)"
-    echo "outputs       : $CELLS_DIR/$CELL_ID.json + matrix status flip to measured"
+    if [ "$UPDATE_MATRIX" = "1" ]; then
+        echo "outputs       : $CELLS_DIR/$CELL_ID.json + matrix status flip to measured"
+    else
+        echo "outputs       : $CELLS_DIR/$CELL_ID.json (matrix untouched: community submissions never edit the project matrix — docs/hardware-validation.md)"
+    fi
 }
 
 if [ "$DRY_RUN" = "1" ]; then
@@ -239,12 +255,21 @@ wait_gtt_drain() { # block until GTT returns near the idle baseline (max 150s;
 }
 
 write_cell_and_matrix() { # write_cell_and_matrix <assembled-json-path>
-    CELL_DIR="$CELLS_DIR" python3 - "$MATRIX" "$CELL_ID" "$1" <<'PY'
+    CELL_DIR="$CELLS_DIR" python3 - "$CELL_ID" "$1" <<'PY'
 import json, os, shutil, sys
-matrix_path, cell_id, assembled = sys.argv[1:4]
-cell = json.load(open(assembled))
+cell_id, assembled = sys.argv[1:3]
 dest = os.path.join(os.environ["CELL_DIR"], cell_id + ".json")
 shutil.copyfile(assembled, dest)
+print(f"cell json   -> {dest}")
+PY
+    if [ "$UPDATE_MATRIX" != "1" ]; then
+        echo "matrix      -> not touched (CELLS_DIR '$CELLS_DIR' is outside the project default; community submissions never edit the project matrix — docs/hardware-validation.md)"
+        return 0
+    fi
+    python3 - "$MATRIX_FILE" "$CELL_ID" "$1" <<'PY'
+import json, sys
+matrix_path, cell_id, assembled = sys.argv[1:4]
+cell = json.load(open(assembled))
 m = json.load(open(matrix_path))
 for c in m["cells"]:
     if c["id"] == cell_id:
@@ -261,7 +286,6 @@ for c in m["cells"]:
 with open(matrix_path, "w") as f:
     json.dump(m, f, indent=2)
     f.write("\n")
-print(f"cell json   -> {dest}")
 print(f"matrix      -> {cell_id}: measured" + (" (degraded)" if cell.get("degraded") else ""))
 PY
 }
@@ -464,7 +488,7 @@ trap - EXIT
 write_cell_and_matrix "$CELL_TMP"
 
 if [ "$DEGRADED" = "1" ]; then
-    echo "CELL DEGRADED: $CELL_ID — $DEGRADED_REASON (cell + matrix updated with the degraded note)"
+    echo "CELL DEGRADED: $CELL_ID — $DEGRADED_REASON (degraded note recorded in the cell JSON)"
     exit 4
 fi
 echo "CELL OK: $CELL_ID"
