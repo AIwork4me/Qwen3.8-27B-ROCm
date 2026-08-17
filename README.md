@@ -43,6 +43,17 @@ split-mode c4@131072 cell; single-stream use is unaffected.
 | vLLM (source build @ `4d2a68d`, BF16) | Validated — text, MTP speculative decoding, 262144 context, and single-small-image vision; encoder-peak memory for larger image workloads is unbudgeted under `--skip-mm-profiling` | `docs/results/rocm-7.14/vllm-validation.md` |
 | llama.cpp / GGUF (HIP build @ `4df29be`, UD-Q4_K_XL) | Validated — text (greedy smoke at ctx 131072), MTP via `--spec-type draft-mtp`, and single-small-image vision via mmproj-F16; `CTX_SIZE=262144` boots but total GTT grows to 33.9 GiB (weights + KV; the 262144 KV increment is 8.0 GiB over the 131072 boot), so the validated default stays 131072 | `docs/results/rocm-7.14/gguf-validation.md` |
 
+## Hardware support
+
+<!-- BEGIN GENERATED: hardware-matrix -->
+| Platform | GPU arch | Memory model | Stack | Status | Evidence |
+|---|---|---|---|---|---|
+| AMD Ryzen AI MAX+ PRO 395 / Radeon 8060S (reference host) | `gfx1151` | 80 GiB unified GTT pool | ROCm 7.14.0 — vLLM @`4d2a68d`, llama.cpp @`4df29be` | ✅ Project-validated | [vLLM](docs/results/rocm-7.14/vllm-validation.md), [GGUF](docs/results/rocm-7.14/gguf-validation.md) |
+| AMD Radeon PRO W7900 | `gfx1100` | 48 GiB discrete GDDR6 (no UMA/GTT pool) | — (submitter stack per protocol) | 🚧 Planned | [requires protocol submission](docs/hardware-validation.md) |
+
+✅ project-validated on the reference host; 🧪 community-validated — a submitter's receipts, schema-checked and reviewed per [docs/hardware-validation.md](docs/hardware-validation.md); 🚧 planned — invited, no evidence yet. Community status never changes project verdicts or quickstart defaults (`configs/community/` and the community receipts tree are a separate namespace).
+<!-- END GENERATED: hardware-matrix -->
+
 ## Performance
 
 <!-- BEGIN GENERATED: performance-highlights -->

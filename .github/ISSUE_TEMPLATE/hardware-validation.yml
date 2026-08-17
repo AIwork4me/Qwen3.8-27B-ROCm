@@ -1,0 +1,125 @@
+name: Hardware validation (community platform)
+description: >-
+  Submit validation evidence for Qwen3.8-27B on a non-gfx1151 AMD GPU
+  (e.g. Radeon PRO W7900 / gfx1100). Read docs/hardware-validation.md first.
+title: "[hardware] <platform-id>: <GPU marketing name>"
+labels: [hardware-validation]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for validating this project on your hardware. This form mirrors
+        the checklist in
+        [docs/hardware-validation.md](../docs/hardware-validation.md) — read it
+        before filling this in. Numbers from other harnesses (llama-bench,
+        vLLM benchmark_serving, vendor tools) are context, not evidence: only
+        raw cells produced by this repo's `run-cell-*.sh` + `bench_client.py`
+        count. Community status never changes project verdicts or quickstart
+        defaults. One issue + one PR per platform.
+
+  - type: input
+    id: platform-id
+    attributes:
+      label: Platform id
+      description: >-
+        Stable lower-case id with hyphens, matching your receipts directory,
+        e.g. w7900-gfx1100-rocm714
+      placeholder: w7900-gfx1100-rocm714
+    validations:
+      required: true
+
+  - type: input
+    id: gpu
+    attributes:
+      label: GPU (arch + marketing name + VRAM)
+      description: As reported by rocminfo, e.g. gfx1100 / Radeon PRO W7900 / 48
+      placeholder: gfx1100 — Radeon PRO W7900 — 48 GiB
+    validations:
+      required: true
+
+  - type: textarea
+    id: env-check
+    attributes:
+      label: env-check output (--profile community)
+      description: >-
+        Verbatim output of `bash scripts/00-check-env.sh --profile community`,
+        including the COMMUNITY-PROFILE line. Committed copy goes to
+        docs/results/matrix-714/community/`<platform-id>`/env-check.txt.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: rocm-smi
+    attributes:
+      label: rocm-smi receipts
+      description: >-
+        `rocm-smi` output at idle and under load (e.g. after model load /
+        during a cell). On discrete-VRAM boards this is the authoritative
+        memory evidence.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: commands
+    attributes:
+      label: Exact commands run
+      description: >-
+        Every command used to build and serve, verbatim (env exports,
+        configure/build lines, server invocations). If they differ from the
+        repo scripts, say where and why.
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: cells
+    attributes:
+      label: Raw cells (paths + which paths validated)
+      description: >-
+        Paths of the runner-written cell JSONs under
+        docs/results/matrix-714/community/`<platform-id>`/cells/, and the
+        resulting validated flags (gguf / vllm — a flag is true only for
+        paths whose cells are healthy: boots + clean anchors).
+      placeholder: |
+        docs/results/matrix-714/community/<platform-id>/cells/gguf-....json
+        validated.gguf: true / validated.vllm: false (48 GiB: BF16 weights alone need ~51.7 GiB)
+    validations:
+      required: true
+
+  - type: textarea
+    id: stack-manifest
+    attributes:
+      label: Stack manifest
+      description: >-
+        Where your PyTorch and vLLM came from (index URL / wheel tag / source
+        repo + commit + local patches), llama.cpp commit, ROCm version,
+        kernel. The project's TheRock index has no gfx1100 builds — your own
+        documented sources are expected.
+      render: text
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: guarantees
+    attributes:
+      label: Submission checklist
+      options:
+        - label: I read docs/hardware-validation.md and followed it.
+          required: true
+        - label: >-
+            All cells were produced by this repo's run-cell-*.sh +
+            bench_client.py (other-harness numbers are context only, not
+            evidence).
+          required: true
+        - label: >-
+            My PR adds exactly one entry to configs/community/platforms.json
+            (schema-valid) plus the receipts tree under
+            docs/results/matrix-714/community/<platform-id>/, and I
+            regenerated the README hardware matrix.
+          required: true
+        - label: >-
+            I understand community status grants nothing beyond a 🧪 row:
+            no project verdicts, no quickstart changes, no project claims.
+          required: true

@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "community-platform.schema.json",
+  "title": "Community-validated platform entry",
+  "description": "One entry of configs/community/platforms.json — a third-party hardware-validation submission for Qwen3.8-27B on a non-gfx1151 AMD GPU. Community entries carry the submitter's own receipts; they never change project verdicts or quickstart defaults (docs/hardware-validation.md).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "submitter",
+    "submitted",
+    "gpu",
+    "stack",
+    "validated",
+    "receipts"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "description": "Stable platform id, e.g. w7900-gfx1100-rocm714. Must match the receipts directory name under docs/results/matrix-714/community/."
+    },
+    "submitter": {
+      "type": "string",
+      "minLength": 1,
+      "description": "GitHub handle or name of the submitter (the person who ran the cells)."
+    },
+    "submitted": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+      "description": "Submission date (YYYY-MM-DD)."
+    },
+    "gpu": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["arch", "marketing_name", "vram_gib"],
+      "properties": {
+        "arch": {
+          "type": "string",
+          "pattern": "^gfx[0-9]{3,4}[a-z]*$",
+          "description": "GCN/RDNA arch as reported by rocminfo, e.g. gfx1100. gfx1151 is the project-validated host and does not belong in the community index."
+        },
+        "marketing_name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Marketing name from rocminfo, e.g. Radeon PRO W7900."
+        },
+        "vram_gib": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Discrete VRAM (GiB) from the submitter's rocm-smi receipt. Discrete boards have no UMA/GTT pool — do not report system RAM here."
+        }
+      }
+    },
+    "stack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rocm", "kernel", "pytorch_source", "vllm_source", "llama_cpp_commit"],
+      "properties": {
+        "rocm": {
+          "type": "string",
+          "minLength": 1,
+          "description": "ROCm version used, e.g. 7.14.0."
+        },
+        "kernel": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Linux kernel release of the submitter's host, e.g. 6.17.0."
+        },
+        "pytorch_source": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Where the submitter's PyTorch came from, e.g. 'official rocm wheel 2.9' — the project's TheRock index has no gfx1100 builds, so submitters bring their own and must say so."
+        },
+        "vllm_source": {
+          "type": "string",
+          "minLength": 1,
+          "description": "vLLM source pin, e.g. 'upstream main @<full sha>' plus any local patches."
+        },
+        "llama_cpp_commit": {
+          "type": "string",
+          "minLength": 1,
+          "description": "llama.cpp commit used for the GGUF-path cells."
+        }
+      }
+    },
+    "validated": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gguf", "vllm"],
+      "properties": {
+        "gguf": {
+          "type": "boolean",
+          "description": "True when GGUF-path cells from this platform's receipts are healthy (boots + anchors clean)."
+        },
+        "vllm": {
+          "type": "boolean",
+          "description": "True when vLLM-path cells from this platform's receipts are healthy."
+        }
+      }
+    },
+    "receipts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["env_check", "cells"],
+      "properties": {
+        "env_check": {
+          "type": "string",
+          "pattern": "^docs/results/matrix-714/community/[^/]+/.+$",
+          "description": "Saved output of 'bash scripts/00-check-env.sh --profile community', committed under the platform's community receipts tree."
+        },
+        "cells": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^docs/results/matrix-714/community/[^/]+/",
+            "description": "Raw cell JSONs / cell directory produced by the project's own run-cell-*.sh runners, under the platform's community receipts tree."
+          }
+        }
+      }
+    }
+  }
+}

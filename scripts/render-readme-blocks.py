@@ -4,8 +4,10 @@
 Renders, from configs/benchmark-verdicts.json (+ raw cells, the long-context
 smoke receipt, and matrix.json — never hand-edited copies):
 
-  * the three GENERATED blocks inside README.md (performance highlights,
-    context capacity, known good / known bad), replaced between
+  * the GENERATED blocks inside README.md (performance highlights,
+    context capacity, known good / known bad, and — via
+    scripts/render-hardware-matrix.py, imported below — the hardware
+    matrix), replaced between
     `<!-- BEGIN GENERATED: <name> -->` / `<!-- END GENERATED: <name> -->`
     markers — regeneration is idempotent (byte-identical);
   * docs/results/benchmark.md, wholesale (headline tables + links to the
@@ -20,6 +22,7 @@ Hand-editing inside the markers is forbidden: the next regen destroys it.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import re
 import sys
@@ -34,6 +37,21 @@ README = ROOT / "README.md"
 BENCH_MD = ROOT / "docs" / "results" / "benchmark.md"
 
 BLOCKS = ("performance-highlights", "context-capacity", "known-good-bad")
+
+
+def _load_hardware_matrix_renderer():
+    """scripts/render-hardware-matrix.py (hyphenated name: no plain import).
+    One regen covers every README block, so this renderer owns the
+    hardware-matrix block too; it stays independently runnable with the
+    same --check semantics."""
+    spec = importlib.util.spec_from_file_location(
+        "render_hardware_matrix", ROOT / "scripts" / "render-hardware-matrix.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+HARDWARE_MATRIX = _load_hardware_matrix_renderer()
 
 
 def mark(verdict: str) -> str:
@@ -507,13 +525,16 @@ def main(argv=None) -> int:
     check = "--check" in args
     data = load_data()
     readme_changed = update_readme(data, write=not check)
+    # One regen covers all README blocks: the hardware-matrix renderer
+    # (project + community + planned platform rows) runs on the same pass.
+    hw_changed = HARDWARE_MATRIX.update_readme(write=not check)
     bench = render_benchmark_md(data)
     bench_changed = not (BENCH_MD.exists() and BENCH_MD.read_text() == bench)
     if bench_changed and not check:
         BENCH_MD.write_text(bench)
     if check:
         stale = []
-        if readme_changed:
+        if readme_changed or hw_changed:
             stale.append("README.md")
         if bench_changed:
             stale.append("docs/results/benchmark.md")
@@ -523,7 +544,8 @@ def main(argv=None) -> int:
             return 1
         print("fresh: README blocks + docs/results/benchmark.md")
         return 0
-    print(f"README blocks {'updated' if readme_changed else 'unchanged'}; "
+    print(f"README blocks {'updated' if readme_changed else 'unchanged'}"
+          f"{' (+ hardware matrix)' if hw_changed else ''}; "
           f"benchmark.md {'written' if bench_changed else 'unchanged'}")
     return 0
 
