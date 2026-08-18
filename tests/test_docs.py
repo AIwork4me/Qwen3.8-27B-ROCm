@@ -475,3 +475,86 @@ def test_release_docs_contain_no_secrets() -> None:
             if pattern in text:
                 problems.append(f"{doc.relative_to(ROOT)}: secret pattern {pattern!r}")
     assert not problems, "credential material in release docs:\n  " + "\n  ".join(problems)
+
+
+# ------------------------------- (g) README hand-written areas (readme-polish A)
+
+
+def _readme_handwritten() -> str:
+    """README.md with every ``<!-- BEGIN/END GENERATED -->`` block removed —
+    the hand-written surface this task owns (generated text is Task B's)."""
+    text = (ROOT / "README.md").read_text(encoding="utf-8")
+    stripped = re.sub(
+        r"<!-- BEGIN GENERATED:[^\n]*-->\n.*?<!-- END GENERATED:[^\n]*-->\n?",
+        "", text, flags=re.DOTALL)
+    assert "<!-- BEGIN GENERATED:" not in stripped, "generated-block strip failed"
+    return stripped
+
+
+def _quick_start_section(handwritten: str) -> str:
+    """The `## Quick start` section (heading line through the next `## `)."""
+    parts = handwritten.split("## Quick start", 1)
+    assert len(parts) == 2, "README has no '## Quick start' section"
+    return parts[1].split("\n## ", 1)[0]
+
+
+def test_readme_carries_ci_license_and_release_badges() -> None:
+    """(a) Badges above the fold: CI, License (shields), GitHub release."""
+    head = _readme_handwritten().split("\n## ", 1)[0]
+    assert ("https://github.com/AIwork4me/Qwen3.8-27B-ROCm/actions/workflows/"
+            "ci.yml/badge.svg") in head, "CI badge missing from the header"
+    assert "img.shields.io/badge/License-Apache" in head, "license badge missing"
+    assert ("https://img.shields.io/github/v/release/"
+            "AIwork4me/Qwen3.8-27B-ROCm") in head, "release badge missing"
+
+
+def test_readme_quickstart_block_is_complete() -> None:
+    """(b) The copy-paste happy path: clone -> env check -> (install) -> build
+    -> fetch -> serve, plus the verify curls the quickstart itself echoes."""
+    hand = _readme_handwritten()
+    for cmd in (
+        "git clone https://github.com/AIwork4me/Qwen3.8-27B-ROCm.git",
+        "bash scripts/00-check-env.sh",
+        "bash scripts/install-rocm-7.14.sh",
+        "SET=gguf bash scripts/02-fetch-model.sh",
+        "WITH_MTP=1 bash scripts/gguf-quickstart.sh",
+        "curl -s http://127.0.0.1:8080/health",
+        "curl -s http://127.0.0.1:8080/v1/chat/completions",
+    ):
+        assert cmd in hand, f"README quickstart lacks the literal command: {cmd}"
+    # The verify curl payload matches scripts/gguf-quickstart.sh's own UX echo.
+    assert '"content":"Reply with exactly: OK"' in hand
+    assert '"max_tokens":512' in hand
+
+
+def test_readme_decision_table_rows_and_anchors_exist() -> None:
+    """(c) The three-row decision table lives in the Quick start section and
+    points at the sections that carry the evidence."""
+    quick = _quick_start_section(_readme_handwritten())
+    # Row 1: interactive chat -> GGUF WITH_MTP=1.
+    assert "WITH_MTP=1" in quick and "gguf-quickstart.sh" in quick
+    # Row 2: long context / vision / batch -> vLLM on :8000.
+    assert "bash scripts/03-serve-vllm.sh" in quick
+    assert "8000" in quick
+    # Row 3: multi-user GGUF loads -> don't; link to the pit evidence.
+    assert "[Known good / known bad](#known-good--known-bad)" in quick
+    # The unmeasured-stock-default caveat line is retained.
+    assert "not measured" in quick
+    # Hand-written anchor links resolve inside the README (see also the
+    # generic link tests): Performance and Known good / known bad.
+    assert "[Performance](#performance)" in quick
+
+
+def test_readme_has_no_work_in_progress() -> None:
+    """(d) The 'Work in progress' blockquote is gone (whole file)."""
+    text = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "Work in progress" not in text
+
+
+def test_readme_handwritten_text_has_no_controller_ruling() -> None:
+    """(e) Jargon sweep: 'controller ruling' survives only inside GENERATED
+    blocks (Task B's surface); the hand-written sentence says 'project
+    ruling (2026-08-17)'."""
+    hand = _readme_handwritten()
+    assert "controller ruling" not in hand
+    assert "project ruling (2026-08-17)" in hand

@@ -1,48 +1,76 @@
 # Qwen3.8-27B-ROCm
 
-> Work in progress. Goal: the reproducible RDNA reference for
-> [Qwen/Qwen3.8-27B](https://modelscope.cn/models/Qwen/Qwen3.8-27B) on
-> AMD ROCm 7.14.0 — method: Adapt → Validate → Benchmark → Explain →
-> Reproduce.
->
-> Status: both serving paths (vLLM and llama.cpp/GGUF) validated on the
-> reference host (see the table).
-> Validated platform: AMD Ryzen AI MAX+ PRO 395 / Radeon 8060S (`gfx1151`).
-> W7900D (`gfx1100`) is community-validated (GGUF path, per the hardware matrix below); more platforms are evidence-gated.
+[![CI](https://github.com/AIwork4me/Qwen3.8-27B-ROCm/actions/workflows/ci.yml/badge.svg)](https://github.com/AIwork4me/Qwen3.8-27B-ROCm/actions/workflows/ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/AIwork4me/Qwen3.8-27B-ROCm)](https://github.com/AIwork4me/Qwen3.8-27B-ROCm/releases)
 
-Design spec: `docs/superpowers/specs/2026-08-16-qwen3.8-27b-rocm-design.md`
+The reproducible, evidence-first reference for running
+[Qwen/Qwen3.8-27B](https://modelscope.cn/models/Qwen/Qwen3.8-27B) on AMD
+RDNA GPUs via ROCm — dual serving paths (vLLM + llama.cpp), a 20-cell
+measured benchmark matrix with UX-first ✅/⚠️/❌ verdicts, and a community
+hardware-validation protocol.
 
-## Documentation
+Status: both serving paths (vLLM and llama.cpp/GGUF) validated on the
+reference host — AMD Ryzen AI MAX+ PRO 395 / Radeon 8060S (`gfx1151`),
+ROCm 7.14.0. W7900D (`gfx1100`) is community-validated (GGUF path, per the
+hardware matrix below); more platforms are evidence-gated.
 
-- [Getting started](docs/getting-started.md) — prerequisites, disk budget, both serving paths with the exact validated commands
-- [Troubleshooting](docs/troubleshooting.md) — every measured pit in the standard symptom → repro → diagnosis → workaround → upstream format
-- [Adaptation map](docs/adaptation.md) — MI-series/Day-0 → RDNA gfx1151 deltas, classified by durability
-- [Results index](docs/results/README.md) — one line per validation track (spike, receipts, matrix, method)
-- [Hardware validation protocol](docs/hardware-validation.md) — adding other AMD GPUs as community evidence
+[Quick start](#quick-start-interactive-chat-the-gguf-path) ·
+[Serving paths](#serving-paths) · [Hardware support](#hardware-support) ·
+[Performance](#performance) · [Context capacity](#context-capacity) ·
+[Known good / known bad](#known-good--known-bad) ·
+[Documentation](#documentation)
+
+Prerequisites: a `gfx1151`-class AMD GPU (reference host: Ryzen AI MAX+
+PRO 395 / 8060S), ROCm 7.14.0 (installer script provided), ~20 GiB disk
+for the GGUF path (+~52 GiB for the vLLM BF16 path), git / curl / python3
+— details in [Getting started](docs/getting-started.md).
 
 ## Quick start (interactive chat: the GGUF path)
 
 The benchmark matrix (20 measured cells; verdicts in
-`configs/benchmark-verdicts.json`) puts interactive chat on the GGUF path —
+`configs/benchmark-verdicts.json`) puts interactive chat on the GGUF path:
 every measured vLLM cell runs below the 10 tok/s interactive floor on this
-host (controller ruling 2026-08-17; see [Performance](#performance)):
+host — project ruling (2026-08-17); see [Performance](#performance).
 
 ```bash
-bash scripts/gguf-quickstart.sh              # UD-Q4_K_XL, ctx 131072 — 10.1 tok/s per stream
-WITH_MTP=1 bash scripts/gguf-quickstart.sh   # +28% per-stream: 13.0 tok/s per stream
+git clone https://github.com/AIwork4me/Qwen3.8-27B-ROCm.git && cd Qwen3.8-27B-ROCm
+bash scripts/00-check-env.sh              # ROCm 7.14 at ~/rocm-7.14.0 or /opt/rocm
+bash scripts/install-rocm-7.14.sh         # only if the check says so (1.6 GiB archive + 9 GiB extracted floor)
+bash scripts/05-build-llama.sh            # pinned HIP build @ 4df29be4 for gfx1151 (compile ~7 min)
+SET=gguf bash scripts/02-fetch-model.sh   # ~18 GiB, SHA256-verified against the manifest
+WITH_MTP=1 bash scripts/gguf-quickstart.sh  # 13.0 tok/s per stream — server on :8080
 ```
 
-Point any OpenAI-compatible client at `http://127.0.0.1:8080/v1`. For
-262144-token context, vision, or aggregate batch throughput (to 38.6 tok/s),
-serve vLLM instead (`scripts/03-serve-vllm.sh`, port 8000) — it is the
-greedy-degradation-free path but not interactive on this host. The measured
-greedy-degradation pit hits the c8/c16 split-mode loads (`-np 8`/`-np 16` at
-ctx 131072) **and** c4 on the unified default boot at ctx 32768
-(`gguf-udq4kxl-auto-base-c4-ctx32768`); see
-[Known good / known bad](#known-good--known-bad). Caveat: unified-default-boot
-c4 at ctx 131072 (the stock quickstart's 4-slot default under 4 concurrent
-users) was **not measured** — bracketed by the c4@32768 pit and the clean
-split-mode c4@131072 cell; single-stream use is unaffected.
+In a second terminal, verify (keep `max_tokens` ≥ 512: this model thinks
+before answering; a low cap truncates it):
+
+```bash
+curl -s http://127.0.0.1:8080/health
+curl -s http://127.0.0.1:8080/v1/chat/completions -H 'Content-Type: application/json' \
+  -d '{"messages":[{"role":"user","content":"Reply with exactly: OK"}],"temperature":0,"max_tokens":512}'
+```
+
+Point any OpenAI-compatible client at `http://127.0.0.1:8080/v1`; Ctrl-C
+stops the server.
+
+| Boot | Per-stream speed |
+|---|---|
+| `bash scripts/gguf-quickstart.sh` (default: UD-Q4_K_XL, ctx 131072) | 10.1 tok/s |
+| `WITH_MTP=1 bash scripts/gguf-quickstart.sh` | 13.0 tok/s (+28% per-stream) |
+
+Which serving path?
+
+| You want | Use | Why |
+|---|---|---|
+| Interactive chat | `WITH_MTP=1 bash scripts/gguf-quickstart.sh` (port 8080) | every measured vLLM cell is below the 10 tok/s interactive floor |
+| 262144-token context, vision, or aggregate batch throughput (to 38.6 tok/s) | `bash scripts/03-serve-vllm.sh` (port 8000) | the greedy-degradation-free path, but not interactive on this host |
+| Multi-user GGUF loads | Don't | greedy-degradation pit — see [Known good / known bad](#known-good--known-bad) |
+
+Caveat: unified-default-boot c4 at ctx 131072 (the stock quickstart's
+4-slot default under 4 concurrent users) was **not measured** — bracketed
+by the c4@32768 pit and the clean split-mode c4@131072 cell; single-stream
+use is unaffected.
 
 ## Serving paths
 
@@ -130,3 +158,12 @@ Every verdict with its full reason/conditions/workaround: `configs/benchmark-ver
 <!-- END GENERATED: known-good-bad -->
 
 Full tables with links to the raw receipts: [docs/results/benchmark.md](docs/results/benchmark.md).
+
+## Documentation
+
+- [Getting started](docs/getting-started.md) — prerequisites, disk budget, both serving paths with the exact validated commands
+- [Troubleshooting](docs/troubleshooting.md) — every measured pit in the standard symptom → repro → diagnosis → workaround → upstream format
+- [Adaptation map](docs/adaptation.md) — MI-series/Day-0 → RDNA gfx1151 deltas, classified by durability
+- [Results index](docs/results/README.md) — one line per validation track (spike, receipts, matrix, method)
+- [Hardware validation protocol](docs/hardware-validation.md) — adding other AMD GPUs as community evidence
+- [Design spec (project internals)](docs/superpowers/specs/2026-08-16-qwen3.8-27b-rocm-design.md) — the design decisions behind this repository
