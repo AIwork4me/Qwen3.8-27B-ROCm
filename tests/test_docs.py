@@ -560,3 +560,146 @@ def test_readme_has_no_controller_ruling() -> None:
         "jargon regression: 'controller ruling' must read 'project ruling "
         "(2026-08-17)' everywhere in the README")
     assert "project ruling (2026-08-17)" in _readme_handwritten()
+
+
+# -------------------------- (h) OSS completeness: CONTRIBUTING/SECURITY/roadmap
+#
+# readme-polish Task C (P2): the standard community-facing surfaces —
+# CONTRIBUTING.md (two tracks), SECURITY.md (private reporting), and the
+# README's hand-written Status & roadmap / Contributing / License areas.
+
+
+def _readme_section(handwritten: str, title: str) -> str:
+    """A named `## ` section (heading line through the next `## ` heading)."""
+    parts = handwritten.split(f"## {title}", 1)
+    assert len(parts) == 2, f"README has no '## {title}' section"
+    return parts[1].split("\n## ", 1)[0]
+
+
+def test_contributing_md_documents_both_tracks() -> None:
+    """CONTRIBUTING.md exists, names the hardware-evidence track as the
+    primary ask, points at the validation protocol + its issue form, and
+    spells the evidence-first rules for code/docs work — including the two
+    generated-block freshness gates contributors must run locally."""
+    contrib = ROOT / "CONTRIBUTING.md"
+    assert contrib.exists(), "CONTRIBUTING.md is missing"
+    text = contrib.read_text(encoding="utf-8")
+    # Track 1: the protocol + its issue form.
+    assert "docs/hardware-validation.md" in text, (
+        "CONTRIBUTING does not reference the hardware-validation protocol")
+    assert "hardware-validation.yml" in text, (
+        "CONTRIBUTING does not reference the hardware-validation issue form")
+    assert "uv run --no-sync pytest" in text, "the test loop is not documented"
+    # Track 2: the two --check gates, named verbatim.
+    assert "scripts/render-readme-blocks.py --check" in text, (
+        "CONTRIBUTING lacks the render-readme-blocks.py --check gate")
+    assert "scripts/render-hardware-matrix.py --check" in text, (
+        "CONTRIBUTING lacks the render-hardware-matrix.py --check gate")
+    # Evidence-first rules: receipts behind numbers, generated blocks are
+    # never hand-edited.
+    assert "receipt" in text.lower(), "the receipt rule is not stated"
+    assert "GENERATED" in text, "generated blocks are not declared off-limits"
+    # Upstream-interaction policy (llama.cpp / vLLM posts are human-written).
+    assert "llama.cpp" in text and "vLLM" in text, (
+        "upstream-interaction policy does not name llama.cpp/vLLM")
+    assert "human" in text, "the human-submission policy note is missing"
+
+
+def test_security_md_documents_private_reporting() -> None:
+    """SECURITY.md exists and says: report privately (GitHub security
+    advisories / repo owner), never as public issues; scope is the repo's
+    scripts/configs — model artifacts are Qwen's, under their own license."""
+    sec = ROOT / "SECURITY.md"
+    assert sec.exists(), "SECURITY.md is missing"
+    text = sec.read_text(encoding="utf-8")
+    assert "privately" in text or "private" in text, (
+        "SECURITY.md does not ask for private reporting")
+    assert "security/advisories" in text or "security advisories" in text.lower(), (
+        "SECURITY.md does not point at GitHub security advisories")
+    assert "issue" in text.lower(), "SECURITY.md does not steer away from public issues"
+    assert "modelscope.cn/models/Qwen/Qwen3.8-27B" in text, (
+        "SECURITY.md scope does not name the model artifacts' origin")
+
+
+def test_readme_status_and_roadmap_section() -> None:
+    """'Status & roadmap' (hand-written, after Documentation): names the
+    current release with CHANGELOG + Releases links, and lists the roadmap
+    as evidence-gated intentions — community vLLM, Vulkan-vs-HIP + MTP
+    depth, the c4@131072 bracketing gap, the remaining planned cells, more
+    community platforms."""
+    section = _readme_section(_readme_handwritten(), "Status & roadmap")
+    assert "v0.1.1" in section, "the current release version is not stated"
+    assert "[CHANGELOG](CHANGELOG.md)" in section, "CHANGELOG is not linked"
+    assert ("https://github.com/AIwork4me/Qwen3.8-27B-ROCm/releases"
+            in section), "Releases are not linked"
+    # Evidence-gated framing, not promises.
+    low = section.lower()
+    assert "not promises" in low or "evidence-gated" in low, (
+        "roadmap is not framed as evidence-gated intentions")
+    # The roadmap bullets.
+    assert "vLLM" in section and ("gfx1100" in section or "W7900" in section), (
+        "community-platform vLLM bullet missing")
+    assert "Vulkan" in section and "HIP" in section and "24.5" in section, (
+        "Vulkan-vs-HIP anchor bullet missing")
+    assert "131072" in section, "the c4@131072 bracketing-gap bullet missing"
+    assert "matrix.json" in section, "the planned-cells bullet does not cite matrix.json"
+    # Every matrix.json citation must resolve to the real file.
+    assert (ROOT / "docs/results/matrix-714/matrix.json").exists()
+
+
+def test_readme_contributing_section_links_out() -> None:
+    """The 2-sentence Contributing section links CONTRIBUTING.md, the
+    hardware-validation protocol, and the hardware-validation issue form."""
+    section = _readme_section(_readme_handwritten(), "Contributing")
+    assert "[CONTRIBUTING.md](CONTRIBUTING.md)" in section
+    assert "docs/hardware-validation.md" in section
+    assert "issues/new?template=hardware-validation.yml" in section
+
+
+def test_readme_model_license_note() -> None:
+    """A License note (hand-written): repo code is Apache-2.0; the model
+    artifacts carry their own license on ModelScope (stated factually with
+    the model link) — downloading them means accepting it."""
+    section = _readme_section(_readme_handwritten(), "License")
+    assert "Apache-2.0" in section
+    assert "modelscope.cn/models/Qwen/Qwen3.8-27B" in section
+    assert "own license" in section, (
+        "the model's own-license governance is not stated")
+
+
+def test_readme_toc_lists_the_new_sections() -> None:
+    """The mini-TOC carries the new sections, and each TOC anchor resolves
+    to a real heading in the README (the generic link test double-checks)."""
+    hand = _readme_handwritten()
+    toc = hand.split("\n## ", 1)[0]
+    for anchor in ("#status--roadmap", "#contributing", "#license"):
+        assert anchor in toc, f"mini-TOC lacks {anchor}"
+        slug = anchor[1:]
+        assert slug in _anchors_of(ROOT / "README.md"), (
+            f"README lacks the heading for TOC anchor {anchor}")
+    # Ordering: Status & roadmap after Documentation in the TOC.
+    assert toc.index("#documentation") < toc.index("#status--roadmap") < (
+        toc.index("#contributing")) < toc.index("#license"), (
+        "mini-TOC section order drifted")
+
+
+def test_taskc_docs_markdown_links_resolve() -> None:
+    """The link-sweep contract extended to the Task-C files (CONTRIBUTING.md
+    and SECURITY.md live at the repo root, so relative links resolve from
+    there)."""
+    md_link = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
+    problems: list[str] = []
+    for rel in ("CONTRIBUTING.md", "SECURITY.md"):
+        doc = ROOT / rel
+        assert doc.exists(), f"{rel} is missing"
+        for target in md_link.findall(doc.read_text(encoding="utf-8")):
+            if target.startswith(("http://", "https://", "mailto:")):
+                continue
+            path_part, _, anchor = target.partition("#")
+            resolved = (doc.parent / path_part) if path_part else doc
+            if not resolved.exists():
+                problems.append(f"{rel}: link '{target}' -> path not found")
+                continue
+            if anchor and resolved.suffix == ".md" and anchor not in _anchors_of(resolved):
+                problems.append(f"{rel}: link '{target}' -> anchor #{anchor} missing")
+    assert not problems, "broken markdown links:\n  " + "\n  ".join(problems)

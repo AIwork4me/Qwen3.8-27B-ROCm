@@ -19,7 +19,8 @@ hardware matrix below); more platforms are evidence-gated.
 [Serving paths](#serving-paths) · [Hardware support](#hardware-support) ·
 [Performance](#performance) · [Context capacity](#context-capacity) ·
 [Known good / known bad](#known-good--known-bad) ·
-[Documentation](#documentation)
+[Documentation](#documentation) · [Status & roadmap](#status--roadmap) ·
+[Contributing](#contributing) · [License](#license)
 
 Prerequisites: a `gfx1151`-class AMD GPU (reference host: Ryzen AI MAX+
 PRO 395 / 8060S), ROCm 7.14.0 (installer script provided), ~20 GiB disk
@@ -170,3 +171,43 @@ Full tables with links to the raw receipts: [docs/results/benchmark.md](docs/res
 - [Results index](docs/results/README.md) — one line per validation track (spike, receipts, matrix, method)
 - [Hardware validation protocol](docs/hardware-validation.md) — adding other AMD GPUs as community evidence
 - [Design spec (project internals)](docs/superpowers/specs/2026-08-16-qwen3.8-27b-rocm-design.md) — the design decisions behind this repository
+
+## Status & roadmap
+
+Current release: **v0.1.1** — [CHANGELOG](CHANGELOG.md) ·
+[Releases](https://github.com/AIwork4me/Qwen3.8-27B-ROCm/releases).
+
+Roadmap — evidence-gated intentions, not promises; each item lands when its
+receipts do:
+
+- **vLLM path on community platforms** (W7900-class `gfx1100`): the
+  reference vLLM stack is gfx1151-only (the TheRock nightly index has no
+  gfx1100 builds), so submissions bring and document their own stack — the
+  [protocol](docs/hardware-validation.md) is ready for it.
+- **Vulkan-vs-HIP backend comparison + MTP depth >1** — AMD's Day-0 anchor
+  for this model class is 24.5 tok/s (llama.cpp/Vulkan, MTP=4; spike
+  receipt: [docs/results/spike/vllm.md](docs/results/spike/vllm.md)) vs our
+  13.0 tok/s per stream (HIP, MTP=1) — an unexplained gap worth measuring.
+- **The bracketing gap** — the unified-default c4@131072 cell was not
+  measured (the Quick start caveat); fill it.
+- **The remaining planned matrix cells** — 20 of the matrix's 48 declared
+  cells are still `planned` (8 more are dropped unsupported tiers);
+  `docs/results/matrix-714/matrix.json` is the ledger.
+- **More community platforms** — every 🚧 invitation stands; see
+  [Hardware support](#hardware-support).
+
+## Contributing
+
+The primary ask is hardware evidence: follow the
+[hardware-validation protocol](docs/hardware-validation.md) and file the
+[hardware-validation issue form](https://github.com/AIwork4me/Qwen3.8-27B-ROCm/issues/new?template=hardware-validation.yml).
+For code and docs — evidence-first rules, generated blocks, the local
+test/gate loop — see [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## License
+
+Repository code and docs are [Apache-2.0](LICENSE). The
+[Qwen/Qwen3.8-27B](https://modelscope.cn/models/Qwen/Qwen3.8-27B) model
+artifacts are governed by their own license (Apache-2.0 per the model repo
+on ModelScope) — downloading them means accepting that license; this
+repository does not redistribute them.
