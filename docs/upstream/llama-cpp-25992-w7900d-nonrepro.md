@@ -74,8 +74,8 @@ both anchors were byte-clean. Zero `'////'`-family tails in any of the 7
 - Cell ledger + anchors:
   <https://github.com/AIwork4me/Qwen3.8-27B-ROCm/tree/community/w7900-gfx1100-rocm721/docs/results/matrix-714/community/w7900d-gfx1100-rocm721/cells>
 - The two trigger-shape cells:
-  [base-c4-ctx131072.json](https://github.com/AIwork4me/Qwen3.8-27B-ROCm/blob/community/w7900-gfx1100-rocm721/docs/results/matrix-714/community/w7900d-gfx1100-rocm721/cells/gguf-udq4kxl-auto-base-c4-ctx131072.json),
-  [base-c16-ctx131072.json](https://github.com/AIwork4me/Qwen3.8-27B-ROCm/blob/community/w7900-gfx1100-rocm721/docs/results/matrix-714/community/w7900d-gfx1100-rocm721/cells/gguf-udq4kxl-auto-base-c16-ctx131072.json)
+  [base-c4-ctx131072.json](https://github.com/AIwork4me/Qwen3.8-27B-ROCm/blob/main/docs/results/matrix-714/community/w7900d-gfx1100-rocm721/cells/gguf-udq4kxl-auto-base-c4-ctx131072.json),
+  [base-c16-ctx131072.json](https://github.com/AIwork4me/Qwen3.8-27B-ROCm/blob/main/docs/results/matrix-714/community/w7900d-gfx1100-rocm721/cells/gguf-udq4kxl-auto-base-c16-ctx131072.json)
 - Submission PR (reviewer criteria, receipts tree):
   <https://github.com/AIwork4me/Qwen3.8-27B-ROCm/pull/1>
 

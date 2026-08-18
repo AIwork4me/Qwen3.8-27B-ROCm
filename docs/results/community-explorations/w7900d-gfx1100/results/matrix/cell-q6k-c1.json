@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "identity": {
+    "tag": "q6k-c1",
+    "quant": "Q6_K",
+    "file": "Qwen3.8-27B-Q6_K.gguf",
+    "size_bytes": 22884408288,
+    "np": 1,
+    "extra_args": "",
+    "max_tokens": 128,
+    "llama_cpp_commit": "4df29be4f4c3673f428170fda944a5b19f743bb8",
+    "rocm_version": "7.14.0",
+    "gpu": "AMD Radeon Pro W7900D              ",
+    "ctx_retry": false,
+    "engine": "llama.cpp"
+  },
+  "params": {
+    "concurrency": 1,
+    "reps": 5,
+    "max_tokens": 128,
+    "temperature": 0,
+    "prompt_file": "configs/bench-prompt.txt"
+  },
+  "reps": [
+    {
+      "rep": 0,
+      "ok": 1,
+      "requests": [
+        {
+          "ok": true,
+          "wall_s": 4.783,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        }
+      ],
+      "wave_wall_s": 4.783,
+      "agg_decode_tps": 26.761
+    },
+    {
+      "rep": 1,
+      "ok": 1,
+      "requests": [
+        {
+          "ok": true,
+          "wall_s": 4.648,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        }
+      ],
+      "wave_wall_s": 4.648,
+      "agg_decode_tps": 27.539
+    },
+    {
+      "rep": 2,
+      "ok": 1,
+      "requests": [
+        {
+          "ok": true,
+          "wall_s": 4.318,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        }
+      ],
+      "wave_wall_s": 4.318,
+      "agg_decode_tps": 29.643
+    },
+    {
+      "rep": 3,
+      "ok": 1,
+      "requests": [
+        {
+          "ok": true,
+          "wall_s": 4.31,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        }
+      ],
+      "wave_wall_s": 4.31,
+      "agg_decode_tps": 29.698
+    },
+    {
+      "rep": 4,
+      "ok": 1,
+      "requests": [
+        {
+          "ok": true,
+          "wall_s": 4.316,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        }
+      ],
+      "wave_wall_s": 4.316,
+      "agg_decode_tps": 29.657
+    }
+  ],
+  "aggregates": {
+    "ok_requests": 5,
+    "failed_requests": 0,
+    "mean_decode_tps": 28.66,
+    "p50_request_wall_s": 4.318,
+    "mean_request_wall_s": 4.475,
+    "status": "OK"
+  }
+}
