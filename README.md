@@ -185,9 +185,12 @@ receipts do:
   gfx1100 builds), so submissions bring and document their own stack — the
   [protocol](docs/hardware-validation.md) is ready for it.
 - **Vulkan-vs-HIP backend comparison + MTP depth >1** — AMD's Day-0 anchor
-  for this model class is 24.5 tok/s (llama.cpp/Vulkan, MTP=4; spike
-  receipt: [docs/results/spike/vllm.md](docs/results/spike/vllm.md)) vs our
-  13.0 tok/s per stream (HIP, MTP=1) — an unexplained gap worth measuring.
+  for this model class is 24.5 tok/s (llama.cpp/Vulkan with MTP=4 on a
+  128 GB Ryzen AI Max+ 395 host, where MTP-off was faster at 39.9 tok/s;
+  spike receipt: [docs/results/spike/vllm.md](docs/results/spike/vllm.md))
+  vs our 13.0 tok/s per stream (HIP, MTP=1, on the 80 GiB pool) — a
+  cross-stack gap (backend, MTP depth, host) worth measuring, not a clean
+  24.5-vs-13.0 comparison.
 - **The bracketing gap** — the unified-default c4@131072 cell was not
   measured (the Quick start caveat); fill it.
 - **The remaining planned matrix cells** — 20 of the matrix's 48 declared
@@ -208,6 +211,5 @@ test/gate loop — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Repository code and docs are [Apache-2.0](LICENSE). The
 [Qwen/Qwen3.8-27B](https://modelscope.cn/models/Qwen/Qwen3.8-27B) model
-artifacts are governed by their own license (Apache-2.0 per the model repo
-on ModelScope) — downloading them means accepting that license; this
-repository does not redistribute them.
+artifacts are governed by their own license — check the model repository
+before downloading; this repository does not redistribute them.

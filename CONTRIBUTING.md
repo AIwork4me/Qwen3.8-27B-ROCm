@@ -43,7 +43,8 @@ Evidence-first rules:
 ## Talking to upstreams (llama.cpp / vLLM)
 
 Issues, reviews, and comments posted to the llama.cpp and vLLM trackers are
-written and submitted by a human, per those projects' AI-content policies.
-AI assistance may prepare the evidence (receipts, reproductions, briefs),
-but the upstream submission itself is human-authored, human-reviewed, and
-human-owned.
+written and submitted by a human — llama.cpp's CONTRIBUTING.md explicitly
+prohibits AI-written posts, and for vLLM and any other upstream, check each
+project's policy before posting. AI assistance may prepare the evidence
+(receipts, reproductions, briefs), but the upstream submission itself is
+human-authored, human-reviewed, and human-owned.
