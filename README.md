@@ -57,7 +57,7 @@ split-mode c4@131072 cell; single-stream use is unaffected.
 | Platform | GPU arch | Memory model | Stack | Status | Evidence |
 |---|---|---|---|---|---|
 | AMD Ryzen AI MAX+ PRO 395 / Radeon 8060S (reference host) | `gfx1151` | 80 GiB unified GTT pool | ROCm 7.14.0 — vLLM @`4d2a68d`, llama.cpp @`4df29be` | ✅ Project-validated | [vLLM](docs/results/rocm-7.14/vllm-validation.md), [GGUF](docs/results/rocm-7.14/gguf-validation.md) |
-| AMD Radeon PRO W7900 | `gfx1100` | 48 GiB discrete GDDR6 (no UMA/GTT pool) | — (submitter stack per protocol) | 🚧 Planned | [requires protocol submission](docs/hardware-validation.md) |
+| AMD Radeon Pro W7900D | `gfx1100` | 48 GiB discrete VRAM (submitter's rocm-smi) | ROCm 7.2.1 (kernel 6.8.0-79-generic) — submitter stack, see docs/hardware-validation.md | 🧪 Community validated — GGUF | [env-check.txt](docs/results/matrix-714/community/w7900d-gfx1100-rocm721/env-check.txt), [w7900d-gfx1100-rocm721](docs/results/matrix-714/community/w7900d-gfx1100-rocm721/) |
 
 ✅ project-validated on the reference host; 🧪 community-validated — a submitter's receipts, schema-checked and reviewed per [docs/hardware-validation.md](docs/hardware-validation.md); 🚧 planned — invited, no evidence yet. Community status never changes project verdicts or quickstart defaults (`configs/community/` and the community receipts tree are a separate namespace).
 <!-- END GENERATED: hardware-matrix -->

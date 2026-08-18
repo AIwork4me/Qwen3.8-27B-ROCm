@@ -1,0 +1,16 @@
+Environment profile: community (any AMD gfx GPU; evidence per docs/hardware-validation.md)
+host tools:
+  tool git: /usr/bin/git
+  tool curl: /usr/bin/curl
+  tool python3: /usr/bin/python3
+Selected ROCm:
+  prefix: /opt/rocm
+  version: 7.2.1
+  track: historical reference
+  source: ROCM_PREFIX override
+WARNING: community profile: ROCm 7.2.1 is not the project's 7.14.x — acceptable for a submission, but record the exact version in the stack manifest (docs/hardware-validation.md).
+kernel: 6.8.0-79-generic
+WARNING: community profile: kernel 6.8.0-79-generic is below the project floor 6.16.9 (a Strix Halo UMA-bug guard, docs/troubleshooting.md#uma-bug) — acceptable for a submission, but record the exact kernel in the stack manifest (docs/hardware-validation.md).
+GPU-visible pool: 47 GiB (as reported by rocminfo on this host; discrete boards report board VRAM, gfx1151 reports a GTT pool)
+COMMUNITY-PROFILE: arch=gfx1100 pool=47GiB NOT project-validated — submit evidence per docs/hardware-validation.md
+OK: community profile environment readable

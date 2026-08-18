@@ -1,0 +1,119 @@
+{
+  "id": "gguf-udq4kxl-auto-base-c4-ctx131072",
+  "label": "gguf-udq4kxl-auto-base-c4-ctx131072",
+  "base_url": "http://127.0.0.1:8080",
+  "started_utc": "2026-08-18T00:49:28Z",
+  "server_flags": {
+    "ctx_size": 131072,
+    "concurrency_np": 4,
+    "with_mtp": false,
+    "extra_args": "-np 4",
+    "port": 8080,
+    "kv_semantics_expected": "split (explicit -np 4: per-slot window = 131072/4 = 32768, kv_unified=false)",
+    "quickstart": "scripts/gguf-quickstart.sh",
+    "llama_server_flags": [
+      "--ctx-size",
+      "131072",
+      "-ngl",
+      "99",
+      "--jinja",
+      "-np",
+      "4"
+    ]
+  },
+  "slot_info": {
+    "n_slots": 4,
+    "n_ctx_slot": 32768,
+    "kv_unified": "false",
+    "log_line": "n_slots = 4, n_ctx_slot = 32768, kv_unified = 'false'"
+  },
+  "load": {
+    "vram_mib": 26389,
+    "gtt_mib": 21
+  },
+  "boot": {
+    "ok": true,
+    "health_wall_s": 9
+  },
+  "client": {
+    "label": "gguf-udq4kxl-auto-base-c4-ctx131072",
+    "concurrency": 4,
+    "started_utc": "2026-08-18T00:49:40.729081+00:00",
+    "streams": [
+      {
+        "ttft_ms": 7937.315948307514,
+        "tpot_ms": 57.25338244993313,
+        "completion_tokens": 256,
+        "prompt_tokens": 1412,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 6998.30343015492,
+        "tpot_ms": 61.654616950009654,
+        "completion_tokens": 240,
+        "prompt_tokens": 1474,
+        "reasoning_tokens": 0,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 6998.326864093542,
+        "tpot_ms": 60.78485200072036,
+        "completion_tokens": 256,
+        "prompt_tokens": 1298,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 8139.790926128626,
+        "tpot_ms": 57.318113875648784,
+        "completion_tokens": 242,
+        "prompt_tokens": 1469,
+        "reasoning_tokens": 0,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      }
+    ],
+    "aggregate": {
+      "tok_per_s": 44.10474028106833,
+      "wall_s": 22.537260023877025,
+      "ok_streams": 4,
+      "failed_streams": 0
+    }
+  },
+  "anchor": {
+    "ok": true,
+    "content_tail": "OK"
+  },
+  "log_excerpt": [
+    "llama-server : /root/llama.cpp/build-714gfx1100/bin/llama-server (version: 0.1.0-dev (build 10454, commit 4df29be4f))",
+    "model        : models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf (17G)",
+    "ctx-size     : 131072  (override: CTX_SIZE=<n>)",
+    "gpu layers   : 99 (all)",
+    "mmproj       : models/Qwen3.8-27B-GGUF/mmproj-F16.gguf",
+    "speculative  : off (opt in: WITH_MTP=1)",
+    "extra args   : -np 4",
+    "Serving on http://127.0.0.1:8080 ...",
+    "0.00.076.689 W srv  llama_server: -----------------",
+    "0.00.076.692 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set",
+    "0.00.076.692 W srv  llama_server: this can be a security risk (cross-origin attacks)",
+    "0.00.076.693 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655",
+    "0.00.076.693 W srv  llama_server: -----------------",
+    "0.00.759.461 W model has unused tensor blk.64.attn_norm.weight (size = 20480 bytes) -- ignoring",
+    "0.00.759.468 W model has unused tensor blk.64.post_attention_norm.weight (size = 20480 bytes) -- ignoring",
+    "0.00.759.474 W model has unused tensor blk.64.attn_q.weight (size = 43253760 bytes) -- ignoring",
+    "0.00.759.476 W model has unused tensor blk.64.attn_k.weight (size = 3604480 bytes) -- ignoring",
+    "0.00.759.479 W model has unused tensor blk.64.attn_v.weight (size = 4300800 bytes) -- ignoring",
+    "0.00.759.487 W model has unused tensor blk.64.attn_output.weight (size = 21626880 bytes) -- ignoring",
+    "0.00.759.489 W model has unused tensor blk.64.attn_q_norm.weight (size = 1024 bytes) -- ignoring"
+  ],
+  "degraded": false,
+  "degraded_reason": null
+}

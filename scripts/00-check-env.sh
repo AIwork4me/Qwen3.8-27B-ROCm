@@ -25,10 +25,12 @@ Profiles:
              toolchain (7.14.x recommended, 7.2.x historical fallback),
              kernel floor, gfx1151 GPU arch, GPU-visible memory pool.
   community  third-party hardware validation (docs/hardware-validation.md):
-             any AMD gfx GPU with ROCm present. Host tools + kernel floor
-             are still enforced; the observed GPU arch and memory pool are
-             reported, never gated — the run is evidence for a community
-             platform submission, not a project validation.
+             any AMD gfx GPU with ROCm present. Host tools are still
+             enforced; the observed GPU arch and memory pool are reported,
+             never gated, and the kernel floor (a Strix Halo UMA-bug guard)
+             is warned + recorded in the stack manifest — the run is
+             evidence for a community platform submission, not a project
+             validation.
 EOF
 }
 
@@ -108,8 +110,17 @@ fi
 # instead of depending on the runner's real kernel (often below 6.16.9).
 krel="${KERNEL_RELEASE:-$(uname -r)}"
 echo "kernel: $krel"
-version_at_least "$krel" "$MIN_KERNEL" ||
-    fail "project Strix Halo host floor is kernel >= $MIN_KERNEL (docs/troubleshooting.md#uma-bug); got $krel"
+if [ "$PROFILE" = base ]; then
+    version_at_least "$krel" "$MIN_KERNEL" ||
+        fail "project Strix Halo host floor is kernel >= $MIN_KERNEL (docs/troubleshooting.md#uma-bug); got $krel"
+else
+    # The floor guards the gfx1151 Strix Halo UMA bug only
+    # (docs/troubleshooting.md#uma-bug: reproduction is scoped to that host).
+    # A community submission from another arch on an older kernel is evidence
+    # to record, not a gate — same policy as the ROCm-version check above.
+    version_at_least "$krel" "$MIN_KERNEL" ||
+        warn "community profile: kernel $krel is below the project floor $MIN_KERNEL (a Strix Halo UMA-bug guard, docs/troubleshooting.md#uma-bug) — acceptable for a submission, but record the exact kernel in the stack manifest (docs/hardware-validation.md)."
+fi
 
 # Buffer rocminfo output. A live rocminfo piped to grep -q can receive SIGPIPE
 # under pipefail, so parsing always uses the complete captured output.
