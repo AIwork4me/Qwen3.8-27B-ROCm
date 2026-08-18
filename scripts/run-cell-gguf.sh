@@ -19,14 +19,25 @@
 # flip is skipped — community submissions never edit the project matrix.
 #
 # Cell -> server env derivation (binding, METHODOLOGY.md §1/§6):
-#   CTX_SIZE  = the id's ctx. The cell ctx is ALWAYS the server --ctx-size,
+#   BACKEND    = the id's backend tag: hip -> third_party/llama.cpp/build-714,
+#               vulkan -> build-714-vk (BACKEND env must agree with the id;
+#               a mismatch is refused — the receipt must not lie).
+#   CTX_SIZE  = the id's ctx. This cell ctx is ALWAYS the server --ctx-size,
 #               i.e. the TOTAL KV budget in both slot modes (llama.cpp
 #               allocates --ctx-size tokens of KV whether unified or split).
-#   WITH_MTP=1 for mtp cells (--spec-type draft-mtp from the same GGUF).
+#   WITH_MTP=1 + SPEC_DEPTH for mtp/mtp4 cells (--spec-type draft-mtp from
+#               the same GGUF + --spec-draft-n-max N, the depth flag
+#               discovered at the pin: mtp => 1, mtp4 => 4; upstream default
+#               is 3, so the depth is always passed EXPLICITLY and recorded
+#               in the receipt's server_flags).
 #   EXTRA_ARGS="-np N" ONLY for the concurrency-sweep cells with N>1 at the
 #               131072 tier. An explicit -np N flips llama.cpp to SPLIT KV
 #               semantics: per-slot window = ctx/N, kv_unified=false
 #               (e.g. c4@131072 -> every stream gets a 32768 window).
+#   -unified rider (c4 only): NO -np flag — the stock quickstart default
+#               boot (auto n_parallel=4, kv_unified=true), exactly what a
+#               user of the validated defaults gets; SLOTS=unified env must
+#               agree with the -unified id suffix.
 #   Everything else (N=1 cells and the 32768/262144 ctx-tier cells at
 #   N=1,4) keeps the quickstart DEFAULT boot — auto n_parallel=4,
 #   kv_unified=true — exactly what a user of the validated defaults gets;
@@ -118,6 +129,11 @@ case "$MATRIX_STATUS" in
 esac
 
 # ------------------------------------------------------------- id grammar
+# Snapshot the operator env knobs BEFORE the id-derived values take the same
+# names (BACKEND below overwrites the env var of the same name).
+BACKEND_ENV="${BACKEND:-}"
+SPEC_DEPTH_ENV="${SPEC_DEPTH:-}"
+SLOTS_ENV="${SLOTS:-}"
 if [[ "$CELL_ID" =~ $ID_RE ]]; then
     BACKEND="${BASH_REMATCH[1]}"        # hip | vulkan
     MTP_PART="${BASH_REMATCH[2]}"       # base | mtp | mtp4
@@ -136,25 +152,65 @@ if [[ "$CELL_ID" != gguf-* ]]; then
     exit 2
 fi
 
-# Vulkan backend / mtp4 depth / unified-boot rider: the v0.1.2 runner
-# plumbing (Vulkan build + backend binary selection, MTP depth, unified
-# default boot) is NOT in this runner yet — refuse loudly rather than
-# silently measure a vulkan/mtp4/unified cell with the hip base/mtp
-# machinery (the receipt would lie about what ran).
-if [ "$BACKEND" != "hip" ] || [ "$MTP_PART" = "mtp4" ] || [ -n "$UNIFIED" ]; then
-    echo "ERROR: '$CELL_ID' needs the v0.1.2 Vulkan×MTP runner plumbing (backend binary selection / MTP depth / unified default boot) — not yet implemented in this runner; only hip {base,mtp} cells can run today." >&2
+# ---------------------------------- v0.1.2 plumbing: backend / depth / slots
+# The id is the source of truth; the env knobs (BACKEND, SPEC_DEPTH, SLOTS)
+# are cross-checks for the operator, and a contradiction is REFUSED — a
+# mismatched boot would make the receipt lie about what ran.
+case "$BACKEND" in
+    hip)    LLAMA_BIN="$ROOT/third_party/llama.cpp/build-714/bin/llama-server" ;;
+    vulkan) LLAMA_BIN="$ROOT/third_party/llama.cpp/build-714-vk/bin/llama-server" ;;
+    *)      echo "ERROR: unknown backend '$BACKEND' in id '$CELL_ID' (hip|vulkan)." >&2; exit 2 ;;
+esac
+if [ -n "${BACKEND_ENV:-}" ] && [ "$BACKEND_ENV" != "$BACKEND" ]; then
+    echo "ERROR: backend mismatch: id '$CELL_ID' is $BACKEND but BACKEND=$BACKEND_ENV —" >&2
+    echo "       the env knob must agree with the id (the id is the source of truth)." >&2
+    exit 2
+fi
+
+# MTP draft depth (discovered at the pin 4df29be4, recorded in
+# configs/validated-stack.json llama_cpp_vulkan.mtp_depth): the depth flag is
+# --spec-draft-n-max (upstream default 3), and draft-mtp self-chains the
+# single trained qwen35 MTP head up to that many drafts per step. mtp cells
+# pin depth 1, mtp4 cells pin depth 4 — the depth is passed EXPLICITLY so the
+# receipt's server_flags say exactly what drafted.
+case "$MTP_PART" in
+    base) SPEC_DEPTH_DERIVED=0 ;;
+    mtp)  SPEC_DEPTH_DERIVED=1 ;;
+    mtp4) SPEC_DEPTH_DERIVED=4 ;;
+    *)    echo "ERROR: unknown mtp part '$MTP_PART'." >&2; exit 2 ;;
+esac
+if [ -n "${SPEC_DEPTH_ENV:-}" ] && [ "$SPEC_DEPTH_ENV" != "$SPEC_DEPTH_DERIVED" ]; then
+    echo "ERROR: SPEC_DEPTH mismatch: id '$CELL_ID' derives depth $SPEC_DEPTH_DERIVED but SPEC_DEPTH=$SPEC_DEPTH_ENV —" >&2
+    echo "       mtp => 1, mtp4 => 4; the id suffix decides (the receipt records what actually booted)." >&2
+    exit 2
+fi
+
+# Unified-default-boot rider: '-unified' is c4-only (grammar + enforced here)
+# and means the stock quickstart boot — NO -np flag, auto n_parallel=4,
+# kv_unified=true — distinguishing it from the split-mode c4 cell.
+if [ -n "$UNIFIED" ] && [ "$CONC" != "4" ]; then
+    echo "ERROR: '$CELL_ID': the -unified suffix is only valid on c4 gguf cells." >&2
+    exit 2
+fi
+SLOTS_DERIVED="${UNIFIED:+unified}"
+if [ -n "${SLOTS_ENV:-}" ] && [ "$SLOTS_ENV" != "${SLOTS_DERIVED:-default}" ]; then
+    echo "ERROR: SLOTS mismatch: id '$CELL_ID' boots '${SLOTS_DERIVED:-default}' slots but SLOTS=$SLOTS_ENV —" >&2
+    echo "       SLOTS=unified is only for -unified (c4) rider cells." >&2
     exit 2
 fi
 
 # --------------------------------------------------------- server env derive
 WITH_MTP=0
-[ "$MTP_PART" = "mtp" ] && WITH_MTP=1
+[ "$MTP_PART" != "base" ] && WITH_MTP=1
+SPEC_DEPTH="$SPEC_DEPTH_DERIVED"
 
 EXTRA_ARGS=""
 KV_MODE="unified (default boot: auto n_parallel=4, shared ctx pool)"
-if [ "$CTX" = "131072" ] && [ "$CONC" -gt 1 ]; then
+if [ "$CTX" = "131072" ] && [ "$CONC" -gt 1 ] && [ -z "$UNIFIED" ]; then
     EXTRA_ARGS="-np $CONC"
     KV_MODE="split (explicit -np $CONC: per-slot window = 131072/$CONC = $((131072 / CONC)), kv_unified=false)"
+elif [ -n "$UNIFIED" ]; then
+    KV_MODE="unified (-unified rider: default boot, no explicit n_parallel flag; auto n_parallel=4, shared ctx pool)"
 fi
 
 BENCH_CMD=(python3 "$BENCH" --base-url "$BASE_URL" --concurrency "$CONC"
@@ -166,9 +222,12 @@ ANCHOR_CMD=(python3 "$BENCH" --base-url "$BASE_URL" --anchor-only
 
 print_plan() {
     echo "cell          : $CELL_ID (matrix status: $MATRIX_STATUS)"
-    echo "backend       : $BACKEND (llama.cpp build-714 binary class)"
+    echo "backend       : $BACKEND (binary: ${LLAMA_BIN#"$ROOT"/})"
     echo "server        : $QUICKSTART  (PORT=$PORT)"
-    echo "server env    : CTX_SIZE=$CTX WITH_MTP=$WITH_MTP EXTRA_ARGS='${EXTRA_ARGS}'"
+    echo "server env    : BACKEND=$BACKEND CTX_SIZE=$CTX WITH_MTP=$WITH_MTP SPEC_DEPTH=$SPEC_DEPTH EXTRA_ARGS='${EXTRA_ARGS}'"
+    if [ "$WITH_MTP" = "1" ]; then
+        echo "spec depth    : $SPEC_DEPTH (--spec-draft-n-max $SPEC_DEPTH; id mtp part = $MTP_PART)"
+    fi
     echo "kv semantics  : $KV_MODE"
     echo "health poll   : curl $BASE_URL/health (timeout ${HEALTH_TIMEOUT_S}s)"
     echo "mem snapshot  : rocm-smi --showmeminfo vram + gtt after load (MiB, /1024)"
@@ -190,6 +249,11 @@ fi
 
 # ------------------------------------------------------------ real execution
 [ -x "$QUICKSTART" ] || { echo "ERROR: $QUICKSTART not found/executable" >&2; exit 3; }
+[ -x "$LLAMA_BIN" ] || {
+    echo "ERROR: llama-server not found at $LLAMA_BIN" >&2
+    echo "       run scripts/05-build-llama.sh (hip) or scripts/06-build-llama-vulkan.sh (vulkan) first." >&2
+    exit 3
+}
 [ -f "$PROMPTS" ]    || { echo "ERROR: prompt set $PROMPTS missing" >&2; exit 3; }
 command -v rocm-smi >/dev/null 2>&1 || { echo "ERROR: rocm-smi not found (host-only runner)" >&2; exit 3; }
 
@@ -310,9 +374,10 @@ STARTED_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 DEGRADED=0
 DEGRADED_REASON=""
 
-echo "== booting $QUICKSTART (ctx $CTX, mtp $WITH_MTP, extra '${EXTRA_ARGS:-none}') =="
+echo "== booting $QUICKSTART (backend $BACKEND, ctx $CTX, mtp $WITH_MTP, depth $SPEC_DEPTH, extra '${EXTRA_ARGS:-none}') =="
 STARTED_S=$SECONDS
-PORT="$PORT" CTX_SIZE="$CTX" WITH_MTP="$WITH_MTP" EXTRA_ARGS="$EXTRA_ARGS" \
+PORT="$PORT" BACKEND="$BACKEND" CTX_SIZE="$CTX" WITH_MTP="$WITH_MTP" \
+    SPEC_DEPTH="$SPEC_DEPTH" EXTRA_ARGS="$EXTRA_ARGS" \
     nohup bash "$QUICKSTART" >"$LOG" 2>&1 &
 SERVER_PID=$!
 
@@ -454,7 +519,8 @@ PY
 
 CELL_TMP="/tmp/matrix-cell-${CELL_ID}.assembled.json"
 STARTED_UTC="$STARTED_UTC" CELL_ID="$CELL_ID" BASE_URL="$BASE_URL" CTX="$CTX" \
-CONC="$CONC" WITH_MTP="$WITH_MTP" EXTRA_ARGS="${EXTRA_ARGS}" KV_MODE="$KV_MODE" \
+CONC="$CONC" BACKEND="$BACKEND" SPEC_DEPTH="$SPEC_DEPTH" MTP_PART="$MTP_PART" \
+UNIFIED="${UNIFIED}" WITH_MTP="$WITH_MTP" EXTRA_ARGS="${EXTRA_ARGS}" KV_MODE="$KV_MODE" \
 SLOT_INFO_JSON="$SLOT_INFO_JSON" LOAD_JSON="$LOAD_JSON" BOOT_OK="$BOOT_OK" \
 BOOT_WALL="$BOOT_WALL" BENCH_JSON="$BENCH_JSON" ANCHOR_OK="$ANCHOR_OK" \
 ANCHOR_TAIL="$ANCHOR_TAIL" LOG_EXCERPT_JSON="$LOG_EXCERPT_JSON" DEGRADED="$DEGRADED" \
@@ -472,15 +538,21 @@ cell = {
     "base_url": env["BASE_URL"],
     "started_utc": env["STARTED_UTC"],
     "server_flags": {
+        "backend": env["BACKEND"],
         "ctx_size": int(env["CTX"]),
         "concurrency_np": int(env["CONC"]),
         "with_mtp": env["WITH_MTP"] == "1",
+        "mtp_part": env["MTP_PART"],
+        "spec_depth": int(env["SPEC_DEPTH"]) or None,
+        "slots": "unified-rider" if env["UNIFIED"] else "default",
         "extra_args": env["EXTRA_ARGS"],
         "port": int(env["BASE_URL"].rsplit(":", 1)[1]),
         "kv_semantics_expected": env["KV_MODE"],
         "quickstart": "scripts/gguf-quickstart.sh",
         "llama_server_flags": ["--ctx-size", env["CTX"], "-ngl", "99", "--jinja"]
                               + (["--spec-type", "draft-mtp"] if env["WITH_MTP"] == "1" else [])
+                              + (["--spec-draft-n-max", env["SPEC_DEPTH"]]
+                                 if env["WITH_MTP"] == "1" and int(env["SPEC_DEPTH"]) > 0 else [])
                               + (env["EXTRA_ARGS"].split() if env["EXTRA_ARGS"] else []),
     },
     "slot_info": json.loads(env["SLOT_INFO_JSON"]),

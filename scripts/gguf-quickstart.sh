@@ -12,6 +12,14 @@
 #   CTX_SIZE=<n>              context size
 #   PORT=<n>                  port (default 8080)
 #   WITH_MTP=1                opt in to MTP speculative decoding (see below)
+#   SPEC_DEPTH=<n>            with WITH_MTP=1: MTP draft depth, passed as
+#                             --spec-draft-n-max n (discovered at the pin,
+#                             see configs/validated-stack.json
+#                             llama_cpp_vulkan.mtp_depth; upstream default 3)
+#   BACKEND=<hip|vulkan>      llama.cpp build to serve (default hip =
+#                             build-714; vulkan = build-714-vk, EXPERIMENTAL
+#                             v0.1.2 Vulkan comparison — see benchmark
+#                             verdicts before relying on it)
 #   WITH_MMPROJ=0             skip the vision projector even when present
 #   VERIFY_GGUF=1             full SHA256 re-verification before serving (~1 min)
 #   EXTRA_ARGS='...'          extra llama-server flags appended verbatim
@@ -72,11 +80,22 @@ done
 
 MANIFEST="configs/artifact-manifest.json"
 STACK="configs/validated-stack.json"
-SERVER="${LLAMA_SERVER:-$ROOT/third_party/llama.cpp/build-714/bin/llama-server}"
+# Backend selection: hip (the validated default, unchanged) or an explicit
+# Vulkan opt-in (EXPERIMENTAL, v0.1.2 comparison cells — check the benchmark
+# verdicts before relying on it). LLAMA_SERVER remains the top-level override.
+BACKEND="${BACKEND:-hip}"
+case "$BACKEND" in
+    hip)    SERVER="${LLAMA_SERVER:-$ROOT/third_party/llama.cpp/build-714/bin/llama-server}"
+            BUILD_HINT="run scripts/05-build-llama.sh first (pinned HIP build for gfx1151)." ;;
+    vulkan) SERVER="${LLAMA_SERVER:-$ROOT/third_party/llama.cpp/build-714-vk/bin/llama-server}"
+            BUILD_HINT="run scripts/06-build-llama-vulkan.sh first (pinned Vulkan build; experimental)." ;;
+    *)      echo "ERROR: unknown BACKEND '$BACKEND' (expected hip|vulkan)." >&2
+            exit 1 ;;
+esac
 
 [ -x "$SERVER" ] || {
     echo "ERROR: llama-server not found at $SERVER" >&2
-    echo "       run scripts/05-build-llama.sh first (pinned HIP build for gfx1151)." >&2
+    echo "       $BUILD_HINT" >&2
     exit 1
 }
 
@@ -178,6 +197,18 @@ fi
 #     passed.
 if [ "${WITH_MTP:-0}" = "1" ]; then
     SERVER_ARGS+=(--spec-type draft-mtp)
+    # SPEC_DEPTH=<n> (matrix runner): the depth flag discovered at the pin.
+    # Upstream default is n_max=3 (common/common.h); passing it explicitly
+    # makes the boot (and its receipt) state the exact draft depth.
+    if [ -n "${SPEC_DEPTH:-}" ]; then
+        case "$SPEC_DEPTH" in
+            ''|*[!0-9]*) echo "ERROR: SPEC_DEPTH must be a positive integer (got '$SPEC_DEPTH')." >&2; exit 1 ;;
+        esac
+        [ "$SPEC_DEPTH" -ge 1 ] || {
+            echo "ERROR: SPEC_DEPTH must be >= 1 (got $SPEC_DEPTH)." >&2; exit 1
+        }
+        SERVER_ARGS+=(--spec-draft-n-max "$SPEC_DEPTH")
+    fi
 fi
 
 # EXTRA_ARGS pass-through (benchmark matrix, Task 3): appended verbatim after
@@ -192,11 +223,12 @@ if [ -n "${EXTRA_ARGS:-}" ]; then
 fi
 
 echo "llama-server : $SERVER ($("$SERVER" --version 2>&1 | head -n1))"
+echo "backend      : $BACKEND$([ "$BACKEND" = "vulkan" ] && echo ' (EXPERIMENTAL opt-in — see benchmark verdicts)')"
 echo "model        : $MODEL_PATH ($(du -h "$MODEL_PATH" | cut -f1))"
 echo "ctx-size     : $CTX_SIZE  (override: CTX_SIZE=<n>)"
 echo "gpu layers   : 99 (all)"
 echo "mmproj       : $([ "${WITH_MMPROJ:-1}" != "0" ] && [ -f "$MMPROJ_PATH" ] && echo "$MMPROJ_PATH" || echo "none")"
-echo "speculative  : $([ "${WITH_MTP:-0}" = "1" ] && echo "draft-mtp (MTP head from the same GGUF)" || echo "off (opt in: WITH_MTP=1)")"
+echo "speculative  : $([ "${WITH_MTP:-0}" = "1" ] && echo "draft-mtp (MTP head from the same GGUF, depth ${SPEC_DEPTH:-default 3} via --spec-draft-n-max)" || echo "off (opt in: WITH_MTP=1)")"
 echo "extra args   : ${EXTRA_ARGS:-none}"
 
 # --- End-of-launch UX (muse pattern): where to point the client, how to verify.

@@ -40,3 +40,35 @@ def test_receipt_and_stack_record_vision():
 def test_readme_gguf_row_is_measured_now():
     text = (ROOT / "README.md").read_text()
     assert "GGUF" in text and "llama.cpp" in text
+
+
+# --------------------------------------------- v0.1.2 Task 2: Vulkan opt-in
+
+def test_quickstart_backend_default_is_hip_unchanged():
+    # DEFAULT UNCHANGED (plan Task 2): the stock boot still resolves the
+    # pinned HIP build; Vulkan is strictly an explicit opt-in.
+    src = SCRIPT.read_text()
+    assert 'BACKEND="${BACKEND:-hip}"' in src
+    # Default binary class is the HIP build-714, expressed as the default
+    # branch of the backend case, and the hip miss hint points at 05-build.
+    assert "build-714/bin/llama-server" in src
+    assert "05-build-llama.sh" in src
+
+
+def test_quickstart_backend_vulkan_opt_in():
+    src = SCRIPT.read_text()
+    assert "build-714-vk/bin/llama-server" in src
+    # The opt-in is labeled experimental and defers to the verdicts.
+    assert "experimental" in src.lower()
+    assert "06-build-llama-vulkan.sh" in src
+    # Unknown backend values are refused (no silent fallthrough to hip).
+    assert "hip|vulkan" in src
+
+
+def test_quickstart_spec_depth_passthrough():
+    # SPEC_DEPTH=<n> maps to the depth flag discovered at the pin
+    # (--spec-draft-n-max; see configs/validated-stack.json
+    # llama_cpp_vulkan.mtp_depth). Only valid with WITH_MTP=1.
+    src = SCRIPT.read_text()
+    assert "SPEC_DEPTH" in src
+    assert "--spec-draft-n-max" in src

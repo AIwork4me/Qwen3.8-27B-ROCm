@@ -134,21 +134,100 @@ def test_runner_refuses_legacy_unprefixed_id():
         "unknown" in (r.stdout + r.stderr).lower()
 
 
-def test_runner_refuses_vulkan_mtp4_unified_until_plumbed():
-    """2026-08-18 (Task 1 of the v0.1.2 plan): the grammar accepts the new
-    backend/mtp4/unified ids, but the runner cannot boot them until the
-    Vulkan build + backend/depth/unified plumbing lands (plan Task 2) — it
-    must refuse loudly instead of silently measuring a vulkan cell on the
-    HIP binary. This test is REPLACED by plumbing tests in Task 2."""
-    for cid in ("gguf-vulkan-udq4kxl-auto-base-c1-ctx131072",
-                "gguf-vulkan-udq4kxl-auto-mtp4-c4-ctx131072",
-                "gguf-hip-udq4kxl-auto-mtp4-c1-ctx131072",
-                "gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified"):
-        r = run_runner([cid, "--dry-run"])
-        assert r.returncode != 0, f"{cid} must be refused pre-plumbing"
-        combined = (r.stdout + r.stderr).lower()
-        assert "vulkan" in combined or "plumb" in combined or "not yet" in combined, (
-            f"{cid}: refusal must say the backend/depth/unified plumbing is pending")
+# ---------------------------- v0.1.2 Task 2 plumbing: backend / depth / unified
+# The pre-plumbing refusal test (T1) is REPLACED here by the real plumbing
+# contract: backend binary resolution (build-714 vs build-714-vk), MTP depth
+# id mapping (--spec-draft-n-max), and the unified-default-boot rider. Env
+# knobs (BACKEND/SPEC_DEPTH/SLOTS) must AGREE with the id — a mismatch would
+# make the receipt lie about what booted, so it is refused loudly.
+
+
+def test_runner_resolves_backend_binary_class():
+    # vulkan cell -> the build-714-vk binary; hip cell stays on build-714.
+    r = run_runner(["gguf-vulkan-udq4kxl-auto-base-c1-ctx131072", "--dry-run"])
+    assert r.returncode == 0, r.stderr
+    assert "build-714-vk/bin/llama-server" in r.stdout
+    assert "build-714/bin/llama-server" not in r.stdout  # no silent hip fallback
+
+    r = run_runner(["gguf-hip-udq4kxl-auto-base-c4-ctx131072", "--dry-run"])
+    assert r.returncode == 0, r.stderr
+    assert "build-714/bin/llama-server" in r.stdout
+    assert "build-714-vk" not in r.stdout
+
+
+def test_runner_refuses_backend_env_id_mismatch():
+    # BACKEND env is a cross-check, not an override: the id is the source of
+    # truth. A vulkan id with BACKEND=hip would boot the HIP binary and the
+    # receipt would lie about the backend.
+    env = dict(os.environ, BACKEND="hip")
+    r = subprocess.run(["bash", str(SCRIPT),
+                        "gguf-vulkan-udq4kxl-auto-base-c1-ctx131072", "--dry-run"],
+                       capture_output=True, text=True, timeout=60, cwd=ROOT, env=env)
+    assert r.returncode != 0
+    combined = (r.stdout + r.stderr).lower()
+    assert "backend" in combined and "mismatch" in combined
+
+
+def test_runner_spec_depth_id_mapping():
+    # mtp -> depth 1, mtp4 -> depth 4: the discovered depth mechanism at the
+    # pin is --spec-draft-n-max (default 3 upstream), so the runner passes
+    # the depth EXPLICITLY and the plan shows it.
+    r = run_runner(["gguf-hip-udq4kxl-auto-mtp4-c1-ctx131072", "--dry-run"])
+    assert r.returncode == 0, r.stderr
+    assert "--spec-draft-n-max 4" in r.stdout
+    assert "WITH_MTP=1" in r.stdout
+
+    r = run_runner(["gguf-hip-udq4kxl-auto-mtp-c1-ctx131072", "--dry-run"])
+    assert r.returncode == 0, r.stderr
+    assert "--spec-draft-n-max 1" in r.stdout
+
+    # base cell: no speculative machinery at all.
+    r = run_runner(["gguf-vulkan-udq4kxl-auto-base-c1-ctx131072", "--dry-run"])
+    assert r.returncode == 0, r.stderr
+    assert "--spec-draft-n-max" not in r.stdout
+
+
+def test_runner_refuses_spec_depth_env_id_mismatch():
+    env = dict(os.environ, SPEC_DEPTH="1")
+    r = subprocess.run(["bash", str(SCRIPT),
+                        "gguf-hip-udq4kxl-auto-mtp4-c1-ctx131072", "--dry-run"],
+                       capture_output=True, text=True, timeout=60, cwd=ROOT, env=env)
+    assert r.returncode != 0
+    combined = (r.stdout + r.stderr).lower()
+    assert "spec_depth" in combined and "mismatch" in combined
+
+
+def test_runner_unified_rider_boots_default_unified():
+    # The -unified c4@131072 rider: NO -np flag (the stock quickstart default
+    # boot), while the plain c4 cell at the same tier keeps the split -np 4.
+    r = run_runner(["gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified", "--dry-run"])
+    assert r.returncode == 0, r.stderr
+    out = r.stdout
+    assert "-np" not in out
+    assert "unified" in out.lower()
+    assert "--concurrency 4" in out
+    assert "CTX_SIZE=131072" in out
+
+    r = run_runner(["gguf-hip-udq4kxl-auto-base-c4-ctx131072", "--dry-run"])
+    assert r.returncode == 0, r.stderr
+    assert "-np 4" in r.stdout
+
+
+def test_runner_refuses_unified_on_non_c4_and_slots_mismatch():
+    # The grammar itself refuses -unified on non-c4; the runner must also
+    # enforce it (belt and braces) and refuse a SLOTS env that contradicts
+    # the id.
+    r = run_runner(["gguf-hip-udq4kxl-auto-base-c1-ctx131072-unified", "--dry-run"])
+    assert r.returncode != 0
+    assert "unified" in (r.stdout + r.stderr).lower()
+
+    env = dict(os.environ, SLOTS="unified")
+    r = subprocess.run(["bash", str(SCRIPT),
+                        "gguf-hip-udq4kxl-auto-base-c4-ctx131072", "--dry-run"],
+                       capture_output=True, text=True, timeout=60, cwd=ROOT, env=env)
+    assert r.returncode != 0
+    combined = (r.stdout + r.stderr).lower()
+    assert "slots" in combined and "mismatch" in combined
 
 
 def test_matrix_measured_cells_pair_with_cell_files():

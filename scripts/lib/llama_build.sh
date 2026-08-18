@@ -87,6 +87,41 @@ llama_build_fingerprint_matches() {
     [ -f "$recorded" ] && cmp -s "$expected" "$recorded"
 }
 
+# write_llama_vulkan_build_fingerprint <output> <commit> <icd-json> <loader>
+# Vulkan-build analogue of write_llama_build_fingerprint (scripts/06-build-llama-vulkan.sh).
+# The active ICD identity is part of the fingerprint on purpose: RADV vs the
+# AMD proprietary driver changes what the binary talks to at runtime, and a
+# driver swap (icd mismatch) re-running the build re-records the receipt.
+write_llama_vulkan_build_fingerprint() {
+    local output="$1"
+    local llama_commit="$2"
+    local icd_json="$3"
+    local loader="$4"
+
+    python3 - "$output" "$llama_commit" "$icd_json" "$loader" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+output, commit, icd_json, loader = sys.argv[1:]
+fingerprint = {
+    "schema_version": 1,
+    "llama_cpp_commit": commit,
+    "backend": "vulkan",
+    "vulkan_loader": loader,
+    "icd": json.loads(icd_json),
+    "cmake": {
+        "GGML_VULKAN": True,
+        "GGML_HIP": False,
+        "CMAKE_BUILD_TYPE": "Release",
+    },
+}
+with Path(output).open("w", encoding="utf-8") as stream:
+    json.dump(fingerprint, stream, indent=2, sort_keys=True)
+    stream.write("\n")
+PY
+}
+
 # True when $1 is the state gguf-quickstart.sh's own clone command creates:
 # `git clone --filter=blob:none --no-checkout` leaves an empty worktree and no
 # index file, which git's diff machinery misreads as every tracked path
