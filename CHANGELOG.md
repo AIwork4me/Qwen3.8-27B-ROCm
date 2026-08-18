@@ -77,7 +77,7 @@ reason). Full tables:
 | `gguf-vulkan-…-mtp4-c1` (depth 4) | vulkan | 15.05 tok/s (+41.3% vs base) | ✅ recommended |
 | `gguf-hip-…-mtp4-c1` (depth 4) | hip | 12.76 tok/s (+25.8% vs base) | ✅ recommended |
 | `gguf-vulkan-…-base-c1` | vulkan | 10.65 tok/s | ✅ recommended |
-| c4 cells (all 5 new) | both | 5.0–6.7 tok/s (below the floor) | ⚠️ caution — batch only |
+| c4 cells (all 4 new) | both | 6.1–6.7 tok/s median (below the floor; unified-boot aggregate 5.0) | ⚠️ caution — batch only |
 
 At c4 on Vulkan, MTP is a REGRESSION vs the base counterpart (mtp −7.5%,
 mtp4 −13.0% aggregate) — the c1 payoff inverts under concurrency on this
