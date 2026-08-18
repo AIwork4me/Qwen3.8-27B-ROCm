@@ -90,12 +90,32 @@ tables [`results/benchmark.md`](results/benchmark.md)). All facts below are
   c1/c4), and hip mtp4-c1 anchored clean the same day. The pit remains a
   hip-family (gfx1151/HIP) finding at this pin; Vulkan c8/c16 are
   unmeasured.
-- **Quickstart status (project ruling 2026-08-18)** — `BACKEND=vulkan` is
-  the **recommended opt-in** for best single-stream tok/s
-  (`BACKEND=vulkan WITH_MTP=1`, 16.0 tok/s); the quickstart **default
-  stays `hip`** (headline <25%, single-session Vulkan runtime, one ICD).
+- **Quickstart status (project ruling 2026-08-18; wording upgraded v0.1.3
+  on two-session evidence)** — `BACKEND=vulkan` is the **recommended
+  opt-in** for best single-stream tok/s (`BACKEND=vulkan WITH_MTP=1`,
+  16.0 tok/s), now backed by two independent measurement sessions
+  (2026-08-18, hours apart, independent server boots) + a 30-min
+  sustained soak (108 cycles, -2.6% settle); the quickstart **default
+  stays `hip`** — the pre-registered flip rule requires >25% AND
+  stability, and the session-2 headline (16.25 vs 13.00 tok/s) is exactly
+  +25.0%, not >25%, and still mixed-depth (see the stability note below).
   Recorded per cell in [`configs/benchmark-verdicts.json`](../configs/benchmark-verdicts.json)
   (`metrics.reviewed_by` = `controller-2026-08-18`).
+- **Stability (v0.1.3, measured 2026-08-18)** — a second, independent
+  measurement session (hours after the v0.1.2 session, independent server
+  boots, same host/pin/harness) reproduced every Vulkan c1 cell: mtp-c1
+  16.00→16.25 tok/s (+1.5%), mtp4-c1 15.05→15.25 (+1.3%), base-c1
+  10.65→10.91 (+2.5%) — session 2 uniformly slightly faster, consistent
+  with a warmer machine. A 30-min sustained-load soak on the recommended
+  config (one boot, runner-identical flags) ran 108/108 clean cycles with
+  zero health flaps, a mild settle (stream-rate halves 16.43→16.00 tok/s,
+  -2.6%; aggregate halves -2.8%) and a clean post-soak greedy anchor;
+  anchors are 7/7 across all runs. Receipts:
+  [`results/matrix-714/stability/`](results/matrix-714/stability/)
+  (receipts-only — they do not enter the 28-cell matrix). **Remaining
+  limits, still true:** single host (gfx1151), single ICD (RADV,
+  Mesa 25.2.8), same-day sessions, boot-per-cell — the soak covers
+  sustained load only.
 - **Unified rider (hip)** — `gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified`
   (the stock 4-slot unified default boot under 4 concurrent users): 6.7
   tok/s healthy-stream median / 5.0 aggregate (3-of-4 streams stopped

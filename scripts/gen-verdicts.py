@@ -32,6 +32,14 @@ numbers/basis instead of asserting "Better than base" with a mislabeled
 "c1:" tag; the hip-family "c8/c16 hit the pit" clause is gated on the
 backend), and the unified-default c4 caveat was rewritten — the v0.1.2
 rider MEASURED that configuration.
+
+2026-08-18 stability follow-up S2 (v0.1.3): the "single-session Vulkan
+runtime" caveat in the v0.1.2 ruling note is upgraded to the two-session +
+soak wording (session-2 receipts + the 30-min soak live under
+docs/results/matrix-714/stability/ — receipts-only, never matrix cells),
+and the no-flip arithmetic is recorded in the note so the session-2
+headline (+25.0% exactly) is never misread as the >25% default-flip
+trigger. Wording upgrade ONLY: no verdict, metric, or default changes.
 """
 
 from __future__ import annotations
@@ -342,6 +350,17 @@ def quickstart_c4_caveat(all_metrics: dict | None,
 # (RADV 25.2.8) is covered. mtp (depth 1) stays the recommended variant on
 # both backends — depth 4 never beats depth 1 on either. The unified rider
 # is measured-with-caveat, no config change.
+#
+# v0.1.3 addendum (2026-08-18, S2 — wording upgrade ONLY, recorded, not
+# re-deliberated): the stability follow-up replaced the "single-session"
+# caveat with two independent measurement sessions (2026-08-18, hours
+# apart, independent server boots) + a 30-min sustained soak (108 cycles,
+# -2.6% settle; docs/results/matrix-714/stability/). The DEFAULT still
+# stays hip: the pre-registered flip rule requires >25% AND stability, and
+# the session-2 headline 16.25 vs 13.00 tok/s is EXACTLY +25.0% (not >25%),
+# still mixed-depth — the clean same-depth d4 pairing on session-2 numbers
+# is 15.25 vs 12.76 tok/s, +19.5%. That arithmetic is quoted in the ruling
+# note below so nobody misreads +25.0% as a trigger.
 V012_REVIEWED_BY = "controller-2026-08-18"
 V012_CELLS = frozenset({
     "gguf-vulkan-udq4kxl-auto-base-c1-ctx131072",
@@ -358,8 +377,13 @@ V012_CELLS = frozenset({
 # llama_cpp_vulkan.mtp_depth.note): the historical hip mtp receipts
 # (2026-08-17) ran the IMPLICIT --spec-draft-n-max default 3; every v0.1.2
 # cell passes its depth explicitly. Cited wherever a hip-vs-vulkan MTP
-# number is quoted.
-CROSS_DEPTH_CAVEAT = ("the hip mtp-c1 receipt (2026-08-17) ran the implicit "
+# number is quoted. The parenthetical states the date convention once
+# (2026-08-18, v0.1.3 debt fix): receipt timestamps are UTC, while caveat
+# dates before v0.1.2 were written in the operator's local UTC+8 — the
+# same day either way, never a different one.
+CROSS_DEPTH_CAVEAT = ("the hip mtp-c1 receipt (2026-08-17; receipt "
+                      "timestamps are UTC, caveat dates before v0.1.2 use "
+                      "local UTC+8) ran the implicit "
                       "--spec-draft-n-max default 3 while every v0.1.2 cell "
                       "passes its depth explicitly "
                       "(configs/validated-stack.json llama_cpp_vulkan."
@@ -368,6 +392,77 @@ CROSS_DEPTH_CAVEAT = ("the hip mtp-c1 receipt (2026-08-17) ran the implicit "
 
 def _pct(this: float, other: float) -> str:
     return f"{(this / other - 1) * 100:+.1f}%"
+
+
+# ------------------------------------------- stability evidence (S2, v0.1.3)
+#
+# Session-2 receipts + the 30-min soak live OUTSIDE the matrix corpus (the
+# S1 constraint: new-facts-new-receipts, docs/results/matrix-714/matrix.json
+# and the 28 cells are untouched), but the v0.1.3 wording upgrade quotes
+# them — so they are loaded here and interpolated with the same
+# never-drift convention as the cells (moved/edited receipts fail the
+# regen loudly instead of letting the prose drift).
+STABILITY_DIR = ROOT / "docs" / "results" / "matrix-714" / "stability"
+SESSION2_DIR = STABILITY_DIR / "session2-2026-08-18"
+STABILITY_POINTER = "docs/results/matrix-714/stability/"
+STABILITY_CELLS = (
+    "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072",
+    "gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072",
+    "gguf-vulkan-udq4kxl-auto-base-c1-ctx131072",
+)
+
+
+def _c1_stream_tok_s(cell: dict) -> float:
+    """Exact (unrounded) per-stream tok/s of a c1 cell's healthy stream.
+    Session-2 deltas are computed on exact values so +1.5% prints +1.5% —
+    2dp-rounded operands would print +1.6%."""
+    healthy = [s for s in cell["client"]["streams"]
+               if s.get("ok") and s.get("tpot_ms") and s["tpot_ms"] > 0
+               and (s.get("completion_tokens") or 0) >= 2]
+    return statistics.median(1000.0 / s["tpot_ms"] for s in healthy)
+
+
+def _load_stability_evidence() -> dict:
+    ev = {"pointer": STABILITY_POINTER, "cells": {}}
+    for cid in STABILITY_CELLS:
+        s1 = _c1_stream_tok_s(
+            json.loads((CELLS_DIR / f"{cid}.json").read_text()))
+        s2 = _c1_stream_tok_s(
+            json.loads((SESSION2_DIR / f"{cid}.json").read_text()))
+        ev["cells"][cid] = {
+            "s1": s1, "s2": s2,                       # exact, for deltas
+            "s1_2dp": round(s1, 2), "s2_2dp": round(s2, 2),
+            "delta_pct": _pct(s2, s1),
+        }
+    soak = json.loads((SESSION2_DIR /
+                       "soak-gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072.json")
+                      .read_text())
+    meds = [c["stream_median_tok_s"] for c in soak["cycles"]]
+    half = len(meds) // 2
+    first, second = statistics.median(meds[:half]), statistics.median(meds[half:])
+    ev["soak"] = {
+        "cycles": soak["totals"]["cycles"],
+        "ok_cycles": soak["totals"]["ok_cycles"],
+        "first_half_2dp": round(first, 2),
+        "second_half_2dp": round(second, 2),
+        "settle_pct": round((second / first - 1) * 100, 1),
+    }
+    return ev
+
+
+_STABILITY_EVIDENCE: dict | None = None
+
+
+def stability_evidence() -> dict:
+    """Memoized stability-evidence loader (lazy — importing this module,
+    e.g. from the tests, must stay side-effect-free). Missing receipts
+    raise FileNotFoundError on purpose: the v0.1.3 ruling note quotes this
+    evidence, so regenerating without it must fail loudly rather than
+    silently regress to pre-v0.1.3 wording."""
+    global _STABILITY_EVIDENCE
+    if _STABILITY_EVIDENCE is None:
+        _STABILITY_EVIDENCE = _load_stability_evidence()
+    return _STABILITY_EVIDENCE
 
 
 def v012_ruling_note(cid: str, all_metrics: dict | None,
@@ -395,17 +490,50 @@ def v012_ruling_note(cid: str, all_metrics: dict | None,
                 and all_metrics[k]["anchor_ok"]])
 
     if cid == "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072":
+        ev = stability_evidence()
+        c1 = ev["cells"]
+        m1 = c1["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]
+        m4 = c1["gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072"]
+        b1 = c1["gguf-vulkan-udq4kxl-auto-base-c1-ctx131072"]
+        soak = ev["soak"]
+        hip1_2dp = round(hip_mtp1["per_stream_tok_s_median"], 2)
+        hip4_2dp = round(hip_mtp41["per_stream_tok_s_median"], 2)
+        # The no-flip arithmetic uses the corpus 2dp convention (the same
+        # numbers every surface prints): 16.25 vs 13.00 is EXACTLY +25.0%.
+        headline2 = f"{(m1['s2_2dp'] / hip1_2dp - 1) * 100:+.1f}%"
+        same_depth2 = f"{(m4['s2_2dp'] / hip4_2dp - 1) * 100:+.1f}%"
         return (f"Controller ruling 2026-08-18 (v0.1.2, plan outcome (a) — "
-                f"pre-registered rule triggered): promoted in the "
-                f"gguf-quickstart echo as the recommended OPT-IN for best "
-                f"single-stream tok/s ({fmt(vk_mtp1['per_stream_tok_s_median'])} "
-                f"vs hip mtp-c1 {fmt(hip_mtp1['per_stream_tok_s_median'])} "
-                f"tok/s, {headline}); the quickstart DEFAULT stays hip "
-                f"(headline <25%, single-session Vulkan runtime, one ICD — "
-                f"RADV 25.2.8; the 'experimental, see verdicts' label is "
-                f"kept). Cross-depth caveat: the {headline} headline is "
-                f"MIXED-DEPTH — {CROSS_DEPTH_CAVEAT}; the clean same-depth "
-                f"cross-backend pairing is depth 4 — vulkan mtp4 "
+                f"pre-registered rule triggered; stability wording upgraded "
+                f"same day, v0.1.3): promoted in the gguf-quickstart echo "
+                f"as the recommended OPT-IN for best single-stream tok/s "
+                f"({fmt(vk_mtp1['per_stream_tok_s_median'])} vs hip mtp-c1 "
+                f"{fmt(hip_mtp1['per_stream_tok_s_median'])} tok/s, "
+                f"{headline}); the quickstart DEFAULT stays hip and the "
+                f"'experimental, see verdicts' label is kept. Stability "
+                f"evidence ({ev['pointer']}): two independent measurement "
+                f"sessions (2026-08-18, hours apart, independent server "
+                f"boots) + 30-min sustained soak ({soak['cycles']} cycles, "
+                f"{soak['settle_pct']:+.1f}% settle) — session-2 reproduced "
+                f"every c1 cell (mtp {m1['s1_2dp']:.2f}→{m1['s2_2dp']:.2f} "
+                f"{m1['delta_pct']}, mtp4 {m4['s1_2dp']:.2f}→"
+                f"{m4['s2_2dp']:.2f} {m4['delta_pct']}, base "
+                f"{b1['s1_2dp']:.2f}→{b1['s2_2dp']:.2f} {b1['delta_pct']}), "
+                f"soak {soak['ok_cycles']}/{soak['cycles']} cycles clean "
+                f"with zero health flaps and a clean post-soak anchor, "
+                f"anchors 7/7 across all runs; remaining limits unchanged: "
+                f"single host (gfx1151), single ICD (RADV 25.2.8), same-day "
+                f"sessions, boot-per-cell — the soak covers sustained load "
+                f"only. NO default flip, read the arithmetic (recorded so "
+                f"{headline2} is never misread as a trigger): the "
+                f"pre-registered flip rule requires >25% AND stability — "
+                f"the session-2 headline {m1['s2_2dp']:.2f} vs hip "
+                f"{hip1_2dp:.2f} tok/s is exactly {headline2} (NOT >25%), "
+                f"and the headline is still MIXED-DEPTH; the clean "
+                f"same-depth d4 pairing on session-2 numbers is "
+                f"{m4['s2_2dp']:.2f} vs {hip4_2dp:.2f} tok/s, "
+                f"{same_depth2}. Cross-depth caveat: the {headline} "
+                f"headline is MIXED-DEPTH — {CROSS_DEPTH_CAVEAT}; the clean "
+                f"same-depth cross-backend pairing is depth 4 — vulkan mtp4 "
                 f"{fmt(vk_mtp41['per_stream_tok_s_median'])} vs hip mtp4 "
                 f"{fmt(hip_mtp41['per_stream_tok_s_median'])} tok/s "
                 f"({same_depth}, both explicit depth 4, same day). "

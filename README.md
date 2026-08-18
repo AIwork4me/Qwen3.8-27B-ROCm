@@ -148,7 +148,7 @@ Boot ladder (S3) + deep-prompt retrieval smoke — GGUF path, needle sentence at
 
 - ✅ **GGUF interactive at c1** — hip: all three ctx tiers recommended, default boot (10.1 tok/s per stream) and `WITH_MTP=1` (13.0 tok/s, +28% per-stream); vulkan (opt-in): base 10.7 and mtp 16.0 tok/s — the best single-stream cells measured on this host.
 - ✅ **vLLM path anchor-clean in all 8 cells** — including anchors run immediately after 16-stream benches: the GGUF greedy-degradation pit does NOT reproduce here; the honest choice for 262144 context, vision, and batch throughput (38.6 tok/s aggregate @base-c16).
-- ✅ **Vulkan backend (v0.1.2, opt-in)** — anchor-clean in all 6 measured vulkan cells (the hip greedy pit does NOT reproduce on this backend); `BACKEND=vulkan WITH_MTP=1` reaches 16.0 tok/s per stream — the recommended opt-in for best single-stream speed (project ruling 2026-08-18; the quickstart default stays hip).
+- ✅ **Vulkan backend (v0.1.2, opt-in)** — anchor-clean in all 6 measured vulkan cells (the hip greedy pit does NOT reproduce on this backend); `BACKEND=vulkan WITH_MTP=1` reaches 16.0 tok/s per stream — the recommended opt-in for best single-stream speed (project ruling 2026-08-18; the quickstart default stays hip). Stability: reproduced by two independent measurement sessions (2026-08-18) + a 30-min soak (108 cycles, -2.6% settle; `docs/results/matrix-714/stability/`), one host / one ICD (RADV 25.2.8) remain the limits.
 - ✅ **Boot reliability** — every declared-priority cell booted (GGUF 4–6 s warm; vLLM 171/226 s); zero failed streams across all 28 cells.
 
 **Known bad / pits:**
@@ -184,7 +184,7 @@ Full tables with links to the raw receipts: [docs/results/benchmark.md](docs/res
 
 ## Status & roadmap
 
-Current release: **v0.1.2** — [CHANGELOG](CHANGELOG.md) ·
+Current release: **v0.1.3** — [CHANGELOG](CHANGELOG.md) ·
 [Releases](https://github.com/AIwork4me/Qwen3.8-27B-ROCm/releases).
 
 Roadmap — evidence-gated intentions, not promises; each item lands when its
@@ -205,7 +205,9 @@ receipts do:
   depth-4 never beats depth-1 on either backend (vulkan 15.05, hip 12.76)
   — backend and depth each contribute, and neither closes the gap to
   24.5 on an 80 GiB host. `BACKEND=vulkan` is now the recommended
-  quickstart opt-in (default stays hip).
+  quickstart opt-in (default stays hip), confirmed by two independent
+  measurement sessions + a 30-min soak
+  ([stability receipts](docs/results/matrix-714/stability/), v0.1.3).
 - **The bracketing gap — filled (v0.1.2)** — the unified-default c4@131072
   cell is measured (rider): 6.7 tok/s healthy-stream median vs 7.5
   split-mode — unified default boot degrades interactivity; no config

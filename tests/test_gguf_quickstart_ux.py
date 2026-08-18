@@ -1,4 +1,7 @@
 import json
+import os
+import socket
+import subprocess
 
 from pathlib import Path
 
@@ -89,3 +92,45 @@ def test_quickstart_spec_depth_passthrough():
     src = SCRIPT.read_text()
     assert "SPEC_DEPTH" in src
     assert "--spec-draft-n-max" in src
+
+
+def test_quickstart_refuses_invalid_spec_depth(tmp_path):
+    # The script's own SPEC_DEPTH validation, exercised end-to-end on its
+    # refusal paths (2026-08-18, v0.1.3 debt fix). CI-safe: LLAMA_SERVER is
+    # an executable stub and GGUF_FILE a scratch file (absolute path,
+    # unknown to the manifest -> the size gate is skipped), so no build and
+    # no model are needed; the validation fires before anything launches.
+    # Values read from the script's validation: non-numeric ("abc") and <1
+    # ("0") are refused; "5" is a legal depth (>= 1), so it is not used.
+    stub = tmp_path / "llama-server-stub"
+    stub.write_text("#!/bin/sh\nexit 0\n")
+    stub.chmod(0o755)
+    gguf = tmp_path / "scratch.gguf"
+    gguf.write_text("x")
+    sock = socket.socket()
+    try:
+        sock.bind(("127.0.0.1", 0))
+        port = str(sock.getsockname()[1])
+    finally:
+        sock.close()
+
+    def run_with(value):
+        env = dict(os.environ, WITH_MTP="1", SPEC_DEPTH=value,
+                   LLAMA_SERVER=str(stub), GGUF_FILE=str(gguf), PORT=port)
+        return subprocess.run(["bash", str(SCRIPT)], capture_output=True,
+                              text=True, timeout=60, cwd=ROOT, env=env)
+
+    r = run_with("abc")
+    assert r.returncode == 1
+    assert "SPEC_DEPTH must be a positive integer (got 'abc')" in \
+        (r.stdout + r.stderr)
+
+    r = run_with("0")
+    assert r.returncode == 1
+    assert "SPEC_DEPTH must be >= 1 (got 0)" in (r.stdout + r.stderr)
+
+    # Boundary: a valid depth is NOT refused by the validation (the boot
+    # proceeds to the stub, which exits 0).
+    r = run_with("4")
+    assert r.returncode == 0, r.stdout + r.stderr
+    assert "SPEC_DEPTH must" not in (r.stdout + r.stderr)

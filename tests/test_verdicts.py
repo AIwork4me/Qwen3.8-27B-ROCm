@@ -742,7 +742,10 @@ def test_ruling_vulkan_optin_trigger_and_default_stays_hip():
     """The ruling is justified by the receipts AND recorded where it binds:
     >=15% single-stream win, anchor-clean, quickstart opt-in promoted,
     default hip unchanged, cross-depth caveat stated with the clean
-    same-depth pairing."""
+    same-depth pairing. Updated 2026-08-18 (v0.1.3, S2): the
+    'single-session' caveat is upgraded to the two-session + soak wording
+    with the evidence pointer — the default-stays-hip rationale now cites
+    the flip-rule arithmetic, not a single-session limitation."""
     by_id = {c["id"]: c for c in load(VERDICTS)["cells"]}
     vk = by_id["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]
     hip = by_id["gguf-hip-udq4kxl-auto-mtp-c1-ctx131072"]
@@ -756,7 +759,10 @@ def test_ruling_vulkan_optin_trigger_and_default_stays_hip():
     r = vk["reason"]
     assert "recommended OPT-IN" in r
     assert "DEFAULT stays hip" in r
-    assert "<25%" in r and "single-session" in r and "RADV 25.2.8" in r
+    assert "two independent measurement sessions" in r
+    assert "docs/results/matrix-714/stability/" in r
+    assert "RADV 25.2.8" in r
+    assert "single-session" not in r
     assert "MIXED-DEPTH" in r and "implicit --spec-draft-n-max default 3" in r
     assert "depth 4" in r and "explicit depth 4" in r  # same-depth pairing
     # The quickstart binds: opt-in promoted in the echo, DEFAULT unchanged.
@@ -765,6 +771,61 @@ def test_ruling_vulkan_optin_trigger_and_default_stays_hip():
     assert "RECOMMENDED OPT-IN" in src
     assert "BACKEND=vulkan WITH_MTP=1" in src
     assert "16.0" in src
+
+
+def test_ruling_no_flip_arithmetic_recorded_v013():
+    """v0.1.3 (S2): the two-session evidence upgraded the WORDING but did
+    NOT flip the default — and the arithmetic is recorded in the ruling
+    note so the session-2 headline (+25.0% exactly) is never misread as
+    the >25% flip trigger. The session-2/soak numbers interpolate from the
+    committed receipts via gen-verdicts.stability_evidence() (receipts-only:
+    they never enter the 28-cell matrix)."""
+    ev = gv.stability_evidence()
+    assert ev, ("stability receipts failed to load from "
+                "docs/results/matrix-714/stability/")
+    by_id = {c["id"]: c for c in load(VERDICTS)["cells"]}
+    hip_mtp1 = by_id["gguf-hip-udq4kxl-auto-mtp-c1-ctx131072"][
+        "metrics"]["per_stream_tok_s_median"]
+    hip_mtp4 = by_id["gguf-hip-udq4kxl-auto-mtp4-c1-ctx131072"][
+        "metrics"]["per_stream_tok_s_median"]
+    m1 = ev["cells"]["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]
+    m4 = ev["cells"]["gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072"]
+    # The headline arithmetic itself, at the corpus 2dp convention:
+    # 16.25 vs 13.00 is EXACTLY +25.0% — i.e. NOT > 25% (the flip rule).
+    assert m1["s2_2dp"] == 16.25 and hip_mtp1 == 13.0
+    headline2 = (m1["s2_2dp"] / hip_mtp1 - 1) * 100
+    assert round(headline2, 1) == 25.0, (
+        f"session-2 headline must be exactly +25.0%, got {headline2:+.1f}%")
+    assert not headline2 > 25.0, "exactly +25.0% must never read as >25%"
+    # The clean same-depth d4 pairing: 15.25 vs 12.76 = +19.5%.
+    assert m4["s2_2dp"] == 15.25 and hip_mtp4 == 12.76
+    assert round((m4["s2_2dp"] / hip_mtp4 - 1) * 100, 1) == 19.5
+    # Session-2 reproduction deltas (exact-receipt basis): +1.5/+1.3/+2.5%.
+    assert m1["delta_pct"] == "+1.5%"
+    assert m4["delta_pct"] == "+1.3%"
+    assert ev["cells"]["gguf-vulkan-udq4kxl-auto-base-c1-ctx131072"][
+        "delta_pct"] == "+2.5%"
+    # The soak stats the wording quotes: 108 cycles, -2.6% settle.
+    assert ev["soak"]["cycles"] == 108 and ev["soak"]["ok_cycles"] == 108
+    assert ev["soak"]["settle_pct"] == -2.6
+    # All of it is recorded in the promoted cell's ruling note...
+    r = by_id["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]["reason"]
+    assert "exactly +25.0%" in r and "NOT >25%" in r
+    assert ">25% AND stability" in r
+    assert "MIXED-DEPTH" in r  # the caveat the headline still carries
+    assert "+19.5%" in r and "15.25 vs 12.76" in r
+    assert "108 cycles, -2.6% settle" in r
+    # ...and the default is still hip everywhere the quickstart binds.
+    assert 'BACKEND="${BACKEND:-hip}"' in QUICKSTART.read_text()
+    # The generated surfaces carry the two-session wording, never the old
+    # "single-session" caveat.
+    for surface in (BENCH_MD, README):
+        text = surface.read_text()
+        assert "single-session" not in text, (
+            f"{surface.name}: stale single-session caveat survived")
+        if surface is BENCH_MD:
+            assert "two independent measurement sessions" in text
+            assert "exactly +25.0%" in text
 
 
 def test_ruling_mtp_depth1_beats_depth4_on_both_backends():

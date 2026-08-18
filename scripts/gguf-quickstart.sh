@@ -21,8 +21,12 @@
 #                             RECOMMENDED OPT-IN for best single-stream tok/s
 #                             (project ruling 2026-08-18: vulkan mtp-c1 16.0
 #                             vs hip 13.0 tok/s, anchors clean 6/6; build via
-#                             scripts/06-build-llama-vulkan.sh). Still
-#                             experimental — single-session runtime, one ICD
+#                             scripts/06-build-llama-vulkan.sh). Backed by two
+#                             independent measurement sessions (2026-08-18,
+#                             hours apart, independent server boots) + a
+#                             30-min sustained soak (108 cycles, -2.6% settle;
+#                             docs/results/matrix-714/stability/). Still
+#                             experimental — single host (gfx1151), one ICD
 #                             (RADV 25.2.8): see benchmark verdicts before
 #                             relying on it.
 #   WITH_MMPROJ=0             skip the vision projector even when present
@@ -88,9 +92,12 @@ STACK="configs/validated-stack.json"
 # Backend selection: hip (the validated default, unchanged) or an explicit
 # Vulkan opt-in. Project ruling 2026-08-18 (v0.1.2): Vulkan is the
 # recommended OPT-IN for best single-stream tok/s (mtp-c1 16.0 vs hip 13.0
-# tok/s, anchors clean 6/6) — the default stays hip (headline win <25%,
-# single-session runtime, one ICD). LLAMA_SERVER remains the top-level
-# override.
+# tok/s, anchors clean 6/6) — the default stays hip: the pre-registered
+# flip rule requires >25% AND stability, and the session-2 headline
+# (16.25 vs 13.00 tok/s) is exactly +25.0%, not >25%, and still
+# mixed-depth (arithmetic recorded in the verdicts; v0.1.3). Limits:
+# single host (gfx1151), one ICD (RADV 25.2.8). LLAMA_SERVER remains the
+# top-level override.
 BACKEND="${BACKEND:-hip}"
 case "$BACKEND" in
     hip)    SERVER="${LLAMA_SERVER:-$ROOT/third_party/llama.cpp/build-714/bin/llama-server}"
@@ -232,7 +239,7 @@ fi
 
 echo "llama-server : $SERVER ($("$SERVER" --version 2>&1 | head -n1))"
 if [ "$BACKEND" = "vulkan" ]; then
-    echo "backend      : $BACKEND (RECOMMENDED OPT-IN for best single-stream tok/s — 16.0 vs 13.0 tok/s with WITH_MTP=1; project ruling 2026-08-18. Experimental: single-session runtime, one ICD — see benchmark verdicts)"
+    echo "backend      : $BACKEND (RECOMMENDED OPT-IN for best single-stream tok/s — 16.0 vs 13.0 tok/s with WITH_MTP=1, mixed-depth pairing — see benchmark verdicts for the same-depth +19.5%; project ruling 2026-08-18. Two independent measurement sessions (2026-08-18, independent boots) + 30-min soak (108 cycles, -2.6% settle). Still experimental: single host (gfx1151), one ICD (RADV 25.2.8) — see benchmark verdicts)"
 else
     echo "backend      : $BACKEND (default, unchanged)"
     echo "tip (opt-in) : for best single-stream tok/s run: BACKEND=vulkan WITH_MTP=1 bash scripts/gguf-quickstart.sh  # 16.0 tok/s (build first: scripts/06-build-llama-vulkan.sh; experimental — see benchmark verdicts)"

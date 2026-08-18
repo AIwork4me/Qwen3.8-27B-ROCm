@@ -230,6 +230,33 @@ def test_runner_refuses_unified_on_non_c4_and_slots_mismatch():
     assert "slots" in combined and "mismatch" in combined
 
 
+def test_runner_refuses_unified_on_non_c4_via_own_enforcement(tmp_path):
+    # PATH PINNED (2026-08-18, v0.1.3 debt fix): the RUNNER's own c4-only
+    # -unified enforcement ("the -unified suffix is only valid on c4 gguf
+    # cells", exit 2) — NOT the matrix "not declared" refusal (exit 3) that
+    # the test above rides on for undeclared ids. Here the id IS declared
+    # (a scratch MATRIX_FILE, the runner's own override knob) and IS
+    # grammatically valid (the regex accepts -unified on any c), so the
+    # grammar passes and the c4-only guard is what refuses.
+    manifest = json.loads(MATRIX.read_text())
+    manifest["cells"] = manifest["cells"] + [{
+        "id": "gguf-hip-udq4kxl-auto-base-c1-ctx131072-unified",
+        "status": "planned", "runner_hint": "scripts/run-cell-gguf.sh"}]
+    scratch_matrix = tmp_path / "scratch-matrix.json"
+    scratch_matrix.write_text(json.dumps(manifest))
+    env = dict(os.environ, MATRIX_FILE=str(scratch_matrix),
+               CELLS_DIR=str(tmp_path / "cells"))  # never the project ns
+    r = subprocess.run(["bash", str(SCRIPT),
+                        "gguf-hip-udq4kxl-auto-base-c1-ctx131072-unified",
+                        "--dry-run"],
+                       capture_output=True, text=True, timeout=60, cwd=ROOT,
+                       env=env)
+    combined = r.stdout + r.stderr
+    assert r.returncode == 2, combined  # the grammar-class exit, not matrix 3
+    assert "-unified suffix is only valid on c4" in combined
+    assert "not declared" not in combined.lower()  # matrix path did not fire
+
+
 def test_matrix_measured_cells_pair_with_cell_files():
     m = json.loads(MATRIX.read_text())
     measured = {c["id"] for c in m["cells"] if c["status"] == "measured"}

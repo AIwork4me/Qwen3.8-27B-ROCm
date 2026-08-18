@@ -20,8 +20,8 @@ The user-facing defaults map to measured, verdicted cells — a quickstart can n
 
 Controller ruling (2026-08-17, binding): all 8 measured vLLM cells are below the 10 tok/s interactive floor — the vLLM c1 cells are `caution` **with non-empty conditions**: "per-stream < 10 tok/s on this host: use for 262144-context, vision, and aggregate batch throughput (to 38.6 tok/s), and as the greedy-degradation-free path; interactive chat → GGUF path (mtp-c1 13.0 tok/s)". README quickstart guidance points at the GGUF path.
 
-Controller ruling (2026-08-18, binding, v0.1.2 plan outcome (a)):
-`BACKEND=vulkan` is promoted in the gguf-quickstart echo as the recommended OPT-IN for best single-stream tok/s — vulkan mtp-c1 16.00 vs hip 13.00 tok/s (+23.1% mixed-depth headline; the clean same-depth depth-4 pairing is 15.05 vs 12.76 tok/s, +18.0%), anchors clean 6/6 — while the quickstart DEFAULT stays `hip` (headline <25%, single-session Vulkan runtime, one ICD: RADV 25.2.8). MTP depth 1 stays the recommended variant on both backends (depth 4 never beats it); cross-depth caveat: the hip 13.0 receipt ran the implicit `--spec-draft-n-max` default 3 while every v0.1.2 cell passes depth explicitly (`configs/validated-stack.json` `llama_cpp_vulkan.mtp_depth.note`). The unified-default-boot c4@131072 rider is measured-with-caveat (degrades interactivity vs split boot; no config change).
+Controller ruling (2026-08-18, binding, v0.1.2 plan outcome (a); stability wording upgraded 2026-08-18, v0.1.3):
+`BACKEND=vulkan` is promoted in the gguf-quickstart echo as the recommended OPT-IN for best single-stream tok/s — vulkan mtp-c1 16.00 vs hip 13.00 tok/s (+23.1% mixed-depth headline; the clean same-depth depth-4 pairing is 15.05 vs 12.76 tok/s, +17.9%), anchors clean 6/6 — while the quickstart DEFAULT stays `hip`. Stability evidence (`docs/results/matrix-714/stability/`): two independent measurement sessions (2026-08-18, hours apart, independent server boots) + 30-min sustained soak (108 cycles, -2.6% settle) — session-2 reproduced every c1 cell within +1.3%…+2.5% per-stream, anchors 7/7 across all runs; remaining limits: one host (gfx1151), one ICD (RADV 25.2.8), same-day sessions, boot-per-cell, and the soak covers sustained load only. NO default flip, read the arithmetic (recorded so the session-2 headline is never misread as a trigger): the pre-registered flip rule requires >25% AND stability — the session-2 headline 16.25 vs 13.00 tok/s is exactly +25.0% (NOT >25%) and stays mixed-depth; the clean same-depth d4 pairing is 15.25 vs 12.76 tok/s, +19.5%. MTP depth 1 stays the recommended variant on both backends (depth 4 never beats it); cross-depth caveat: the hip 13.0 receipt ran the implicit `--spec-draft-n-max` default 3 while every v0.1.2 cell passes depth explicitly (`configs/validated-stack.json` `llama_cpp_vulkan.mtp_depth.note`). The unified-default-boot c4@131072 rider is measured-with-caveat (degrades interactivity vs split boot; no config change).
 
 
 ## GGUF path (llama.cpp `4df29be4`, UD-Q4_K_XL; Backend column from the cell id)
@@ -60,14 +60,14 @@ Boots: base healthy in 171 s (GTT 75,040 MiB: weights 51.1 GiB, KV 19.57 GiB, re
 
 | Cell | Verdict | Per-stream med tok/s | min | TPOT med ms | Aggregate tok/s | TTFT med | Anchor | GTT MiB | auto → final |
 |---|---|---|---|---|---|---|---|---|---|
-| [`vllm-bf16-auto-base-c1-ctx262144`](matrix-714/cells/vllm-bf16-auto-base-c1-ctx262144.json) |  | ⚠️ caution | 4.28 | 4.28 | 233.8 | 4.00 | 4.0 s | ok | 75,040 | avoid → **caution** (ruling) |
-| [`vllm-bf16-auto-base-c16-ctx262144`](matrix-714/cells/vllm-bf16-auto-base-c16-ctx262144.json) |  | ⚠️ caution | 2.95 | 2.58 | 338.9 | 38.58 | 15.8 s | ok | 75,040 | caution |
-| [`vllm-bf16-auto-base-c4-ctx262144`](matrix-714/cells/vllm-bf16-auto-base-c4-ctx262144.json) |  | ⚠️ caution | 3.85 | 3.58 | 259.9 | 13.44 | 9.5 s | ok | 75,040 | caution |
-| [`vllm-bf16-auto-base-c8-ctx262144`](matrix-714/cells/vllm-bf16-auto-base-c8-ctx262144.json) |  | ⚠️ caution | 3.33 | 2.94 | 300.0 | 22.61 | 12.7 s | ok | 75,040 | caution |
-| [`vllm-bf16-auto-mtp-c1-ctx262144`](matrix-714/cells/vllm-bf16-auto-mtp-c1-ctx262144.json) |  | ⚠️ caution | 6.53 | 6.53 | 153.1 | 5.82 | 4.4 s | ok | 76,072 | avoid → **caution** (ruling) |
-| [`vllm-bf16-auto-mtp-c16-ctx262144`](matrix-714/cells/vllm-bf16-auto-mtp-c16-ctx262144.json) |  | ❌ avoid | 2.98 | 1.85 | 335.9 | 31.11 | 36.0 s | ok | 76,072 | caution → **avoid** (ruling) |
-| [`vllm-bf16-auto-mtp-c4-ctx262144`](matrix-714/cells/vllm-bf16-auto-mtp-c4-ctx262144.json) |  | ⚠️ caution | 5.12 | 4.53 | 196.1 | 16.32 | 11.8 s | ok | 76,072 | caution |
-| [`vllm-bf16-auto-mtp-c8-ctx262144`](matrix-714/cells/vllm-bf16-auto-mtp-c8-ctx262144.json) |  | ⚠️ caution | 4.24 | 3.47 | 236.4 | 24.73 | 18.5 s | ok | 76,072 | caution |
+| [`vllm-bf16-auto-base-c1-ctx262144`](matrix-714/cells/vllm-bf16-auto-base-c1-ctx262144.json) | — | ⚠️ caution | 4.28 | 4.28 | 233.8 | 4.00 | 4.0 s | ok | 75,040 | avoid → **caution** (ruling) |
+| [`vllm-bf16-auto-base-c16-ctx262144`](matrix-714/cells/vllm-bf16-auto-base-c16-ctx262144.json) | — | ⚠️ caution | 2.95 | 2.58 | 338.9 | 38.58 | 15.8 s | ok | 75,040 | caution |
+| [`vllm-bf16-auto-base-c4-ctx262144`](matrix-714/cells/vllm-bf16-auto-base-c4-ctx262144.json) | — | ⚠️ caution | 3.85 | 3.58 | 259.9 | 13.44 | 9.5 s | ok | 75,040 | caution |
+| [`vllm-bf16-auto-base-c8-ctx262144`](matrix-714/cells/vllm-bf16-auto-base-c8-ctx262144.json) | — | ⚠️ caution | 3.33 | 2.94 | 300.0 | 22.61 | 12.7 s | ok | 75,040 | caution |
+| [`vllm-bf16-auto-mtp-c1-ctx262144`](matrix-714/cells/vllm-bf16-auto-mtp-c1-ctx262144.json) | — | ⚠️ caution | 6.53 | 6.53 | 153.1 | 5.82 | 4.4 s | ok | 76,072 | avoid → **caution** (ruling) |
+| [`vllm-bf16-auto-mtp-c16-ctx262144`](matrix-714/cells/vllm-bf16-auto-mtp-c16-ctx262144.json) | — | ❌ avoid | 2.98 | 1.85 | 335.9 | 31.11 | 36.0 s | ok | 76,072 | caution → **avoid** (ruling) |
+| [`vllm-bf16-auto-mtp-c4-ctx262144`](matrix-714/cells/vllm-bf16-auto-mtp-c4-ctx262144.json) | — | ⚠️ caution | 5.12 | 4.53 | 196.1 | 16.32 | 11.8 s | ok | 76,072 | caution |
+| [`vllm-bf16-auto-mtp-c8-ctx262144`](matrix-714/cells/vllm-bf16-auto-mtp-c8-ctx262144.json) | — | ⚠️ caution | 4.24 | 3.47 | 236.4 | 24.73 | 18.5 s | ok | 76,072 | caution |
 
 ## MTP effect (basis labeled)
 
@@ -87,7 +87,7 @@ Boots: base healthy in 171 s (GTT 75,040 MiB: weights 51.1 GiB, KV 19.57 GiB, re
 | `mtp-c4-ctx262144` vs base-c4-ctx262144 | — | +33.0% (5.12 vs 3.85 tok/s) | +21.4% (16.32 vs 13.44 tok/s) | ⚠️ caution |
 | `mtp-c8-ctx262144` vs base-c8-ctx262144 | — | +27.3% (4.24 vs 3.33 tok/s) | +9.4% (24.73 vs 22.61 tok/s) | ⚠️ caution |
 
-Read: MTP is the interactive win on the GGUF path (+28.2% per-stream at c1) and beneficial through c8 on the vLLM path (+33%/+27% per-stream at c4/c8, aggregate +21%/+9%), but inverts at vLLM c16 (−19.4% aggregate — the avoid cell; muse-rocm DFlash lesson mirrored). On the GGUF path the hip c8/c16 MTP cells are degraded by the §6 anchor pit, so their negative deltas are pit artifacts, not MTP evidence (the pit does NOT reproduce on Vulkan, whose c8/c16 tiers are unmeasured; on Vulkan the c4 MTP regressions are real cells, anchor-clean). v0.1.2: MTP depth 1 beats depth 4 on both backends at c1 (vulkan 16.00 vs 15.05; hip 13.00 vs 12.76 tok/s) — depth 1 stays the recommended variant; cross-backend at c1 Vulkan leads HIP at both depths (+23.1% mixed-depth headline, +18.0% at fixed depth 4 — the hip mtp receipts of 2026-08-17 ran the implicit depth default 3, see `configs/validated-stack.json`).
+Read: MTP is the interactive win on the GGUF path (+28.2% per-stream at c1) and beneficial through c8 on the vLLM path (+33%/+27% per-stream at c4/c8, aggregate +21%/+9%), but inverts at vLLM c16 (−19.4% aggregate — the avoid cell; muse-rocm DFlash lesson mirrored). On the GGUF path the hip c8/c16 MTP cells are degraded by the §6 anchor pit, so their negative deltas are pit artifacts, not MTP evidence (the pit does NOT reproduce on Vulkan, whose c8/c16 tiers are unmeasured; on Vulkan the c4 MTP regressions are real cells, anchor-clean). v0.1.2: MTP depth 1 beats depth 4 on both backends at c1 (vulkan 16.00 vs 15.05; hip 13.00 vs 12.76 tok/s) — depth 1 stays the recommended variant; cross-backend at c1 Vulkan leads HIP at both depths (+23.1% mixed-depth headline, +17.9% at fixed depth 4 — the hip mtp receipts of 2026-08-17 ran the implicit depth default 3, see `configs/validated-stack.json`).
 
 ## Context capacity & retrieval smoke
 
