@@ -1,20 +1,22 @@
 {
-  "generated_at": "2026-08-17",
+  "generated_at": "2026-08-18",
   "generator": "scripts/gen-matrix.py",
   "notes": [
-    "Declaration only: statuses flip to measured by the cell runners (Tasks 3/4); regenerating resets to this declaration.",
+    "Declaration only: statuses flip to measured by the cell runners (Tasks 3/4); regeneration resets to this declaration.",
     "Weight is path-bound by construction (gguf<->udq4kxl, vllm<->bf16); cross pairs are invalid and never emitted (METHODOLOGY.md \u00a78).",
-    "Dropped cells record the unsupported-tier exclusions per spec 4.3."
+    "Dropped cells record the unsupported-tier exclusions per spec 4.3.",
+    "Backend dimension (2026-08-18, v0.1.2): gguf ids carry an explicit -hip-|-vulkan- tag; legacy unprefixed gguf ids are hip. The 8 new Vulkan\u00d7MTP cells are declared planned pre-measurement.",
+    "Measured-state carry-over (2026-08-18): regeneration transfers committed measured cells (status/degraded/note) onto the declared ids via the LEGACY->NEW mapping; it refuses only if a measured cell would leave the declaration (--force re-emits the bare declaration)."
   ],
   "cells": [
     {
-      "id": "gguf-udq4kxl-auto-base-c1-ctx32768",
+      "id": "gguf-hip-udq4kxl-auto-base-c1-ctx32768",
       "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c4-ctx32768",
+      "id": "gguf-hip-udq4kxl-auto-base-c4-ctx32768",
       "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true,
@@ -22,33 +24,33 @@
       "note": "measured (degraded): anchor check failed (greedy byte-identity)"
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c8-ctx32768",
+      "id": "gguf-hip-udq4kxl-auto-base-c8-ctx32768",
       "status": "planned",
       "reason": "time-boxed session; machinery complete",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": false
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c16-ctx32768",
+      "id": "gguf-hip-udq4kxl-auto-base-c16-ctx32768",
       "status": "planned",
       "reason": "time-boxed session; machinery complete",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": false
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c1-ctx131072",
+      "id": "gguf-hip-udq4kxl-auto-base-c1-ctx131072",
       "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c4-ctx131072",
+      "id": "gguf-hip-udq4kxl-auto-base-c4-ctx131072",
       "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c8-ctx131072",
+      "id": "gguf-hip-udq4kxl-auto-base-c8-ctx131072",
       "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true,
@@ -56,7 +58,7 @@
       "note": "measured (degraded): anchor check failed (greedy byte-identity)"
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c16-ctx131072",
+      "id": "gguf-hip-udq4kxl-auto-base-c16-ctx131072",
       "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true,
@@ -64,73 +66,73 @@
       "note": "measured (degraded): anchor check failed (greedy byte-identity)"
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c1-ctx262144",
+      "id": "gguf-hip-udq4kxl-auto-base-c1-ctx262144",
       "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c4-ctx262144",
+      "id": "gguf-hip-udq4kxl-auto-base-c4-ctx262144",
       "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c8-ctx262144",
+      "id": "gguf-hip-udq4kxl-auto-base-c8-ctx262144",
       "status": "planned",
       "reason": "time-boxed session; machinery complete",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": false
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c16-ctx262144",
+      "id": "gguf-hip-udq4kxl-auto-base-c16-ctx262144",
       "status": "planned",
       "reason": "time-boxed session; machinery complete",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": false
     },
     {
-      "id": "gguf-udq4kxl-auto-mtp-c1-ctx32768",
+      "id": "gguf-hip-udq4kxl-auto-mtp-c1-ctx32768",
       "status": "planned",
       "reason": "time-boxed session; machinery complete",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": false
     },
     {
-      "id": "gguf-udq4kxl-auto-mtp-c4-ctx32768",
+      "id": "gguf-hip-udq4kxl-auto-mtp-c4-ctx32768",
       "status": "planned",
       "reason": "time-boxed session; machinery complete",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": false
     },
     {
-      "id": "gguf-udq4kxl-auto-mtp-c8-ctx32768",
+      "id": "gguf-hip-udq4kxl-auto-mtp-c8-ctx32768",
       "status": "planned",
       "reason": "time-boxed session; machinery complete",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": false
     },
     {
-      "id": "gguf-udq4kxl-auto-mtp-c16-ctx32768",
+      "id": "gguf-hip-udq4kxl-auto-mtp-c16-ctx32768",
       "status": "planned",
       "reason": "time-boxed session; machinery complete",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": false
     },
     {
-      "id": "gguf-udq4kxl-auto-mtp-c1-ctx131072",
+      "id": "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072",
       "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true
     },
     {
-      "id": "gguf-udq4kxl-auto-mtp-c4-ctx131072",
+      "id": "gguf-hip-udq4kxl-auto-mtp-c4-ctx131072",
       "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true
     },
     {
-      "id": "gguf-udq4kxl-auto-mtp-c8-ctx131072",
+      "id": "gguf-hip-udq4kxl-auto-mtp-c8-ctx131072",
       "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true,
@@ -138,7 +140,7 @@
       "note": "measured (degraded): anchor check failed (greedy byte-identity)"
     },
     {
-      "id": "gguf-udq4kxl-auto-mtp-c16-ctx131072",
+      "id": "gguf-hip-udq4kxl-auto-mtp-c16-ctx131072",
       "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true,
@@ -146,32 +148,88 @@
       "note": "measured (degraded): anchor check failed (greedy byte-identity)"
     },
     {
-      "id": "gguf-udq4kxl-auto-mtp-c1-ctx262144",
+      "id": "gguf-hip-udq4kxl-auto-mtp-c1-ctx262144",
       "status": "planned",
       "reason": "time-boxed session; machinery complete",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": false
     },
     {
-      "id": "gguf-udq4kxl-auto-mtp-c4-ctx262144",
+      "id": "gguf-hip-udq4kxl-auto-mtp-c4-ctx262144",
       "status": "planned",
       "reason": "time-boxed session; machinery complete",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": false
     },
     {
-      "id": "gguf-udq4kxl-auto-mtp-c8-ctx262144",
+      "id": "gguf-hip-udq4kxl-auto-mtp-c8-ctx262144",
       "status": "planned",
       "reason": "time-boxed session; machinery complete",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": false
     },
     {
-      "id": "gguf-udq4kxl-auto-mtp-c16-ctx262144",
+      "id": "gguf-hip-udq4kxl-auto-mtp-c16-ctx262144",
       "status": "planned",
       "reason": "time-boxed session; machinery complete",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": false
+    },
+    {
+      "id": "gguf-vulkan-udq4kxl-auto-base-c1-ctx131072",
+      "status": "planned",
+      "reason": "v0.1.2 Vulkan\u00d7MTP experiment priority (declared pre-measurement, METHODOLOGY.md \u00a78 addendum 2026-08-18)",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true
+    },
+    {
+      "id": "gguf-vulkan-udq4kxl-auto-base-c4-ctx131072",
+      "status": "planned",
+      "reason": "v0.1.2 Vulkan\u00d7MTP experiment priority (declared pre-measurement, METHODOLOGY.md \u00a78 addendum 2026-08-18)",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true
+    },
+    {
+      "id": "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072",
+      "status": "planned",
+      "reason": "v0.1.2 Vulkan\u00d7MTP experiment priority (declared pre-measurement, METHODOLOGY.md \u00a78 addendum 2026-08-18)",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true
+    },
+    {
+      "id": "gguf-vulkan-udq4kxl-auto-mtp-c4-ctx131072",
+      "status": "planned",
+      "reason": "v0.1.2 Vulkan\u00d7MTP experiment priority (declared pre-measurement, METHODOLOGY.md \u00a78 addendum 2026-08-18)",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true
+    },
+    {
+      "id": "gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072",
+      "status": "planned",
+      "reason": "v0.1.2 Vulkan\u00d7MTP experiment priority (declared pre-measurement, METHODOLOGY.md \u00a78 addendum 2026-08-18)",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true
+    },
+    {
+      "id": "gguf-vulkan-udq4kxl-auto-mtp4-c4-ctx131072",
+      "status": "planned",
+      "reason": "v0.1.2 Vulkan\u00d7MTP experiment priority (declared pre-measurement, METHODOLOGY.md \u00a78 addendum 2026-08-18)",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true
+    },
+    {
+      "id": "gguf-hip-udq4kxl-auto-mtp4-c1-ctx131072",
+      "status": "planned",
+      "reason": "v0.1.2 Vulkan\u00d7MTP experiment priority (declared pre-measurement, METHODOLOGY.md \u00a78 addendum 2026-08-18)",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true
+    },
+    {
+      "id": "gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified",
+      "status": "planned",
+      "reason": "v0.1.2 Vulkan\u00d7MTP experiment priority (declared pre-measurement, METHODOLOGY.md \u00a78 addendum 2026-08-18)",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true
     },
     {
       "id": "vllm-bf16-auto-base-c1-ctx32768",

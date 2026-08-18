@@ -40,6 +40,42 @@ N      ∈ {1, 4, 8, 16}          # concurrency
 K      ∈ {32768, 131072, 262144}  # vllm: {131072, 262144}; 32768 not offered (dropped, §7)
 ```
 
+**Addendum (2026-08-18, declared pre-measurement — v0.1.2 Vulkan×MTP
+experiment, plan `docs/superpowers/plans/2026-08-18-vulkan-mtp-comparison.md`):
+backend dimension added to the gguf id grammar.** gguf ids now carry an
+explicit backend tag and an `mtp4` depth variant; vLLM ids are unchanged
+(single-backend path):
+
+```
+gguf-{backend}-udq4kxl-auto-{mtp}-c{N}-ctx{K}[-unified]
+backend ∈ {hip, vulkan}     # gguf only; legacy unprefixed gguf ids ARE hip
+                            # (all pre-2026-08-18 cells migrated to -hip- in lockstep:
+                            #  matrix.json, verdicts, README blocks, benchmark.md,
+                            #  cells/ filenames — filename == id invariant preserved)
+mtp    ∈ {base, mtp, mtp4}  # mtp = speculative depth 1 (the 2026-08-17 cells);
+                            # mtp4 = depth 4 — the exact depth mechanism at the pin
+                            # (server --spec-type draft-mtp + depth flag vs a fixed
+                            # mtp_num_hidden_layers) is to be DISCOVERED and recorded
+                            # at the pin BEFORE any mtp4 cell runs (plan Task 2); if
+                            # depth=4 is not configurable at the pin, that is the
+                            # finding — no faked variant
+-unified                    # optional, c4 gguf cells only: marks the
+                            # unified-default-boot (no -np, stock quickstart 4-slot
+                            # default) rider cell vs the existing split-mode c4 cell
+```
+
+Motivation (AMD anchor context, quoted from `docs/results/spike/vllm.md`,
+AMD Day-0 blog for this exact model on this exact platform class): on Ryzen
+AI Max+ 395 (GMKtec EVO-X2, 128 GB unified) via llama.cpp/**Vulkan** (LM
+Studio, Q4_K_XL GGUF), AMD reports **"24.5 tok/s output with an MTP setting
+of 4 vs 39.9 tok/s without"** — i.e. MTP=4 was net-negative on the 395 per
+AMD — against this project's **13.0 tok/s** interactive cell (HIP, MTP
+depth 1, 80 GiB GTT pool). The v0.1.2 experiment measures what each factor
+(backend, MTP depth) contributes on the SAME host, model, prompts, and
+harness, with the greedy anchor on every new cell (does the §6 pit
+reproduce on Vulkan?). The same llama.cpp pin `4df29be4` is used for both
+backends (separate build dir `build-714-vk`; HIP build-714 untouched).
+
 - **S1 — single-stream interactive (N=1).** One user, one chat completion,
   streaming. The judge is perceived latency: TTFT and per-stream TPOT. This
   is the quickstart's presentation; the 10 tok/s floor (§3) applies fully.
@@ -477,3 +513,31 @@ against the committed file: no-op → exit 0, otherwise exit 1) or pass
 
 Cell counts emitted by the generator: gguf 24 (12 priority), vllm 16 (8
 priority) + 8 dropped ctx-32768 = **48 declared cells, 20 priority**.
+
+**Addendum (2026-08-18, pre-measurement — v0.1.2 backend dimension):**
+
+- **Declaration:** the gguf cross-product above now rides on the explicit
+  `-hip-` tag (same 24 cells, migrated in lockstep with the cells/ file
+  renames), plus **8 new planned cells** (priority reason "v0.1.2 Vulkan×MTP
+  experiment"): `vulkan × {base,mtp,mtp4} × {1,4} @131072` (6) + `hip
+  mtp4-c1 @131072` (depth comparison on the incumbent backend, 1) + `hip
+  base-c4 @131072-unified` (the unified-default-boot rider, 1). Cell counts:
+  gguf 24 hip + 8 new = 32, vllm 16, + 8 dropped = **56 declared cells**
+  (20 measured carried over by the migration, 28 planned, 8 dropped).
+- **Guarded regeneration — semantics extended (same intent: never clobber
+  measured state).** Since the 2026-08-17 final-review erratum a plain
+  `python3 scripts/gen-matrix.py` refused to write while any committed cell
+  was `measured`. Since the 2026-08-18 migration a plain run instead
+  **carries over** the committed measurement state (status + `degraded` +
+  `note`) onto the declared ids via the generator's baked-in LEGACY→NEW
+  mapping (legacy unprefixed gguf ids ARE hip), so the id migration lost
+  nothing; the refusal now fires **only when a committed `measured` cell
+  would fall out of the declaration entirely** (lost evidence — it names
+  the cell). `--check` (byte-compare a fresh regeneration, carry-over
+  included) and `--force` (re-emit the bare declaration; statuses must then
+  be re-flipped by the cell runners) are unchanged.
+- **Legacy id note:** every `gguf-udq4kxl-auto-*` id in the immutable
+  history (v0.1.0/v0.1.1 CHANGELOG entries, historical receipts under
+  `docs/results/upstream-controls/` and the community namespace) means
+  `gguf-hip-udq4kxl-auto-*` under the 2026-08-18 grammar; the v0.1.2
+  CHANGELOG carries the one-line migration note.

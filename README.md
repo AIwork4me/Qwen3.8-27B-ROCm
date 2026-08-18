@@ -98,12 +98,12 @@ Measured 2026-08-16/17 on the reference host (gfx1151, ROCm 7.14, 80 GiB GTT poo
 
 **Recommended — interactive chat (GGUF path, UD-Q4_K_XL):**
 
-| Config | Per-stream (median) | Aggregate | TTFT | Verdict |
-|---|---|---|---|---|
-| `WITH_MTP=1` mtp-c1 @131072 — +28% per-stream | 13.0 tok/s (TPOT 76.9 ms) | 10.2 tok/s | 5.5 s | ✅ recommended |
-| default boot base-c1 @131072 | 10.1 tok/s (TPOT 98.6 ms) | 8.4 tok/s | 5.1 s | ✅ recommended |
-| base-c1 @32768 | 10.0 tok/s (TPOT 99.6 ms) | 8.3 tok/s | 5.3 s | ✅ recommended |
-| base-c1 @262144 (GTT +8.0 GiB) | 10.1 tok/s (TPOT 98.8 ms) | 8.4 tok/s | 5.3 s | ✅ recommended |
+| Config | Backend | Per-stream (median) | Aggregate | TTFT | Verdict |
+|---|---|---|---|---|---|
+| `WITH_MTP=1` mtp-c1 @131072 — +28% per-stream | hip | 13.0 tok/s (TPOT 76.9 ms) | 10.2 tok/s | 5.5 s | ✅ recommended |
+| default boot base-c1 @131072 | hip | 10.1 tok/s (TPOT 98.6 ms) | 8.4 tok/s | 5.1 s | ✅ recommended |
+| base-c1 @32768 | hip | 10.0 tok/s (TPOT 99.6 ms) | 8.3 tok/s | 5.3 s | ✅ recommended |
+| base-c1 @262144 (GTT +8.0 GiB) | hip | 10.1 tok/s (TPOT 98.8 ms) | 8.4 tok/s | 5.3 s | ✅ recommended |
 
 **Caution — batch / throughput (vLLM BF16 @262144):** every measured vLLM cell is below the 10 tok/s interactive floor — project ruling (2026-08-17); use this path for what it wins:
 
@@ -144,11 +144,11 @@ Boot ladder (S3) + deep-prompt retrieval smoke — GGUF path, needle sentence at
 
 **Known bad / pits:**
 
-- ❌ `gguf-udq4kxl-auto-base-c16-ctx131072` — greedy `'////'` corruption after sustained multistream load (per-stream median 3.2 tok/s, aggregate 27.5 tok/s). Workaround: restart the server; multi-stream loads → vLLM.
-- ❌ `gguf-udq4kxl-auto-base-c4-ctx32768` — greedy `'////'` corruption after sustained multistream load (per-stream median 5.8 tok/s, aggregate 15.7 tok/s). Workaround: restart the server; multi-stream loads → vLLM.
-- ❌ `gguf-udq4kxl-auto-base-c8-ctx131072` — greedy `'////'` corruption after sustained multistream load (per-stream median 3.6 tok/s, aggregate 18.4 tok/s). Workaround: restart the server; multi-stream loads → vLLM.
-- ❌ `gguf-udq4kxl-auto-mtp-c16-ctx131072` — greedy `'////'` corruption after sustained multistream load (per-stream median 1.4 tok/s, aggregate 16.3 tok/s). Workaround: restart the server; multi-stream loads → vLLM.
-- ❌ `gguf-udq4kxl-auto-mtp-c8-ctx131072` — greedy `'////'` corruption after sustained multistream load (per-stream median 2.1 tok/s, aggregate 10.7 tok/s). Workaround: restart the server; multi-stream loads → vLLM.
+- ❌ `gguf-hip-udq4kxl-auto-base-c16-ctx131072` — greedy `'////'` corruption after sustained multistream load (per-stream median 3.2 tok/s, aggregate 27.5 tok/s). Workaround: restart the server; multi-stream loads → vLLM.
+- ❌ `gguf-hip-udq4kxl-auto-base-c4-ctx32768` — greedy `'////'` corruption after sustained multistream load (per-stream median 5.8 tok/s, aggregate 15.7 tok/s). Workaround: restart the server; multi-stream loads → vLLM.
+- ❌ `gguf-hip-udq4kxl-auto-base-c8-ctx131072` — greedy `'////'` corruption after sustained multistream load (per-stream median 3.6 tok/s, aggregate 18.4 tok/s). Workaround: restart the server; multi-stream loads → vLLM.
+- ❌ `gguf-hip-udq4kxl-auto-mtp-c16-ctx131072` — greedy `'////'` corruption after sustained multistream load (per-stream median 1.4 tok/s, aggregate 16.3 tok/s). Workaround: restart the server; multi-stream loads → vLLM.
+- ❌ `gguf-hip-udq4kxl-auto-mtp-c8-ctx131072` — greedy `'////'` corruption after sustained multistream load (per-stream median 2.1 tok/s, aggregate 10.7 tok/s). Workaround: restart the server; multi-stream loads → vLLM.
 
 **Upstream tracking (shared by the 5 greedy-pit cells):** live at llama.cpp master HEAD 01818e495 (2026-08-17); candidate fix PR #25863 https://github.com/ggml-org/llama.cpp/pull/25863 differentially verified on this host (patched 2/2 anchor PASS vs unpatched 3/3 FAIL idle-host; receipts docs/results/upstream-controls/); tracked in #25992 https://github.com/ggml-org/llama.cpp/issues/25992 (primary — same-host bisect, maintainer invited testing) and #23577 https://github.com/ggml-org/llama.cpp/issues/23577 (////-family); exact mechanism unresolved at session close (METHODOLOGY §6).
 

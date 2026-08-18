@@ -380,8 +380,8 @@ def test_changelog_headline_numbers_recompute_from_verdicts() -> None:
     def metric(cid: str, key: str) -> float:
         return cells[cid]["metrics"][key]
 
-    gguf_mtp = "gguf-udq4kxl-auto-mtp-c1-ctx131072"
-    gguf_base = "gguf-udq4kxl-auto-base-c1-ctx131072"
+    gguf_mtp = "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072"
+    gguf_base = "gguf-hip-udq4kxl-auto-base-c1-ctx131072"
     vllm_mtp = "vllm-bf16-auto-mtp-c1-ctx262144"
     vllm_mtp16 = "vllm-bf16-auto-mtp-c16-ctx262144"
     vllm_base16 = "vllm-bf16-auto-base-c16-ctx262144"

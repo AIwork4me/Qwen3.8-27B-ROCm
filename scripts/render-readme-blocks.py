@@ -18,6 +18,13 @@ Usage:
     python3 scripts/render-readme-blocks.py --check # exit 1 if either is stale
 
 Hand-editing inside the markers is forbidden: the next regen destroys it.
+
+2026-08-18 backend-dimension migration (v0.1.2 Vulkan×MTP): gguf cell ids
+carry an explicit -hip-|-vulkan- tag (legacy unprefixed ids ARE hip; the
+cells/ files were renamed in lockstep, filename == id). Tables that will
+mix backends render a Backend column derived from the id (all measured
+cells are hip today; the vulkan/mtp4/unified cells are declared planned,
+unmeasured).
 """
 
 from __future__ import annotations
@@ -60,6 +67,22 @@ def mark(verdict: str) -> str:
 
 def fmt(x, nd=1):
     return f"{x:.{nd}f}" if x is not None else "—"
+
+
+def backend_of(cid: str) -> str:
+    """Backend tag straight from the cell id (2026-08-18 grammar:
+    gguf-{backend}-...). vLLM has exactly one backend — no tag, no column."""
+    return cid.split("-")[1] if cid.startswith("gguf-") else ""
+
+
+def short_id(cid: str) -> str:
+    """Table label: the id minus its fixed prefixes (path, backend, weight,
+    kv-mode) — e.g. `mtp-c1-ctx131072`."""
+    for prefix in (f"gguf-{backend_of(cid)}-udq4kxl-auto-",
+                   "vllm-bf16-auto-"):
+        if cid.startswith(prefix):
+            return cid[len(prefix):]
+    return cid
 
 
 def load_data() -> dict:
@@ -121,10 +144,10 @@ def render_performance_highlights(data: dict) -> str:
     v = data["vmap"]
     d = dist(data)
     gguf_reco = [v[i] for i in (
-        "gguf-udq4kxl-auto-mtp-c1-ctx131072",
-        "gguf-udq4kxl-auto-base-c1-ctx131072",
-        "gguf-udq4kxl-auto-base-c1-ctx32768",
-        "gguf-udq4kxl-auto-base-c1-ctx262144")]
+        "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072",
+        "gguf-hip-udq4kxl-auto-base-c1-ctx131072",
+        "gguf-hip-udq4kxl-auto-base-c1-ctx32768",
+        "gguf-hip-udq4kxl-auto-base-c1-ctx262144")]
     lines = [
         f"Measured 2026-08-16/17 on the reference host (gfx1151, ROCm 7.14, "
         f"80 GiB GTT pool): **{len(data['verdicts']['cells'])} cells — "
@@ -136,22 +159,23 @@ def render_performance_highlights(data: dict) -> str:
         "",
         "**Recommended — interactive chat (GGUF path, UD-Q4_K_XL):**",
         "",
-        "| Config | Per-stream (median) | Aggregate | TTFT | Verdict |",
-        "|---|---|---|---|---|",
+        "| Config | Backend | Per-stream (median) | Aggregate | TTFT | Verdict |",
+        "|---|---|---|---|---|---|",
     ]
     for c in gguf_reco:
         m = c["metrics"]
         label = {
-            "gguf-udq4kxl-auto-mtp-c1-ctx131072":
+            "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072":
                 "`WITH_MTP=1` mtp-c1 @131072 — +28% per-stream",
-            "gguf-udq4kxl-auto-base-c1-ctx131072":
+            "gguf-hip-udq4kxl-auto-base-c1-ctx131072":
                 "default boot base-c1 @131072",
-            "gguf-udq4kxl-auto-base-c1-ctx32768": "base-c1 @32768",
-            "gguf-udq4kxl-auto-base-c1-ctx262144":
+            "gguf-hip-udq4kxl-auto-base-c1-ctx32768": "base-c1 @32768",
+            "gguf-hip-udq4kxl-auto-base-c1-ctx262144":
                 "base-c1 @262144 (GTT +8.0 GiB)",
         }[c["id"]]
         lines.append(
-            f"| {label} | {fmt(m['per_stream_tok_s_median'])} tok/s "
+            f"| {label} | {backend_of(c['id'])} | "
+            f"{fmt(m['per_stream_tok_s_median'])} tok/s "
             f"(TPOT {fmt(m['tpot_ms_median'])} ms) | "
             f"{fmt(m['aggregate_tok_s'])} tok/s | "
             f"{fmt(m['ttft_ms_median'] / 1000)} s | {mark(c['verdict'])} "
@@ -373,8 +397,8 @@ def _row(cid: str, data: dict) -> str:
     auto = m.get("auto_verdict", "")
     final = c["verdict"]
     trail = auto if auto == final else f"{auto} → **{final}** (ruling)"
-    return (f"| [`{cid}`](matrix-714/cells/{cid}.json) | {mark(final)} "
-            f"{final} | {fmt(m['per_stream_tok_s_median'], 2)} | "
+    return (f"| [`{cid}`](matrix-714/cells/{cid}.json) | {backend_of(cid)} | "
+            f"{mark(final)} {final} | {fmt(m['per_stream_tok_s_median'], 2)} | "
             f"{fmt(m['per_stream_tok_s_min'], 2)} | "
             f"{fmt(m['tpot_ms_median'])} | {fmt(m['aggregate_tok_s'], 2)} | "
             f"{fmt(m['ttft_ms_median'] / 1000)} s | "
@@ -388,7 +412,7 @@ def gguf_c4_slot_note(cells: dict) -> str:
     `slot_info` so the note can never drift from the receipts."""
     rows = []
     for ctx in (32768, 131072, 262144):
-        cell = cells.get(f"gguf-udq4kxl-auto-base-c4-ctx{ctx}")
+        cell = cells.get(f"gguf-hip-udq4kxl-auto-base-c4-ctx{ctx}")
         s = (cell or {}).get("slot_info") or {}
         if not s:
             continue
@@ -441,8 +465,8 @@ def render_benchmark_md(data: dict) -> str:
     out.append("|---|---|---|")
     for label, cid in (
             ("`scripts/gguf-quickstart.sh` default boot (UD-Q4_K_XL, ctx 131072)",
-             "gguf-udq4kxl-auto-base-c1-ctx131072"),
-            ("`WITH_MTP=1` opt-in", "gguf-udq4kxl-auto-mtp-c1-ctx131072"),
+             "gguf-hip-udq4kxl-auto-base-c1-ctx131072"),
+            ("`WITH_MTP=1` opt-in", "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072"),
             ("`scripts/03-serve-vllm.sh` (`serve-args.conf`, 262144)",
              "vllm-bf16-auto-base-c1-ctx262144"),
             ("`scripts/03-serve-vllm.sh --mtp` (`serve-args-mtp.conf`)",
@@ -459,14 +483,18 @@ def render_benchmark_md(data: dict) -> str:
                "path (mtp-c1 13.0 tok/s)\". README quickstart guidance points "
                "at the GGUF path.\n")
 
-    out.append("## GGUF path (llama.cpp `4df29be4` HIP, UD-Q4_K_XL)\n")
+    out.append("\n## GGUF path (llama.cpp `4df29be4`, UD-Q4_K_XL; Backend "
+               "column from the cell id)\n")
     out.append("Per-stream medians over **healthy streams only** (≥2 content "
                "tokens — streams with <2 tokens carry no defined TPOT and "
                "never count toward UX claims; see healthy-vs-total in the raw "
-               "cells).\n")
-    out.append("| Cell | Verdict | Per-stream med tok/s | min | TPOT med ms "
-               "| Aggregate tok/s | TTFT med | Anchor | GTT MiB | auto → final |")
-    out.append("|---|---|---|---|---|---|---|---|---|---|")
+               "cells). Measured cells are all `hip` (ROCm build-714); the "
+               "vulkan/mtp4/unified cells of the v0.1.2 experiment are "
+               "declared planned, unmeasured.\n")
+    out.append("| Cell | Backend | Verdict | Per-stream med tok/s | min | "
+               "TPOT med ms | Aggregate tok/s | TTFT med | Anchor | GTT MiB "
+               "| auto → final |")
+    out.append("|---|---|---|---|---|---|---|---|---|---|---|")
     for cid in gguf_ids:
         out.append(_row(cid, data))
 
@@ -490,16 +518,17 @@ def render_benchmark_md(data: dict) -> str:
         out.append(_row(cid, data))
 
     out.append("\n## MTP effect (basis labeled)\n")
-    out.append("| Config | Per-stream basis | Aggregate basis | Verdict |")
-    out.append("|---|---|---|---|")
+    out.append("| Config | Backend | Per-stream basis | Aggregate basis | Verdict |")
+    out.append("|---|---|---|---|---|")
     for cid in sorted(v):
         g = v[cid]["metrics"].get("mtp_gain_vs_base")
         if not g:
             continue
-        base_cid = cid.replace("-mtp-", "-base-")
+        base_cid = cid.replace("-mtp-", "-base-").replace("-mtp4-", "-base-")
         out.append(
-            f"| `{cid.removeprefix('gguf-udq4kxl-auto-').removeprefix('vllm-bf16-auto-')}` "
-            f"vs {base_cid} | {g['per_stream_pct']:+.1f}% "
+            f"| `{short_id(cid)}` vs {short_id(base_cid)} | "
+            f"{backend_of(cid) or '—'} | "
+            f"{g['per_stream_pct']:+.1f}% "
             f"({fmt(v[cid]['metrics']['per_stream_tok_s_median'], 2)} vs "
             f"{fmt(g['base_per_stream_tok_s_median'], 2)} tok/s) | "
             f"{g['aggregate_pct']:+.1f}% ({fmt(v[cid]['metrics']['aggregate_tok_s'], 2)} "

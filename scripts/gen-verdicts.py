@@ -14,6 +14,12 @@ Usage:
 
 Output is deterministic: ids sorted, floats rounded at emission, no wall-clock
 timestamps — `--check` is a byte comparison, safe as a CI freshness gate.
+
+2026-08-18 backend-dimension migration (v0.1.2 Vulkan×MTP): gguf cell ids
+carry an explicit -hip-|-vulkan- tag (legacy unprefixed ids ARE hip) and an
+mtp4 depth variant; vLLM ids are unchanged. Verdict CONTENT is unaffected
+by the migration — ids aside, regeneration is byte-stable (families and
+base-counterparts are matched within one backend; hip and vulkan never mix).
 """
 
 from __future__ import annotations
@@ -41,9 +47,19 @@ REVIEWED_BY = f"controller-{CONTROLLER_REVIEW_DATE}"
 
 
 def parse_cell_id(cid: str) -> dict:
-    path, weight, kv, mtp, c, ctx = cid.split("-")
-    return {"path": path, "weight": weight, "kv": kv, "mtp": mtp,
-            "c": int(c[1:]), "ctx": int(ctx[3:])}
+    """Both grammar forms (2026-08-18 backend-dimension migration):
+    gguf-{backend}-udq4kxl-auto-{mtp}-c{N}-ctx{K}(-unified)? and the
+    unchanged vllm-bf16-auto-{mtp}-c{N}-ctx{K}."""
+    parts = cid.split("-")
+    if parts[0] == "gguf":
+        backend, weight, kv, mtp, c, ctx = parts[1:7]
+        return {"path": "gguf", "backend": backend, "weight": weight,
+                "kv": kv, "mtp": mtp, "c": int(c[1:]), "ctx": int(ctx[3:]),
+                "unified": cid.endswith("-unified")}
+    path, weight, kv, mtp, c, ctx = parts
+    return {"path": path, "backend": None, "weight": weight, "kv": kv,
+            "mtp": mtp, "c": int(c[1:]), "ctx": int(ctx[3:]),
+            "unified": False}
 
 
 def fmt(x: float, nd: int = 1) -> str:
@@ -258,8 +274,8 @@ GGUF_PIT_WORKAROUND = ("Restart the server to restore greedy decoding; for "
 # split-mode c4@131072 cell; single-stream use is unaffected (all c1 cells
 # anchor-clean at every ctx tier).
 QUICKSTART_C4_CAVEAT_CELLS = (
-    "gguf-udq4kxl-auto-base-c1-ctx131072",
-    "gguf-udq4kxl-auto-mtp-c1-ctx131072",
+    "gguf-hip-udq4kxl-auto-base-c1-ctx131072",
+    "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072",
 )
 QUICKSTART_C4_CAVEAT = (
     "Caveat (2026-08-17 final review): unified-default-boot c4 at ctx 131072 "
@@ -300,8 +316,9 @@ def compose_verdict(cid: str, cell: dict, m: dict, base_m: dict | None,
     boot_s = (cell.get("boot") or {}).get("health_wall_s")
 
     # MTP gain vs the base counterpart (both bases labeled, §2-style honesty).
+    # mtp4 (depth-4 variant, v0.1.2) gains against the same base cell.
     gains = None
-    if parts["mtp"] == "mtp" and base_m:
+    if parts["mtp"] in ("mtp", "mtp4") and base_m:
         gains = {
             "per_stream_pct": round((med / base_m["per_stream_tok_s_median"] - 1) * 100, 1),
             "aggregate_pct": round((agg / base_m["aggregate_tok_s"] - 1) * 100, 1),
@@ -422,9 +439,9 @@ def compose_verdict(cid: str, cell: dict, m: dict, base_m: dict | None,
                       f"(UD-Q4_K_XL, ctx {parts['ctx']}). TTFT "
                       f"{fmt(ttft_s)} s on ~1.4K-token prompts; concurrency "
                       f"demotes per-stream below the floor (see the c4 cells).")
-        if parts["mtp"] == "mtp":
+        if parts["mtp"] in ("mtp", "mtp4"):
             c4 = (all_metrics or {}).get(
-                f"gguf-udq4kxl-auto-mtp-c4-ctx{parts['ctx']}")
+                f"gguf-{parts['backend']}-udq4kxl-auto-mtp-c4-ctx{parts['ctx']}")
             c4_txt = (f"c4 median {fmt(c4['per_stream_tok_s_median'])} tok/s "
                       f"(below floor)" if c4 else "c4 below floor")
             conditions = (f"+{gains['per_stream_pct']}% is the PER-STREAM basis "
@@ -496,12 +513,19 @@ def build_verdicts(root: Path = ROOT) -> dict:
     out_cells = []
     for cid in sorted(measured):
         parts = parse_cell_id(cid)
-        # Base counterpart: same path/ctx/c, base MTP.
-        base_id = f"{parts['path']}-{parts['weight']}-{parts['kv']}-base-c{parts['c']}-ctx{parts['ctx']}"
-        base_m = metrics.get(base_id) if parts["mtp"] == "mtp" else None
-        # Best lower-concurrency aggregate in the same family.
+        # Base counterpart: same path/backend/ctx/c, base MTP.
+        if parts["path"] == "gguf":
+            base_id = (f"gguf-{parts['backend']}-{parts['weight']}-{parts['kv']}-"
+                       f"base-c{parts['c']}-ctx{parts['ctx']}")
+        else:
+            base_id = (f"{parts['path']}-{parts['weight']}-{parts['kv']}-"
+                       f"base-c{parts['c']}-ctx{parts['ctx']}")
+        base_m = metrics.get(base_id) if parts["mtp"] in ("mtp", "mtp4") else None
+        # Best lower-concurrency aggregate in the same family (a family is
+        # path x backend x mtp-variant x ctx — hip and vulkan never mix).
         lowers = [metrics[o]["aggregate_tok_s"] for o in measured
                   if (p := parse_cell_id(o))["path"] == parts["path"]
+                  and p["backend"] == parts["backend"]
                   and p["mtp"] == parts["mtp"]
                   and p["ctx"] == parts["ctx"] and p["c"] < parts["c"]]
         family_best = max(lowers) if lowers else None

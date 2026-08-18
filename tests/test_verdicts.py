@@ -28,6 +28,7 @@ import sys
 from pathlib import Path
 
 import jsonschema
+import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 VERDICTS = ROOT / "configs" / "benchmark-verdicts.json"
@@ -437,11 +438,11 @@ def test_quickstart_configs_are_recommended():
     assert mtp_opt_in, "MTP must stay opt-in in the quickstart"
 
     # quickstart default boot -> gguf base c1 @131072 must be recommended.
-    cell = verdict_of("gguf-udq4kxl-auto-base-c1-ctx131072")
+    cell = verdict_of("gguf-hip-udq4kxl-auto-base-c1-ctx131072")
     assert cell["verdict"] == "recommended"
 
     # WITH_MTP=1 -> gguf mtp c1 @131072 must be recommended (13.0 tok/s).
-    cell = verdict_of("gguf-udq4kxl-auto-mtp-c1-ctx131072")
+    cell = verdict_of("gguf-hip-udq4kxl-auto-mtp-c1-ctx131072")
     assert cell["verdict"] == "recommended"
     assert cell["metrics"]["per_stream_tok_s_median"] > 13.0 - 0.05
 
@@ -466,8 +467,8 @@ def test_quickstart_configs_are_recommended():
 
 
 def test_no_quickstart_referenced_config_is_avoid():
-    for cid in ("gguf-udq4kxl-auto-base-c1-ctx131072",
-                "gguf-udq4kxl-auto-mtp-c1-ctx131072",
+    for cid in ("gguf-hip-udq4kxl-auto-base-c1-ctx131072",
+                "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072",
                 "vllm-bf16-auto-base-c1-ctx262144",
                 "vllm-bf16-auto-mtp-c1-ctx262144"):
         assert verdict_of(cid)["verdict"] != "avoid", (
@@ -496,3 +497,118 @@ def test_benchmark_md_links_raw_cells_and_lists_every_verdict():
         assert cell["id"] in text, f"benchmark.md missing {cell['id']}"
     assert "cells/" in text  # links to the raw receipts
     assert str(len(v["cells"])) in text  # headline count
+
+
+# ------------------- 5. 2026-08-18 backend-dimension id migration (v0.1.2)
+#
+# gguf ids gained an explicit backend tag (legacy unprefixed == hip); the
+# migration must lose nothing: verdict CONTENT stays byte-stable modulo the
+# id string, every live id-naming surface carries the tag, and the tables
+# that will mix hip/vulkan rows render a Backend column derived from the id.
+
+LEGACY_ID_RE = re.compile(r"gguf-udq4kxl-auto-")
+
+
+def migrated(cid: str) -> str:
+    """LEGACY->NEW mapping baked into the 2026-08-18 migration."""
+    return LEGACY_ID_RE.sub("gguf-hip-udq4kxl-auto-", cid, count=1)
+
+
+def test_no_legacy_unprefixed_gguf_ids_on_migrated_surfaces():
+    """Migration completeness. Deliberately OUT of scope (immutable history,
+    kept by design): CHANGELOG v0.1.0/v0.1.1 entries (interpreted via the
+    v0.1.2 migration note), docs/results receipts produced under the old
+    ids (upstream-controls/, community/ cells — the community namespace has
+    its own grammar), and spike docs."""
+    for name, path in (("matrix.json", MATRIX),
+                       ("benchmark-verdicts.json", VERDICTS),
+                       ("README.md", README),
+                       ("benchmark.md", BENCH_MD)):
+        assert not LEGACY_ID_RE.search(path.read_text()), (
+            f"{name} still carries legacy unprefixed gguf ids")
+    for p in CELLS_DIR.glob("*.json"):
+        assert not LEGACY_ID_RE.search(p.name), (
+            f"cells/{p.name} not renamed (filename == id invariant)")
+
+
+def test_verdict_content_is_byte_stable_modulo_the_id_migration():
+    """The 2026-08-18 migration changed ids ONLY: every verdict from the
+    pre-migration commit must survive byte-identically (verdict, reason,
+    conditions, workaround, upstream, metrics) under its mapped id."""
+    old = subprocess.run(
+        ["git", "show", "f67ddc6:configs/benchmark-verdicts.json"],
+        cwd=ROOT, capture_output=True, text=True, timeout=60)
+    if old.returncode != 0:
+        pytest.skip("pre-migration commit f67ddc6 not in this clone")
+    old_cells = {c["id"]: c for c in json.loads(old.stdout)["cells"]}
+    new_cells = {c["id"]: c for c in load(VERDICTS)["cells"]}
+    assert set(new_cells) == {migrated(i) for i in old_cells}, (
+        "the verdict id set is not the migrated pre-commit id set")
+    for old_id, old_cell in sorted(old_cells.items()):
+        new_id = migrated(old_id)
+        migrated_cell = dict(new_cells[new_id])
+        expected = dict(old_cell)
+        assert migrated_cell.pop("id") == new_id
+        assert expected.pop("id") == old_id
+        assert migrated_cell == expected, (
+            f"{new_id}: content drifted beyond the id string during the "
+            f"migration")
+
+
+def test_measured_matrix_cells_and_verdicts_survived_the_migration():
+    """The 20 measured cells (5 degraded) keep their statuses and degraded
+    notes under the migrated ids; verdict coverage stays exact."""
+    m = load(MATRIX)
+    measured = {c["id"] for c in m["cells"] if c["status"] == "measured"}
+    assert len(measured) == 20
+    degraded = {c["id"] for c in m["cells"] if c["status"] == "measured"
+                and c.get("degraded")}
+    assert len(degraded) == 5
+    verdicted = {c["id"] for c in load(VERDICTS)["cells"]}
+    assert verdicted == measured
+
+
+def test_benchmark_tables_render_a_backend_column_from_ids():
+    """Backend dimension: the tables that will mix hip/vulkan rows carry a
+    Backend column derived from the cell id (all values hip today — the 8
+    vulkan/mtp4/unified cells are planned, unmeasured)."""
+    text = BENCH_MD.read_text()
+    assert "| Cell | Backend | Verdict |" in text, (
+        "benchmark.md GGUF table lacks the Backend column")
+    assert "| Config | Backend |" in text, (
+        "benchmark.md MTP-effect table lacks the Backend column")
+    readme = README.read_text()
+    assert "| Config | Backend | Per-stream (median) |" in readme, (
+        "README performance highlights lack the Backend column")
+    # Values come from the ids: every measured gguf row states its backend.
+    for cid in sorted(c["id"] for c in load(VERDICTS)["cells"]
+                      if c["id"].startswith("gguf-")):
+        backend = cid.split("-")[1]
+        row = re.search(rf"\| \[`{re.escape(cid)}`\]\([^)]*\) \| (\w+) \|", text)
+        assert row, f"benchmark.md has no row link for {cid}"
+        assert row.group(1) == backend == "hip", (
+            f"{cid}: Backend column must derive from the id")
+        assert f"| {backend} |" in text
+
+
+def test_declared_v012_cells_are_planned_not_verdicted():
+    """The 8 new v0.1.2 cells are declared planned (pre-measurement) and
+    carry no verdicts — an unmeasured cell has no evidence to verdict on."""
+    m = load(MATRIX)
+    new_ids = {
+        "gguf-vulkan-udq4kxl-auto-base-c1-ctx131072",
+        "gguf-vulkan-udq4kxl-auto-base-c4-ctx131072",
+        "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072",
+        "gguf-vulkan-udq4kxl-auto-mtp-c4-ctx131072",
+        "gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072",
+        "gguf-vulkan-udq4kxl-auto-mtp4-c4-ctx131072",
+        "gguf-hip-udq4kxl-auto-mtp4-c1-ctx131072",
+        "gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified",
+    }
+    by_id = {c["id"]: c for c in m["cells"]}
+    assert set(by_id) >= new_ids
+    for cid in sorted(new_ids):
+        assert by_id[cid]["status"] == "planned", f"{cid} must be planned"
+        assert "Vulkan×MTP" in by_id[cid]["reason"]
+    verdicted = {c["id"] for c in load(VERDICTS)["cells"]}
+    assert not (verdicted & new_ids)

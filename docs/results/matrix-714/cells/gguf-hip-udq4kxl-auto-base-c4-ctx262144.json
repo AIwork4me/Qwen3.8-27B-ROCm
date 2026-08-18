@@ -1,6 +1,6 @@
 {
-  "id": "gguf-udq4kxl-auto-base-c4-ctx262144",
-  "label": "gguf-udq4kxl-auto-base-c4-ctx262144",
+  "id": "gguf-hip-udq4kxl-auto-base-c4-ctx262144",
+  "label": "gguf-hip-udq4kxl-auto-base-c4-ctx262144",
   "base_url": "http://127.0.0.1:8080",
   "started_utc": "2026-08-16T22:43:04Z",
   "server_flags": {
@@ -34,7 +34,7 @@
     "health_wall_s": 6
   },
   "client": {
-    "label": "gguf-udq4kxl-auto-base-c4-ctx262144",
+    "label": "gguf-hip-udq4kxl-auto-base-c4-ctx262144",
     "concurrency": 4,
     "started_utc": "2026-08-16T22:43:13.634653+00:00",
     "streams": [

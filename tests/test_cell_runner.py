@@ -22,9 +22,10 @@ CELLS_DIR = ROOT / "docs" / "results" / "matrix-714" / "cells"
 # must stay byte-stable across the whole branch — cells override via env only.
 BRANCH_BASE = "2bb00ba"
 
-# Cell id grammar, shared with gen-matrix.py and the verdicts schema.
-ID_RE_PARTS = ("gguf", "udq4kxl", "auto", "{base|mtp}", "c{1,4,8,16}",
-               "ctx{32768|131072|262144}")
+# Cell id grammar, shared with gen-matrix.py and the verdicts schema
+# (2026-08-18 backend-dimension migration: gguf ids carry -hip-|-vulkan-).
+ID_RE_PARTS = ("gguf", "(hip|vulkan)", "udq4kxl", "auto", "{base|mtp|mtp4}",
+               "c{1,4,8,16}", "ctx{32768|131072|262144}")
 
 
 def run_runner(args, timeout=60):
@@ -54,8 +55,8 @@ def test_runner_script_exists_and_names_the_contract():
 def test_runner_enforces_id_format():
     src = SCRIPT.read_text()
     # The id grammar is asserted by the runner itself, not just by convention.
-    for part in ("gguf-udq4kxl-auto-", "(base|mtp)", "c(1|4|8|16)",
-                 "ctx(32768|131072|262144)"):
+    for part in ("gguf-(hip|vulkan)-udq4kxl-auto-", "(base|mtp|mtp4)",
+                 "c(1|4|8|16)", "ctx(32768|131072|262144)"):
         assert part in src, f"runner must encode id grammar part {part!r}"
 
 
@@ -72,7 +73,7 @@ def test_runner_refuses_malformed_id():
 def test_runner_refuses_unknown_id_not_in_matrix():
     # Grammar-valid (so the refusal exercises the matrix lookup, not the regex)
     # but never declared: c3 is outside the declared N set.
-    r = run_runner(["gguf-udq4kxl-auto-base-c3-ctx131072"])
+    r = run_runner(["gguf-hip-udq4kxl-auto-base-c3-ctx131072"])
     assert r.returncode != 0
     combined = r.stdout + r.stderr
     assert "matrix" in combined.lower()
@@ -89,7 +90,7 @@ def test_runner_dry_run_prints_plan_without_launching():
     # Snapshot the mutable receipts: a dry run must not create or change any.
     before_matrix = MATRIX.read_bytes()
     before_files = sorted(p.name for p in CELLS_DIR.glob("*.json")) if CELLS_DIR.exists() else []
-    r = run_runner(["gguf-udq4kxl-auto-base-c4-ctx131072", "--dry-run"])
+    r = run_runner(["gguf-hip-udq4kxl-auto-base-c4-ctx131072", "--dry-run"])
     assert r.returncode == 0, r.stderr
     out = r.stdout
     assert "dry run" in out.lower()
@@ -98,6 +99,7 @@ def test_runner_dry_run_prints_plan_without_launching():
     assert "CTX_SIZE=131072" in out
     assert "-np 4" in out
     assert "--concurrency 4" in out
+    assert "backend" in out.lower() and "hip" in out.lower()
     assert MATRIX.read_bytes() == before_matrix, "dry run must not touch matrix.json"
     after_files = sorted(p.name for p in CELLS_DIR.glob("*.json")) if CELLS_DIR.exists() else []
     assert after_files == before_files, "dry run must not write cell files"
@@ -105,22 +107,48 @@ def test_runner_dry_run_prints_plan_without_launching():
 
 def test_runner_dry_run_mtp_and_ctx_tiers_derive_correct_env():
     # mtp cell: WITH_MTP=1; c1 keeps the default (unified) boot, no -np.
-    r = run_runner(["gguf-udq4kxl-auto-mtp-c1-ctx131072", "--dry-run"])
+    r = run_runner(["gguf-hip-udq4kxl-auto-mtp-c1-ctx131072", "--dry-run"])
     assert r.returncode == 0, r.stderr
     assert "WITH_MTP=1" in r.stdout
     assert "-np" not in r.stdout
 
     # ctx-tier cell at c4 keeps the declared unified/naive boot (no -np):
     # the cell ctx is the total, default slots are the validated quickstart.
-    r = run_runner(["gguf-udq4kxl-auto-base-c4-ctx262144", "--dry-run"])
+    r = run_runner(["gguf-hip-udq4kxl-auto-base-c4-ctx262144", "--dry-run"])
     assert r.returncode == 0, r.stderr
     assert "CTX_SIZE=262144" in r.stdout
     assert "-np" not in r.stdout
 
     # c8/c16 concurrency cells scale -np with N.
-    r = run_runner(["gguf-udq4kxl-auto-base-c16-ctx131072", "--dry-run"])
+    r = run_runner(["gguf-hip-udq4kxl-auto-base-c16-ctx131072", "--dry-run"])
     assert r.returncode == 0, r.stderr
     assert "-np 16" in r.stdout
+
+
+def test_runner_refuses_legacy_unprefixed_id():
+    # The 2026-08-18 migration made the backend tag explicit: legacy
+    # unprefixed ids are hip but no longer resolvable (matrix-first lookup).
+    r = run_runner(["gguf-udq4kxl-auto-base-c4-ctx131072", "--dry-run"])
+    assert r.returncode != 0
+    assert "not declared" in (r.stdout + r.stderr).lower() or \
+        "unknown" in (r.stdout + r.stderr).lower()
+
+
+def test_runner_refuses_vulkan_mtp4_unified_until_plumbed():
+    """2026-08-18 (Task 1 of the v0.1.2 plan): the grammar accepts the new
+    backend/mtp4/unified ids, but the runner cannot boot them until the
+    Vulkan build + backend/depth/unified plumbing lands (plan Task 2) — it
+    must refuse loudly instead of silently measuring a vulkan cell on the
+    HIP binary. This test is REPLACED by plumbing tests in Task 2."""
+    for cid in ("gguf-vulkan-udq4kxl-auto-base-c1-ctx131072",
+                "gguf-vulkan-udq4kxl-auto-mtp4-c4-ctx131072",
+                "gguf-hip-udq4kxl-auto-mtp4-c1-ctx131072",
+                "gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified"):
+        r = run_runner([cid, "--dry-run"])
+        assert r.returncode != 0, f"{cid} must be refused pre-plumbing"
+        combined = (r.stdout + r.stderr).lower()
+        assert "vulkan" in combined or "plumb" in combined or "not yet" in combined, (
+            f"{cid}: refusal must say the backend/depth/unified plumbing is pending")
 
 
 def test_matrix_measured_cells_pair_with_cell_files():
@@ -207,7 +235,7 @@ def test_vllm_runner_refuses_unknown_id_not_in_matrix():
 
 def test_vllm_runner_refuses_wrong_path_id():
     # A real matrix id, but for the OTHER path: the vllm runner must refuse it.
-    r = run_vllm_runner(["gguf-udq4kxl-auto-base-c1-ctx131072"])
+    r = run_vllm_runner(["gguf-hip-udq4kxl-auto-base-c1-ctx262144"])
     assert r.returncode != 0
 
 
@@ -308,7 +336,7 @@ def test_runners_dry_run_honor_community_cells_dir(tmp_path):
     # untouched; with the default env the matrix flip is still in the plan.
     community = tmp_path / "community-cells"
     before_matrix = MATRIX.read_bytes()
-    for runner, cell in ((SCRIPT, "gguf-udq4kxl-auto-base-c4-ctx131072"),
+    for runner, cell in ((SCRIPT, "gguf-hip-udq4kxl-auto-base-c4-ctx131072"),
                          (VSCRIPT, "vllm-bf16-auto-base-c1-ctx262144")):
         r = subprocess.run(["bash", str(runner), cell, "--dry-run"],
                            capture_output=True, text=True, timeout=60, cwd=ROOT,

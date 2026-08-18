@@ -3,7 +3,7 @@
   "reviewed_by": "controller-2026-08-17",
   "cells": [
     {
-      "id": "gguf-udq4kxl-auto-base-c1-ctx131072",
+      "id": "gguf-hip-udq4kxl-auto-base-c1-ctx131072",
       "verdict": "recommended",
       "reason": "Interactive single-stream at the validated defaults (unified default boot, full 131072 window): per-stream 10.1 tok/s median (TPOT 98.6 ms/token) at/above the 10 tok/s interactive floor; greedy anchor byte-identical; GTT 25.9 GiB at load.",
       "metrics": {
@@ -34,7 +34,7 @@
       "conditions": "Single-user interactive chat at the validated defaults (UD-Q4_K_XL, ctx 131072). TTFT 5.1 s on ~1.4K-token prompts; concurrency demotes per-stream below the floor (see the c4 cells). Caveat (2026-08-17 final review): unified-default-boot c4 at ctx 131072 (the stock quickstart's 4-slot default under 4 concurrent users) was NOT measured — bracketed by the c4@32768 greedy pit (unified boot, degraded) and the clean split-mode c4@131072 cell; single-stream use is unaffected."
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c1-ctx262144",
+      "id": "gguf-hip-udq4kxl-auto-base-c1-ctx262144",
       "verdict": "recommended",
       "reason": "Interactive single-stream at the validated defaults (unified default boot, full 262144 window): per-stream 10.1 tok/s median (TPOT 98.8 ms/token) at/above the 10 tok/s interactive floor; greedy anchor byte-identical; GTT 33.9 GiB at load.",
       "metrics": {
@@ -65,7 +65,7 @@
       "conditions": "Single-user interactive chat at the validated defaults (UD-Q4_K_XL, ctx 262144). TTFT 5.3 s on ~1.4K-token prompts; concurrency demotes per-stream below the floor (see the c4 cells). GTT grows +8.0 GiB over the 131072 boot (34,742 vs 26,548 MiB = 64 KiB/token bf16 KV, the closed form); deep-context retrieval is not depth-reliable on this path (120K tier confident miss — see the context-capacity table)."
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c1-ctx32768",
+      "id": "gguf-hip-udq4kxl-auto-base-c1-ctx32768",
       "verdict": "recommended",
       "reason": "Interactive single-stream at the validated defaults (unified default boot, full 32768 window): per-stream 10.0 tok/s median (TPOT 99.6 ms/token) at/above the 10 tok/s interactive floor; greedy anchor byte-identical; GTT 19.9 GiB at load.",
       "metrics": {
@@ -96,7 +96,7 @@
       "conditions": "Single-user interactive chat at the validated defaults (UD-Q4_K_XL, ctx 32768). TTFT 5.3 s on ~1.4K-token prompts; concurrency demotes per-stream below the floor (see the c4 cells). Long-context retrieval smoke PASSED at this tier (needle recalled at ~30K-token depth)."
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c16-ctx131072",
+      "id": "gguf-hip-udq4kxl-auto-base-c16-ctx131072",
       "verdict": "avoid",
       "reason": "Greedy byte-identity anchor FAILED after the 16-stream bench (split boot (-np 16, n_ctx_slot 8192)): greedy decoding on the same server instance degenerates into a '////…' repetition loop (METHODOLOGY §6 pit). Recorded throughput (per-stream median 3.2 tok/s, aggregate 27.5 tok/s) is secondary — the cell is measured(degraded) and its anchor drift invalidates cross-path comparison.",
       "metrics": {
@@ -129,7 +129,7 @@
       "upstream": "llama.cpp HIP on gfx1151 — live at master HEAD 01818e495 (2026-08-17), same pit as the 4df29be4 pin; candidate fix PR #25863 https://github.com/ggml-org/llama.cpp/pull/25863 differentially verified on this host (patched 2/2 anchor PASS vs unpatched 3/3 FAIL on the idle host; receipts docs/results/upstream-controls/); tracked upstream in #25992 https://github.com/ggml-org/llama.cpp/issues/25992 (primary — same-host bisect, maintainer invited testing of the PR) and #23577 https://github.com/ggml-org/llama.cpp/issues/23577 (////-family); exact mechanism unresolved at session close (METHODOLOGY §6)"
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c4-ctx131072",
+      "id": "gguf-hip-udq4kxl-auto-base-c4-ctx131072",
       "verdict": "caution",
       "reason": "Per-stream median 7.5 tok/s (TPOT 133.0 ms/token) is below the 10 tok/s interactive floor at the c4 light-multi-user tier; aggregate 9.4 tok/s. Anchor clean; GTT 25.9 GiB at load.",
       "metrics": {
@@ -160,7 +160,7 @@
       "conditions": "Batch/light-multi-user use only — aggregate 9.4 tok/s; interactive chat → the c1 cells (mtp-c1 13.0 tok/s). UX claims exclude non-healthy streams: 1-of-4 stream(s) emitted <2 content tokens (no defined TPOT) and must not count toward latency claims."
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c4-ctx262144",
+      "id": "gguf-hip-udq4kxl-auto-base-c4-ctx262144",
       "verdict": "caution",
       "reason": "Per-stream median 8.4 tok/s (TPOT 119.1 ms/token) is below the 10 tok/s interactive floor at the c4 light-multi-user tier; aggregate 8.8 tok/s. Anchor clean; GTT 33.9 GiB at load.",
       "metrics": {
@@ -191,7 +191,7 @@
       "conditions": "Batch/light-multi-user use only — aggregate 8.8 tok/s; interactive chat → the c1 cells (mtp-c1 13.0 tok/s). UX claims exclude non-healthy streams: 2-of-4 stream(s) emitted <2 content tokens (no defined TPOT) and must not count toward latency claims. Full-context tier: GTT +8.0 GiB over the 131072 boot and the deep-context retrieval caveat apply (see the context-capacity table)."
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c4-ctx32768",
+      "id": "gguf-hip-udq4kxl-auto-base-c4-ctx32768",
       "verdict": "avoid",
       "reason": "Greedy byte-identity anchor FAILED after the 4-stream bench (unified default boot, n_ctx_slot 32768): greedy decoding on the same server instance degenerates into a '////…' repetition loop (METHODOLOGY §6 pit). Recorded throughput (per-stream median 5.8 tok/s, aggregate 15.7 tok/s) is secondary — the cell is measured(degraded) and its anchor drift invalidates cross-path comparison.",
       "metrics": {
@@ -224,7 +224,7 @@
       "upstream": "llama.cpp HIP on gfx1151 — live at master HEAD 01818e495 (2026-08-17), same pit as the 4df29be4 pin; candidate fix PR #25863 https://github.com/ggml-org/llama.cpp/pull/25863 differentially verified on this host (patched 2/2 anchor PASS vs unpatched 3/3 FAIL on the idle host; receipts docs/results/upstream-controls/); tracked upstream in #25992 https://github.com/ggml-org/llama.cpp/issues/25992 (primary — same-host bisect, maintainer invited testing of the PR) and #23577 https://github.com/ggml-org/llama.cpp/issues/23577 (////-family); exact mechanism unresolved at session close (METHODOLOGY §6)"
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c8-ctx131072",
+      "id": "gguf-hip-udq4kxl-auto-base-c8-ctx131072",
       "verdict": "avoid",
       "reason": "Greedy byte-identity anchor FAILED after the 8-stream bench (split boot (-np 8, n_ctx_slot 16384)): greedy decoding on the same server instance degenerates into a '////…' repetition loop (METHODOLOGY §6 pit). Recorded throughput (per-stream median 3.6 tok/s, aggregate 18.4 tok/s) is secondary — the cell is measured(degraded) and its anchor drift invalidates cross-path comparison.",
       "metrics": {
@@ -257,7 +257,7 @@
       "upstream": "llama.cpp HIP on gfx1151 — live at master HEAD 01818e495 (2026-08-17), same pit as the 4df29be4 pin; candidate fix PR #25863 https://github.com/ggml-org/llama.cpp/pull/25863 differentially verified on this host (patched 2/2 anchor PASS vs unpatched 3/3 FAIL on the idle host; receipts docs/results/upstream-controls/); tracked upstream in #25992 https://github.com/ggml-org/llama.cpp/issues/25992 (primary — same-host bisect, maintainer invited testing of the PR) and #23577 https://github.com/ggml-org/llama.cpp/issues/23577 (////-family); exact mechanism unresolved at session close (METHODOLOGY §6)"
     },
     {
-      "id": "gguf-udq4kxl-auto-mtp-c1-ctx131072",
+      "id": "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072",
       "verdict": "recommended",
       "reason": "Interactive single-stream at the validated defaults (unified default boot, full 131072 window): per-stream 13.0 tok/s median (TPOT 76.9 ms/token) at/above the 10 tok/s interactive floor; greedy anchor byte-identical; GTT 28.6 GiB at load. MTP speculative decoding lifts per-stream throughput +28.2% (13.0 vs 10.1 tok/s median; aggregate basis +20.8%) — the quickstart's WITH_MTP=1 opt-in is safe for interactive chat.",
       "metrics": {
@@ -294,7 +294,7 @@
       "conditions": "+28.2% is the PER-STREAM basis (13.0 vs 10.1 tok/s median, c1 ctx 131072); aggregate basis +20.8% (10.2 vs 8.4 tok/s). Payoff shrinks under concurrency: c4 median 9.0 tok/s (below floor), and c8/c16 hit the anchor-degradation pit (avoid cells). Caveat (2026-08-17 final review): unified-default-boot c4 at ctx 131072 (the stock quickstart's 4-slot default under 4 concurrent users) was NOT measured — bracketed by the c4@32768 greedy pit (unified boot, degraded) and the clean split-mode c4@131072 cell; single-stream use is unaffected."
     },
     {
-      "id": "gguf-udq4kxl-auto-mtp-c16-ctx131072",
+      "id": "gguf-hip-udq4kxl-auto-mtp-c16-ctx131072",
       "verdict": "avoid",
       "reason": "Greedy byte-identity anchor FAILED after the 16-stream bench (split boot (-np 16, n_ctx_slot 8192)): greedy decoding on the same server instance degenerates into a '////…' repetition loop (METHODOLOGY §6 pit). Recorded throughput (per-stream median 1.4 tok/s, aggregate 16.3 tok/s) is secondary — the cell is measured(degraded) and its anchor drift invalidates cross-path comparison.",
       "metrics": {
@@ -333,7 +333,7 @@
       "upstream": "llama.cpp HIP on gfx1151 — live at master HEAD 01818e495 (2026-08-17), same pit as the 4df29be4 pin; candidate fix PR #25863 https://github.com/ggml-org/llama.cpp/pull/25863 differentially verified on this host (patched 2/2 anchor PASS vs unpatched 3/3 FAIL on the idle host; receipts docs/results/upstream-controls/); tracked upstream in #25992 https://github.com/ggml-org/llama.cpp/issues/25992 (primary — same-host bisect, maintainer invited testing of the PR) and #23577 https://github.com/ggml-org/llama.cpp/issues/23577 (////-family); exact mechanism unresolved at session close (METHODOLOGY §6)"
     },
     {
-      "id": "gguf-udq4kxl-auto-mtp-c4-ctx131072",
+      "id": "gguf-hip-udq4kxl-auto-mtp-c4-ctx131072",
       "verdict": "caution",
       "reason": "Per-stream median 9.0 tok/s (TPOT 110.9 ms/token) is below the 10 tok/s interactive floor at the c4 light-multi-user tier; aggregate 10.9 tok/s. Better than base c4 (9.4 tok/s aggregate), but MTP's payoff shrinks with concurrency (c1: +19.9% per-stream). Anchor clean; GTT 28.6 GiB at load.",
       "metrics": {
@@ -370,7 +370,7 @@
       "conditions": "Batch/light-multi-user use only — aggregate 10.9 tok/s; interactive chat → the c1 cells (mtp-c1 13.0 tok/s). UX claims exclude non-healthy streams: 1-of-4 stream(s) emitted <2 content tokens (no defined TPOT) and must not count toward latency claims."
     },
     {
-      "id": "gguf-udq4kxl-auto-mtp-c8-ctx131072",
+      "id": "gguf-hip-udq4kxl-auto-mtp-c8-ctx131072",
       "verdict": "avoid",
       "reason": "Greedy byte-identity anchor FAILED after the 8-stream bench (split boot (-np 8, n_ctx_slot 16384)): greedy decoding on the same server instance degenerates into a '////…' repetition loop (METHODOLOGY §6 pit). Recorded throughput (per-stream median 2.1 tok/s, aggregate 10.7 tok/s) is secondary — the cell is measured(degraded) and its anchor drift invalidates cross-path comparison.",
       "metrics": {

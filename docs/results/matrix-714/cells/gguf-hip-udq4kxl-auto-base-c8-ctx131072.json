@@ -1,12 +1,12 @@
 {
-  "id": "gguf-udq4kxl-auto-mtp-c8-ctx131072",
-  "label": "gguf-udq4kxl-auto-mtp-c8-ctx131072",
+  "id": "gguf-hip-udq4kxl-auto-base-c8-ctx131072",
+  "label": "gguf-hip-udq4kxl-auto-base-c8-ctx131072",
   "base_url": "http://127.0.0.1:8080",
-  "started_utc": "2026-08-16T22:32:36Z",
+  "started_utc": "2026-08-16T22:14:41Z",
   "server_flags": {
     "ctx_size": 131072,
     "concurrency_np": 8,
-    "with_mtp": true,
+    "with_mtp": false,
     "extra_args": "-np 8",
     "port": 8080,
     "kv_semantics_expected": "split (explicit -np 8: per-slot window = 131072/8 = 16384, kv_unified=false)",
@@ -17,8 +17,6 @@
       "-ngl",
       "99",
       "--jinja",
-      "--spec-type",
-      "draft-mtp",
       "-np",
       "8"
     ]
@@ -31,20 +29,20 @@
   },
   "load": {
     "vram_mib": 1131,
-    "gtt_mib": 31712
+    "gtt_mib": 27148
   },
   "boot": {
     "ok": true,
-    "health_wall_s": 6
+    "health_wall_s": 4
   },
   "client": {
-    "label": "gguf-udq4kxl-auto-mtp-c8-ctx131072",
+    "label": "gguf-hip-udq4kxl-auto-base-c8-ctx131072",
     "concurrency": 8,
-    "started_utc": "2026-08-16T22:32:45.389492+00:00",
+    "started_utc": "2026-08-16T22:14:48.371831+00:00",
     "streams": [
       {
-        "ttft_ms": 44832.95518194791,
-        "tpot_ms": 483.7405507804315,
+        "ttft_ms": 40226.99808201287,
+        "tpot_ms": 278.661780325495,
         "completion_tokens": 256,
         "prompt_tokens": 1412,
         "reasoning_tokens": 0,
@@ -53,18 +51,18 @@
         "error": null
       },
       {
-        "ttft_ms": 31526.7610399751,
-        "tpot_ms": 0.0,
-        "completion_tokens": 2,
+        "ttft_ms": 42764.824762998614,
+        "tpot_ms": 269.5618789725225,
+        "completion_tokens": 256,
         "prompt_tokens": 1474,
         "reasoning_tokens": 0,
-        "finish_reason": "stop",
+        "finish_reason": "length",
         "ok": true,
         "error": null
       },
       {
-        "ttft_ms": 31526.139581983443,
-        "tpot_ms": 528.8899319255542,
+        "ttft_ms": 37493.933357007336,
+        "tpot_ms": 288.6056662158237,
         "completion_tokens": 256,
         "prompt_tokens": 1298,
         "reasoning_tokens": 0,
@@ -73,8 +71,8 @@
         "error": null
       },
       {
-        "ttft_ms": 45509.02216602117,
-        "tpot_ms": 481.6746835019348,
+        "ttft_ms": 40226.56980098691,
+        "tpot_ms": 278.65754498040997,
         "completion_tokens": 256,
         "prompt_tokens": 1469,
         "reasoning_tokens": 0,
@@ -83,8 +81,8 @@
         "error": null
       },
       {
-        "ttft_ms": 44830.16593300272,
-        "tpot_ms": 483.73963676082593,
+        "ttft_ms": 29596.199734020047,
+        "tpot_ms": 318.6917111921289,
         "completion_tokens": 256,
         "prompt_tokens": 1336,
         "reasoning_tokens": 0,
@@ -93,8 +91,8 @@
         "error": null
       },
       {
-        "ttft_ms": 45509.88761999179,
-        "tpot_ms": 481.67117626278423,
+        "ttft_ms": 29596.07693302678,
+        "tpot_ms": 318.6923494117389,
         "completion_tokens": 256,
         "prompt_tokens": 1516,
         "reasoning_tokens": 0,
@@ -103,8 +101,8 @@
         "error": null
       },
       {
-        "ttft_ms": 39570.792157028336,
-        "tpot_ms": 502.9464634429828,
+        "ttft_ms": 40222.07675600657,
+        "tpot_ms": 278.66662547846016,
         "completion_tokens": 256,
         "prompt_tokens": 1462,
         "reasoning_tokens": 0,
@@ -113,8 +111,8 @@
         "error": null
       },
       {
-        "ttft_ms": 45505.87645202177,
-        "tpot_ms": 481.67829344701937,
+        "ttft_ms": 40226.29026701907,
+        "tpot_ms": 278.6534181960365,
         "completion_tokens": 256,
         "prompt_tokens": 1408,
         "reasoning_tokens": 0,
@@ -124,8 +122,8 @@
       }
     ],
     "aggregate": {
-      "tok_per_s": 10.657064173228655,
-      "wall_s": 168.33904449094553,
+      "tok_per_s": 18.367020734506752,
+      "wall_s": 111.5042025379953,
       "ok_streams": 8,
       "failed_streams": 0
     }
@@ -140,21 +138,21 @@
     "ctx-size     : 131072  (override: CTX_SIZE=<n>)",
     "gpu layers   : 99 (all)",
     "mmproj       : models/Qwen3.8-27B-GGUF/mmproj-F16.gguf",
-    "speculative  : draft-mtp (MTP head from the same GGUF)",
+    "speculative  : off (opt in: WITH_MTP=1)",
     "extra args   : -np 8",
     "Serving on http://127.0.0.1:8080 ...",
-    "0.00.040.010 W srv  llama_server: -----------------",
-    "0.00.040.011 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set",
-    "0.00.040.012 W srv  llama_server: this can be a security risk (cross-origin attacks)",
-    "0.00.040.012 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655",
-    "0.00.040.012 W srv  llama_server: -----------------",
-    "0.04.103.409 I common_speculative_init_result: creating MTP draft context against the target model 'models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf'",
-    "0.04.151.611 W load_hparams: Qwen-VL models require at minimum 1024 image tokens to function correctly on grounding tasks",
-    "0.04.151.614 W load_hparams: if you encounter problems with accuracy, try adding --image-min-tokens 1024",
-    "0.04.151.614 W load_hparams: more info: https://github.com/ggml-org/llama.cpp/issues/16842",
-    "0.04.619.223 I srv    load_model: initializing, n_slots = 8, n_ctx_slot = 16384, kv_unified = 'false'",
-    "0.04.619.513 W llama_sampler_backend_support: device 'ROCm0' does not have support for op TOP_K needed for sampler 'top-k'",
-    "0.04.619.524 W llama_sampler_backend_support: device 'ROCm0' does not have support for op TOP_K needed for sampler 'top-k'"
+    "0.00.022.121 W srv  llama_server: -----------------",
+    "0.00.022.123 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set",
+    "0.00.022.123 W srv  llama_server: this can be a security risk (cross-origin attacks)",
+    "0.00.022.123 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655",
+    "0.00.022.123 W srv  llama_server: -----------------",
+    "0.00.765.186 W model has unused tensor blk.64.attn_norm.weight (size = 20480 bytes) -- ignoring",
+    "0.00.765.193 W model has unused tensor blk.64.post_attention_norm.weight (size = 20480 bytes) -- ignoring",
+    "0.00.765.198 W model has unused tensor blk.64.attn_q.weight (size = 43253760 bytes) -- ignoring",
+    "0.00.765.199 W model has unused tensor blk.64.attn_k.weight (size = 3604480 bytes) -- ignoring",
+    "0.00.765.201 W model has unused tensor blk.64.attn_v.weight (size = 4300800 bytes) -- ignoring",
+    "0.00.765.207 W model has unused tensor blk.64.attn_output.weight (size = 21626880 bytes) -- ignoring",
+    "0.00.765.209 W model has unused tensor blk.64.attn_q_norm.weight (size = 1024 bytes) -- ignoring"
   ],
   "degraded": true,
   "degraded_reason": "anchor check failed (greedy byte-identity)"

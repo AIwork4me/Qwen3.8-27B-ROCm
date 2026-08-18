@@ -64,7 +64,9 @@ BASE_URL="http://127.0.0.1:$PORT"
 HEALTH_TIMEOUT_S="${HEALTH_TIMEOUT_S:-420}"
 BENCH_TIMEOUT_S="${BENCH_TIMEOUT_S:-1800}"
 
-ID_RE='^gguf-udq4kxl-auto-(base|mtp)-c(1|4|8|16)-ctx(32768|131072|262144)$'
+# Cell id grammar (2026-08-18 backend-dimension migration, shared with
+# gen-matrix.py and the verdicts schema — legacy unprefixed ids ARE hip):
+ID_RE='^gguf-(hip|vulkan)-udq4kxl-auto-(base|mtp|mtp4)-c(1|4|8|16)-ctx(32768|131072|262144)(-unified)?$'
 
 usage() {
     sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'
@@ -87,7 +89,7 @@ for arg in "$@"; do
     esac
 done
 if [ -z "$CELL_ID" ]; then
-    echo "ERROR: a cell id is required, e.g. scripts/run-cell-gguf.sh gguf-udq4kxl-auto-base-c4-ctx131072 [--dry-run]" >&2
+    echo "ERROR: a cell id is required, e.g. scripts/run-cell-gguf.sh gguf-hip-udq4kxl-auto-base-c4-ctx131072 [--dry-run]" >&2
     exit 2
 fi
 
@@ -117,17 +119,30 @@ esac
 
 # ------------------------------------------------------------- id grammar
 if [[ "$CELL_ID" =~ $ID_RE ]]; then
-    MTP_PART="${BASH_REMATCH[1]}"     # base | mtp
-    CONC="${BASH_REMATCH[2]}"         # 1 | 4 | 8 | 16
-    CTX="${BASH_REMATCH[3]}"          # 32768 | 131072 | 262144
+    BACKEND="${BASH_REMATCH[1]}"        # hip | vulkan
+    MTP_PART="${BASH_REMATCH[2]}"       # base | mtp | mtp4
+    CONC="${BASH_REMATCH[3]}"           # 1 | 4 | 8 | 16
+    CTX="${BASH_REMATCH[4]}"            # 32768 | 131072 | 262144
+    UNIFIED="${BASH_REMATCH[5]:-}"      # -unified suffix (c4 rider) or empty
 else
     echo "ERROR: '$CELL_ID' is not a valid gguf cell id." >&2
-    echo "       grammar: gguf-udq4kxl-auto-{base,mtp}-c{1,4,8,16}-ctx{32768,131072,262144}" >&2
+    echo "       grammar: gguf-(hip|vulkan)-udq4kxl-auto-{base,mtp,mtp4}-c{1,4,8,16}-ctx{32768,131072,262144}[-unified]" >&2
+    echo "       (2026-08-18 migration: legacy unprefixed gguf ids are hip; use the explicit tag)" >&2
     exit 2
 fi
 if [[ "$CELL_ID" != gguf-* ]]; then
     # Unreachable after the regex, kept as a loud guard for copy-paste slips.
     echo "ERROR: '$CELL_ID' is not a gguf cell; this runner only handles the gguf path." >&2
+    exit 2
+fi
+
+# Vulkan backend / mtp4 depth / unified-boot rider: the v0.1.2 runner
+# plumbing (Vulkan build + backend binary selection, MTP depth, unified
+# default boot) is NOT in this runner yet — refuse loudly rather than
+# silently measure a vulkan/mtp4/unified cell with the hip base/mtp
+# machinery (the receipt would lie about what ran).
+if [ "$BACKEND" != "hip" ] || [ "$MTP_PART" = "mtp4" ] || [ -n "$UNIFIED" ]; then
+    echo "ERROR: '$CELL_ID' needs the v0.1.2 Vulkan×MTP runner plumbing (backend binary selection / MTP depth / unified default boot) — not yet implemented in this runner; only hip {base,mtp} cells can run today." >&2
     exit 2
 fi
 
@@ -151,6 +166,7 @@ ANCHOR_CMD=(python3 "$BENCH" --base-url "$BASE_URL" --anchor-only
 
 print_plan() {
     echo "cell          : $CELL_ID (matrix status: $MATRIX_STATUS)"
+    echo "backend       : $BACKEND (llama.cpp build-714 binary class)"
     echo "server        : $QUICKSTART  (PORT=$PORT)"
     echo "server env    : CTX_SIZE=$CTX WITH_MTP=$WITH_MTP EXTRA_ARGS='${EXTRA_ARGS}'"
     echo "kv semantics  : $KV_MODE"
