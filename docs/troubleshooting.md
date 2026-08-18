@@ -307,6 +307,9 @@ recorded in the context-capacity tables
 
 **Symptom.** `bash scripts/00-check-env.sh` fails with
 `project Strix Halo host floor is kernel >= 6.16.9 (docs/troubleshooting.md#uma-bug)`.
+With `--profile community` the same condition is a WARNING instead (evidence
+for a non-Strix-Halo platform is recorded in the submission's stack manifest,
+not gated — docs/hardware-validation.md).
 
 **Reproduction conditions.** Run the env check on a Ryzen AI MAX+ PRO 395 /
 Radeon 8060S host whose kernel is older than 6.16.9.

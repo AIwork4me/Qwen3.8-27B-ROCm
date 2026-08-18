@@ -54,7 +54,10 @@ then open one pull request per platform containing:
 
    saved as `docs/results/matrix-714/community/<platform-id>/env-check.txt`.
    The community profile accepts any AMD gfx arch with ROCm present (host
-   tools and the kernel floor are still enforced) and prints the
+   tools are still enforced; the project kernel floor — a Strix Halo
+   UMA-bug guard, see docs/troubleshooting.md#uma-bug — is warned about
+   when your kernel is below 6.16.9 and the actual kernel belongs in your
+   stack manifest) and prints the
    `COMMUNITY-PROFILE: arch=<gfxNNNN> pool=<…>GiB NOT project-validated`
    line that anchors the receipt to this protocol.
 3. **rocm-smi receipts** — `rocm-smi` output captured at idle and under

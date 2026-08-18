@@ -10,7 +10,7 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def test_platform_index_validates_and_starts_empty():
+def test_platform_index_entries_validate_and_receipts_exist():
     schema = json.loads((ROOT / "schemas" / "community-platform.schema.json").read_text())
     index = json.loads((ROOT / "configs" / "community" / "platforms.json").read_text())
     # The planned shape used a file:// $ref to the schema file; embedding the
@@ -20,7 +20,20 @@ def test_platform_index_validates_and_starts_empty():
     jsonschema.validate(index, {"type": "object", "required": ["platforms"],
                                 "properties": {"platforms": {"type": "array",
                                 "items": schema}}})
-    assert index["platforms"] == []
+    # The index is designed to grow (docs/hardware-validation.md: one entry
+    # per platform); what must hold for EVERY entry is that the committed
+    # receipts tree actually backs it — env-check receipt present and at
+    # least one raw runner-written cell JSON under the listed directories.
+    for entry in index["platforms"]:
+        env_check = ROOT / entry["receipts"]["env_check"]
+        assert env_check.is_file(), f"{entry['id']}: missing env-check receipt {env_check}"
+        n_cells = 0
+        for listed in entry["receipts"]["cells"]:
+            listed_dir = ROOT / listed
+            assert listed_dir.is_dir(), f"{entry['id']}: missing receipts dir {listed_dir}"
+            cells_dir = listed_dir / "cells"
+            n_cells += len(list(cells_dir.glob("*.json"))) if cells_dir.is_dir() else 0
+        assert n_cells > 0, f"{entry['id']}: no raw cell JSONs under the listed receipts dirs"
 
 
 def test_platform_schema_requires_full_evidence_packet():

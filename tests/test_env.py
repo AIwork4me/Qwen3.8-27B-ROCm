@@ -18,6 +18,15 @@ FAKE_ROCMINFO_NO_AMD = """Agent 1 - CPU
   Marketing Name: Other GPU
 """
 
+FAKE_ROCMINFO_GFX1100 = """Agent 1 - CPU
+  Marketing Name: AMD EPYC 9334 32-Core Processor
+Agent 2 - AMD GFX Device
+  Name:                    gfx1100
+  Marketing Name:          AMD Radeon Pro W7900D
+  Segment: GLOBAL; FLAGS: COARSE GRAINED
+  Size: 50331648(48GiB)
+"""
+
 
 def make_fake_rocm(tmp_path, version="7.14.0", rocminfo=FAKE_ROCMINFO):
     prefix = tmp_path / "rocm"
@@ -47,6 +56,18 @@ def run_check_env(prefix):
     )
 
 
+def run_check_env_profile(prefix, profile, kernel="6.17.0-1032-oem"):
+    import os
+
+    env = dict(os.environ, ROCM_PREFIX=str(prefix), KERNEL_RELEASE=kernel)
+    return subprocess.run(
+        ["bash", str(ROOT / "scripts" / "00-check-env.sh"), "--profile", profile],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+
+
 def test_check_env_passes_with_fake_714_gfx1151_prefix(tmp_path):
     r = run_check_env(make_fake_rocm(tmp_path))
     assert r.returncode == 0, f"STDOUT:{r.stdout}\nSTDERR:{r.stderr}"
@@ -63,6 +84,29 @@ def test_check_env_fails_on_unvalidated_rocm_version(tmp_path):
     r = run_check_env(make_fake_rocm(tmp_path, version="6.3.4"))
     assert r.returncode != 0
     assert "7.14" in r.stderr
+
+
+def test_community_profile_kernel_below_floor_warns_not_fails(tmp_path):
+    # The 6.16.9 floor guards the gfx1151 Strix Halo UMA bug
+    # (docs/troubleshooting.md#uma-bug); a community submission from another
+    # arch on an older kernel is evidence to record, not a gate (the ROCm
+    # version check in the same profile already works this way).
+    r = run_check_env_profile(
+        make_fake_rocm(tmp_path, rocminfo=FAKE_ROCMINFO_GFX1100),
+        profile="community", kernel="6.8.0-79-generic",
+    )
+    assert r.returncode == 0, f"STDOUT:{r.stdout}\nSTDERR:{r.stderr}"
+    assert "WARNING" in r.stderr and "6.16.9" in r.stderr
+    assert "COMMUNITY-PROFILE: arch=gfx1100" in r.stdout
+    assert "OK: community profile environment readable" in r.stdout
+
+
+def test_base_profile_kernel_floor_still_fails(tmp_path):
+    r = run_check_env_profile(
+        make_fake_rocm(tmp_path), profile="base", kernel="6.8.0-79-generic",
+    )
+    assert r.returncode != 0
+    assert "6.16.9" in r.stderr
 
 
 @pytest.mark.gpu
