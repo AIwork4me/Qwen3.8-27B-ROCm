@@ -1,0 +1,1 @@
+Explain in clear steps how to choose a quantization level when running a 27-billion-parameter language model on a single 48-gigabyte GPU. Cover memory budgeting, quality trade-offs, and when speculative decoding helps.

@@ -1,0 +1,214 @@
+{
+  "schema_version": 1,
+  "identity": {
+    "tag": "q8-c4",
+    "quant": "Q8_0",
+    "file": "Qwen3.8-27B-Q8_0.gguf",
+    "size_bytes": 29047086048,
+    "np": 4,
+    "extra_args": "",
+    "max_tokens": 128,
+    "llama_cpp_commit": "4df29be4f4c3673f428170fda944a5b19f743bb8",
+    "rocm_version": "7.14.0",
+    "gpu": "AMD Radeon Pro W7900D              ",
+    "ctx_retry": false,
+    "engine": "llama.cpp"
+  },
+  "params": {
+    "concurrency": 4,
+    "reps": 5,
+    "max_tokens": 128,
+    "temperature": 0,
+    "prompt_file": "configs/bench-prompt.txt"
+  },
+  "reps": [
+    {
+      "rep": 0,
+      "ok": 4,
+      "requests": [
+        {
+          "ok": true,
+          "wall_s": 9.187,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        },
+        {
+          "ok": true,
+          "wall_s": 9.187,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        },
+        {
+          "ok": true,
+          "wall_s": 9.187,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        },
+        {
+          "ok": true,
+          "wall_s": 9.186,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        }
+      ],
+      "wave_wall_s": 9.187,
+      "agg_decode_tps": 55.731
+    },
+    {
+      "rep": 1,
+      "ok": 4,
+      "requests": [
+        {
+          "ok": true,
+          "wall_s": 8.496,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        },
+        {
+          "ok": true,
+          "wall_s": 8.496,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        },
+        {
+          "ok": true,
+          "wall_s": 8.495,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        },
+        {
+          "ok": true,
+          "wall_s": 8.495,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        }
+      ],
+      "wave_wall_s": 8.496,
+      "agg_decode_tps": 60.264
+    },
+    {
+      "rep": 2,
+      "ok": 4,
+      "requests": [
+        {
+          "ok": true,
+          "wall_s": 8.155,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        },
+        {
+          "ok": true,
+          "wall_s": 8.156,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        },
+        {
+          "ok": true,
+          "wall_s": 8.155,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        },
+        {
+          "ok": true,
+          "wall_s": 8.155,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        }
+      ],
+      "wave_wall_s": 8.156,
+      "agg_decode_tps": 62.776
+    },
+    {
+      "rep": 3,
+      "ok": 4,
+      "requests": [
+        {
+          "ok": true,
+          "wall_s": 8.157,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        },
+        {
+          "ok": true,
+          "wall_s": 8.157,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        },
+        {
+          "ok": true,
+          "wall_s": 8.157,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        },
+        {
+          "ok": true,
+          "wall_s": 8.157,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        }
+      ],
+      "wave_wall_s": 8.157,
+      "agg_decode_tps": 62.768
+    },
+    {
+      "rep": 4,
+      "ok": 4,
+      "requests": [
+        {
+          "ok": true,
+          "wall_s": 8.227,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        },
+        {
+          "ok": true,
+          "wall_s": 8.279,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        },
+        {
+          "ok": true,
+          "wall_s": 8.279,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        },
+        {
+          "ok": true,
+          "wall_s": 8.278,
+          "prompt_tokens": 100,
+          "completion_tokens": 128,
+          "error": null
+        }
+      ],
+      "wave_wall_s": 8.279,
+      "agg_decode_tps": 61.843
+    }
+  ],
+  "aggregates": {
+    "ok_requests": 20,
+    "failed_requests": 0,
+    "mean_decode_tps": 60.676,
+    "p50_request_wall_s": 8.279,
+    "mean_request_wall_s": 8.452,
+    "status": "OK"
+  }
+}
