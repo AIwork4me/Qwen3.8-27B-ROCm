@@ -551,10 +551,12 @@ def test_readme_has_no_work_in_progress() -> None:
     assert "Work in progress" not in text
 
 
-def test_readme_handwritten_text_has_no_controller_ruling() -> None:
-    """(e) Jargon sweep: 'controller ruling' survives only inside GENERATED
-    blocks (Task B's surface); the hand-written sentence says 'project
-    ruling (2026-08-17)'."""
-    hand = _readme_handwritten()
-    assert "controller ruling" not in hand
-    assert "project ruling (2026-08-17)" in hand
+def test_readme_has_no_controller_ruling() -> None:
+    """(e) Jargon sweep, global since Task B (the generated blocks adopted
+    the wording): 'controller ruling' is absent from the ENTIRE README, and
+    the hand-written sentence says 'project ruling (2026-08-17)'."""
+    text = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "controller ruling" not in text, (
+        "jargon regression: 'controller ruling' must read 'project ruling "
+        "(2026-08-17)' everywhere in the README")
+    assert "project ruling (2026-08-17)" in _readme_handwritten()

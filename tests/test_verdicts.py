@@ -294,6 +294,100 @@ def test_readme_blocks_and_benchmark_md_regenerate_byte_identical():
             f"hand-edit generated content")
 
 
+# -------------------------- 3b. known-bad block contract (readme-polish B)
+#
+# The README rendering dedups the ~600-char upstream tail the 5 greedy-pit
+# cells share (the verdicts JSON keeps the full per-cell string — only the
+# README rendering collapses it into one shared subsection).
+
+def _readme_block(name: str) -> str:
+    text = README.read_text()
+    m = re.search(rf"<!-- BEGIN GENERATED: {name} -->\n(.*?)\n"
+                  rf"<!-- END GENERATED: {name} -->", text, re.S)
+    assert m, f"README missing generated block {name!r}"
+    return m.group(1)
+
+
+def _pit_cells() -> dict:
+    return {c["id"]: c for c in load(VERDICTS)["cells"]
+            if c["verdict"] == "avoid" and not c["metrics"]["anchor_ok"]}
+
+
+def test_known_bad_pit_bullets_are_short_and_keep_own_numbers():
+    """Each greedy-pit bullet carries only its own measured numbers plus the
+    workaround — no inlined upstream tail (that lives in the shared
+    subsection, emitted once)."""
+    block = _readme_block("known-good-bad")
+    bullets = [ln for ln in block.splitlines() if ln.startswith("- ❌ `gguf-")]
+    pits = _pit_cells()
+    assert len(bullets) == len(pits) >= 5, (
+        f"{len(bullets)} pit bullets vs {len(pits)} pit verdicts")
+    for ln in bullets:
+        cid = re.match(r"- ❌ `([^`]+)`", ln).group(1)
+        assert cid in pits, f"{cid} is not a greedy-pit verdict cell"
+        assert len(ln) <= 300, (
+            f"{cid}: pit bullet is {len(ln)} chars (target <= 300) — the "
+            f"shared upstream tail must not be inlined per bullet")
+        m = pits[cid]["metrics"]
+        assert f"{m['per_stream_tok_s_median']:.1f}" in ln, (
+            f"{cid}: own per-stream median missing from its bullet")
+        assert f"{m['aggregate_tok_s']:.1f}" in ln, (
+            f"{cid}: own aggregate missing from its bullet")
+        assert "Upstream:" not in ln, f"{cid}: upstream tail still inlined"
+
+
+def test_known_bad_shared_upstream_subsection_appears_exactly_once():
+    block = _readme_block("known-good-bad")
+    assert block.count("**Upstream tracking (shared by the") == 1, (
+        "the shared upstream subsection must appear exactly once in the "
+        "known-bad block")
+
+
+def test_known_bad_shared_subsection_carries_the_upstream_links():
+    """Single source of truth: every link and identifier in the shared
+    subsection recomputes from the pit cells' own `upstream` field
+    (GGUF_PIT_UPSTREAM in gen-verdicts.py) — the README summary can never
+    drift from configs/benchmark-verdicts.json."""
+    block = _readme_block("known-good-bad")
+    shared = next(ln for ln in block.splitlines()
+                  if ln.startswith("**Upstream tracking"))
+    ups = {c["upstream"] for c in _pit_cells().values()}
+    assert len(ups) == 1, ("greedy-pit cells no longer share one upstream "
+                           "string — update the dedup contract")
+    up = ups.pop()
+    for link in re.findall(r"https://\S+", up):  # fix PR + both issue links
+        assert link in shared, f"{link} missing from the shared subsection"
+    assert re.search(r"master HEAD ([0-9a-f]+)", up).group(1) in shared, (
+        "HEAD commit from the verdicts upstream field missing")
+    assert "docs/results/upstream-controls/" in shared, (
+        "receipts path missing from the shared subsection")
+    assert all(f"#{n}" in shared for n in (25863, 25992, 23577))
+
+
+def test_known_bad_names_every_avoid_cell_and_keeps_vllm_mtp16_distinct():
+    """All avoid cells stay listed; the vllm mtp-c16 bullet keeps its own
+    distinct cause and is NOT folded into the shared greedy-pit tracking."""
+    block = _readme_block("known-good-bad")
+    for cell in load(VERDICTS)["cells"]:
+        if cell["verdict"] == "avoid":
+            assert cell["id"] in block, f"{cell['id']} dropped from known-bad"
+    m = re.search(r"- ❌ `vllm-bf16-auto-mtp-c16-ctx262144`[^\n]*", block)
+    assert m, "vllm mtp-c16 avoid bullet missing"
+    assert "MTP regresses" in m.group(0)
+    assert "greedy" not in m.group(0), (
+        "vllm mtp-c16 is a different failure — do not fold it into the "
+        "shared greedy-pit upstream block")
+
+
+def test_performance_highlights_says_project_ruling():
+    """Jargon sweep: the generated block says 'project ruling (2026-08-17)',
+    never 'controller ruling' (see also test_docs.py for the README-wide
+    global assert)."""
+    block = _readme_block("performance-highlights")
+    assert "project ruling (2026-08-17)" in block
+    assert "controller" not in block.lower()
+
+
 # ------------------------------------------- 4. quickstart anti-pit mapping
 
 def quickstart_defaults():

@@ -159,8 +159,8 @@ def render_performance_highlights(data: dict) -> str:
     lines += [
         "",
         "**Caution — batch / throughput (vLLM BF16 @262144):** every measured "
-        "vLLM cell is below the 10 tok/s interactive floor (controller ruling "
-        "2026-08-17) — use this path for what it wins:",
+        "vLLM cell is below the 10 tok/s interactive floor — project ruling "
+        "(2026-08-17); use this path for what it wins:",
         "",
         "| Config | Per-stream (median, min) | Aggregate | Verdict |",
         "|---|---|---|---|",
@@ -253,6 +253,50 @@ def render_context_capacity(data: dict) -> str:
     return "\n".join(lines)
 
 
+def _pit_upstream_shared(upstream: str, npits: int) -> str:
+    """The ONE shared upstream-tracking subsection for the greedy-pit cells.
+
+    Single source of truth: every load-bearing token (HEAD commit + date,
+    fix-PR link, issue links, differential-verification counts, receipts
+    path) is extracted from the pit cells' own `upstream` field
+    (GGUF_PIT_UPSTREAM in gen-verdicts.py) — a shape change fails loudly
+    instead of letting this summary drift from
+    configs/benchmark-verdicts.json (which keeps the full per-cell string).
+    """
+    def need(pattern: str) -> re.Match:
+        m = re.search(pattern, upstream)
+        if not m:
+            raise SystemExit(
+                f"pit `upstream` field no longer matches the shape the "
+                f"shared-tracking renderer expects (missing {pattern!r}) — "
+                f"update scripts/render-readme-blocks.py alongside "
+                f"GGUF_PIT_UPSTREAM in scripts/gen-verdicts.py")
+        return m
+
+    head, date = need(
+        r"master HEAD ([0-9a-f]+) \((\d{4}-\d{2}-\d{2})\)").groups()
+    pr, pr_url = need(r"PR (#\d+) (\S*/pull/\d+)").groups()
+    p_ok, p_fail = need(
+        r"patched (\d+/\d+) anchor PASS vs unpatched (\d+/\d+) FAIL").groups()
+    receipts = need(r"receipts (docs/\S*upstream-controls/)").group(1)
+    issues = re.findall(r"(#\d+) (\S*/issues/\d+)", upstream)
+    if len(issues) != 2:
+        raise SystemExit(
+            "pit `upstream` field: expected exactly two issue links — "
+            "update scripts/render-readme-blocks.py alongside "
+            "GGUF_PIT_UPSTREAM in scripts/gen-verdicts.py")
+    (primary, primary_url), (family, family_url) = issues
+    return (
+        f"**Upstream tracking (shared by the {npits} greedy-pit cells):** "
+        f"live at llama.cpp master HEAD {head} ({date}); candidate fix PR "
+        f"{pr} {pr_url} differentially verified on this host (patched "
+        f"{p_ok} anchor PASS vs unpatched {p_fail} FAIL idle-host; receipts "
+        f"{receipts}); tracked in {primary} {primary_url} (primary — "
+        f"same-host bisect, maintainer invited testing) and {family} "
+        f"{family_url} (////-family); exact mechanism unresolved at "
+        f"session close (METHODOLOGY §6).")
+
+
 def render_known_good_bad(data: dict) -> str:
     v = data["vmap"]
     cells = data["cells"]
@@ -276,19 +320,27 @@ def render_known_good_bad(data: dict) -> str:
     ]
     for cid in sorted(pit_ids):
         m = v[cid]["metrics"]
-        # Single source of truth: the upstream pointer comes from the verdict's
-        # own `upstream` field (GGUF_PIT_UPSTREAM in gen-verdicts.py), so the
-        # README block can never drift from configs/benchmark-verdicts.json.
-        up = v[cid].get("upstream")
-        up_txt = f"Upstream: {up}." if up else "Upstream: see verdicts."
+        # Short per-cell bullet: its OWN measured numbers + the workaround.
+        # The shared ~600-char upstream tail is NOT inlined per bullet — it
+        # is emitted once, right below, from the verdicts' own `upstream`
+        # field (GGUF_PIT_UPSTREAM in gen-verdicts.py).
         lines.append(
             f"- ❌ `{cid}` — greedy `'////'` corruption after sustained "
-            f"multistream load (anchor failed; per-stream median "
+            f"multistream load (per-stream median "
             f"{fmt(m['per_stream_tok_s_median'])} tok/s, aggregate "
-            f"{fmt(m['aggregate_tok_s'])} tok/s recorded but secondary). "
-            f"Workaround: restart the server; multi-stream loads → vLLM. "
-            f"{up_txt}")
+            f"{fmt(m['aggregate_tok_s'])} tok/s). Workaround: restart the "
+            f"server; multi-stream loads → vLLM.")
+    ups = {v[cid].get("upstream", "").strip() for cid in pit_ids}
+    ups.discard("")
+    if pit_ids:
+        if len(ups) != 1:
+            raise SystemExit(
+                "greedy-pit cells no longer share one upstream string — the "
+                "README shared-tracking dedup cannot apply; update "
+                "render_known_good_bad alongside scripts/gen-verdicts.py")
+        lines += ["", _pit_upstream_shared(ups.pop(), len(pit_ids))]
     lines += [
+        "",
         f"- ❌ `vllm-bf16-auto-mtp-c16-ctx262144` — MTP regresses vs baseline "
         f"at c16 (31.1 vs 38.6 tok/s aggregate, per-stream min 1.85 tok/s); "
         f"serve without `--mtp` at high concurrency.",
