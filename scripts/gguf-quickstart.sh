@@ -16,10 +16,15 @@
 #                             --spec-draft-n-max n (discovered at the pin,
 #                             see configs/validated-stack.json
 #                             llama_cpp_vulkan.mtp_depth; upstream default 3)
-#   BACKEND=<hip|vulkan>      llama.cpp build to serve (default hip =
-#                             build-714; vulkan = build-714-vk, EXPERIMENTAL
-#                             v0.1.2 Vulkan comparison — see benchmark
-#                             verdicts before relying on it)
+#   BACKEND=<hip|vulkan>      llama.cpp build to serve. DEFAULT hip (build-714,
+#                             unchanged). vulkan = build-714-vk — the
+#                             RECOMMENDED OPT-IN for best single-stream tok/s
+#                             (project ruling 2026-08-18: vulkan mtp-c1 16.0
+#                             vs hip 13.0 tok/s, anchors clean 6/6; build via
+#                             scripts/06-build-llama-vulkan.sh). Still
+#                             experimental — single-session runtime, one ICD
+#                             (RADV 25.2.8): see benchmark verdicts before
+#                             relying on it.
 #   WITH_MMPROJ=0             skip the vision projector even when present
 #   VERIFY_GGUF=1             full SHA256 re-verification before serving (~1 min)
 #   EXTRA_ARGS='...'          extra llama-server flags appended verbatim
@@ -81,8 +86,11 @@ done
 MANIFEST="configs/artifact-manifest.json"
 STACK="configs/validated-stack.json"
 # Backend selection: hip (the validated default, unchanged) or an explicit
-# Vulkan opt-in (EXPERIMENTAL, v0.1.2 comparison cells — check the benchmark
-# verdicts before relying on it). LLAMA_SERVER remains the top-level override.
+# Vulkan opt-in. Project ruling 2026-08-18 (v0.1.2): Vulkan is the
+# recommended OPT-IN for best single-stream tok/s (mtp-c1 16.0 vs hip 13.0
+# tok/s, anchors clean 6/6) — the default stays hip (headline win <25%,
+# single-session runtime, one ICD). LLAMA_SERVER remains the top-level
+# override.
 BACKEND="${BACKEND:-hip}"
 case "$BACKEND" in
     hip)    SERVER="${LLAMA_SERVER:-$ROOT/third_party/llama.cpp/build-714/bin/llama-server}"
@@ -223,7 +231,12 @@ if [ -n "${EXTRA_ARGS:-}" ]; then
 fi
 
 echo "llama-server : $SERVER ($("$SERVER" --version 2>&1 | head -n1))"
-echo "backend      : $BACKEND$([ "$BACKEND" = "vulkan" ] && echo ' (EXPERIMENTAL opt-in — see benchmark verdicts)')"
+if [ "$BACKEND" = "vulkan" ]; then
+    echo "backend      : $BACKEND (RECOMMENDED OPT-IN for best single-stream tok/s — 16.0 vs 13.0 tok/s with WITH_MTP=1; project ruling 2026-08-18. Experimental: single-session runtime, one ICD — see benchmark verdicts)"
+else
+    echo "backend      : $BACKEND (default, unchanged)"
+    echo "tip (opt-in) : for best single-stream tok/s run: BACKEND=vulkan WITH_MTP=1 bash scripts/gguf-quickstart.sh  # 16.0 tok/s (build first: scripts/06-build-llama-vulkan.sh; experimental — see benchmark verdicts)"
+fi
 echo "model        : $MODEL_PATH ($(du -h "$MODEL_PATH" | cut -f1))"
 echo "ctx-size     : $CTX_SIZE  (override: CTX_SIZE=<n>)"
 echo "gpu layers   : 99 (all)"

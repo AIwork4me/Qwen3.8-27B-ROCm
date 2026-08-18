@@ -29,7 +29,10 @@ the full tables in [`results/benchmark.md`](results/benchmark.md).
 <a id="greedy-degradation"></a>
 
 Measured 2026-08-17 ([METHODOLOGY.md §6](results/METHODOLOGY.md)). Five of the
-20 measured cells are `avoid` because of this pit.
+28 measured cells are `avoid` because of this pit — all five on the HIP
+build; the pit does **not** reproduce on the Vulkan backend (6/6 v0.1.2
+cells anchor-clean on `build-714-vk`, same host and pin) nor on the vLLM
+path.
 
 **Symptom.** After a sustained multi-stream bench on a *single* llama-server
 instance, every subsequent greedy request (temperature 0, streaming or not)

@@ -366,11 +366,16 @@ def test_changelog_headline_numbers_recompute_from_verdicts() -> None:
                           .read_text(encoding="utf-8"))
     cells = {c["id"]: c for c in verdicts["cells"]}
     dist = Counter(c["verdict"] for c in cells.values())
-    # Count/distribution pins removed 2026-08-18 (Task 3): the measured
-    # v0.1.2 cells grew the set to 28 (8 recommended / 14 caution / 6
-    # avoid); the count must DERIVE from the verdicts JSON, and the
-    # CHANGELOG line below is what stays consistent with it.
-    assert set(dist) <= {"recommended", "caution", "avoid"}, dist
+    # Distribution pins RESTORED 2026-08-18 (Task 4 — the Task 3 subset
+    # weakening is gone): exact, recomputed from the verdicts JSON —
+    # 28 measured cells = 8 recommended / 14 caution / 6 avoid (20
+    # v0.1.0/v0.1.1 cells + 8 v0.1.2 Vulkan×MTP/unified cells). The count
+    # must DERIVE from the verdicts JSON, and the CHANGELOG line below is
+    # what stays consistent with it.
+    assert len(cells) == 28, (
+        f"measured-cell count drifted: {len(cells)} (expect 28)")
+    assert dist == Counter({"caution": 14, "recommended": 8, "avoid": 6}), (
+        f"verdict distribution drifted from the pinned v0.1.2 shape: {dist}")
 
     text = CHANGELOG.read_text(encoding="utf-8")
     # The distribution line, verbatim from the generated tables.
@@ -534,15 +539,22 @@ def test_readme_decision_table_rows_and_anchors_exist() -> None:
     """(c) The three-row decision table lives in the Quick start section and
     points at the sections that carry the evidence."""
     quick = _quick_start_section(_readme_handwritten())
-    # Row 1: interactive chat -> GGUF WITH_MTP=1.
+    # Row 1: interactive chat -> GGUF WITH_MTP=1 (vulkan opt-in promoted).
     assert "WITH_MTP=1" in quick and "gguf-quickstart.sh" in quick
+    assert "BACKEND=vulkan" in quick, (
+        "the 2026-08-18 recommended opt-in is missing from the quickstart")
     # Row 2: long context / vision / batch -> vLLM on :8000.
     assert "bash scripts/03-serve-vllm.sh" in quick
     assert "8000" in quick
     # Row 3: multi-user GGUF loads -> don't; link to the pit evidence.
     assert "[Known good / known bad](#known-good--known-bad)" in quick
-    # The unmeasured-stock-default caveat line is retained.
-    assert "not measured" in quick
+    # Updated 2026-08-18 (Task 4): the unified-default-boot c4@131072 rider
+    # MEASURED the configuration — the caveat line now cites the measured
+    # finding instead of the old "not measured" bracketing.
+    assert "not measured" not in quick, (
+        "the unified c4@131072 cell is measured; drop the stale caveat")
+    assert "6.7 tok/s" in quick and "7.5" in quick, (
+        "the measured unified-vs-split numbers are missing")
     # Hand-written anchor links resolve inside the README (see also the
     # generic link tests): Performance and Known good / known bad.
     assert "[Performance](#performance)" in quick
@@ -626,12 +638,20 @@ def test_security_md_documents_private_reporting() -> None:
 
 def test_readme_status_and_roadmap_section() -> None:
     """'Status & roadmap' (hand-written, after Documentation): names the
-    current release with CHANGELOG + Releases links, and lists the roadmap
-    as evidence-gated intentions — community vLLM, Vulkan-vs-HIP + MTP
-    depth, the c4@131072 bracketing gap, the remaining planned cells, more
-    community platforms."""
+    current release (derived from the CHANGELOG's top version heading so it
+    can never drift) with CHANGELOG + Releases links, and lists the roadmap
+    as evidence-gated intentions — community vLLM, the ANSWERED
+    Vulkan-vs-HIP + MTP depth question (v0.1.2), the FILLED c4@131072
+    bracketing gap, the remaining planned cells, more community
+    platforms."""
     section = _readme_section(_readme_handwritten(), "Status & roadmap")
-    assert "v0.1.1" in section, "the current release version is not stated"
+    changelog_headings = re.findall(
+        r"^## (v\d+\.\d+\.\d+)",
+        CHANGELOG.read_text(encoding="utf-8"), re.M)
+    assert changelog_headings, "CHANGELOG has no version headings"
+    assert changelog_headings[0] in section, (
+        f"the current release ({changelog_headings[0]}, the CHANGELOG top "
+        f"entry) is not stated in Status & roadmap")
     assert "[CHANGELOG](CHANGELOG.md)" in section, "CHANGELOG is not linked"
     assert ("https://github.com/AIwork4me/Qwen3.8-27B-ROCm/releases"
             in section), "Releases are not linked"

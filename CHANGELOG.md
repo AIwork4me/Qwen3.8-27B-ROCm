@@ -10,19 +10,107 @@ and the rehearsal receipt
 
 ## v0.1.2 — 2026-08-18
 
-- **Vulkan×MTP-depth comparison cells measured** (plan
-  [`docs/superpowers/plans/2026-08-18-vulkan-mtp-comparison.md`](docs/superpowers/plans/2026-08-18-vulkan-mtp-comparison.md)):
-  8 new raw cells — `vulkan` {base, mtp, mtp4} × c{1,4} @ctx131072 on the
-  same pinned llama.cpp commit `4df29be4` (build `build-714-vk`, Mesa RADV
-  GFX1151 ICD), `hip` mtp4 c1 (explicit `--spec-draft-n-max 4`), and the
-  `hip` base c4 unified-default-boot rider. Greedy anchor clean on all 8
-  cells — the greedy-degradation pit did NOT reproduce on Vulkan at any
-  depth/concurrency measured. Verdict distribution after regeneration:
-  8 recommended / 14 caution / 6 avoid. Raw receipts:
+The Vulkan×MTP-depth comparison release: 8 new measured cells on the same
+host, model, prompts, and harness answer the roadmap question "what do the
+Vulkan backend and MTP depth >1 each contribute?" — plus the
+unified-default-boot c4@131072 rider that closes the v0.1.0 bracketing gap.
+Plan:
+[`docs/superpowers/plans/2026-08-18-vulkan-mtp-comparison.md`](docs/superpowers/plans/2026-08-18-vulkan-mtp-comparison.md);
+adaptation facts: [`docs/adaptation.md`](docs/adaptation.md).
+
+### Highlights
+
+- **Vulkan backend measured for the first time** — same llama.cpp pin
+  `4df29be4`, separate build `build-714-vk` (`-DGGML_VULKAN=ON
+  -DGGML_HIP=OFF`), Mesa RADV ICD (`RADV GFX1151`, Mesa 25.2.8 — no
+  `VK_ICD_FILENAMES` forcing; identity recorded in
+  [`configs/validated-stack.json`](configs/validated-stack.json)). 6 vulkan
+  cells ({base, mtp, mtp4} × c{1,4} @ctx131072) + 2 hip cells (mtp4 c1
+  with explicit `--spec-draft-n-max 4`, and the unified-default-boot c4
+  rider). Raw receipts:
   [`docs/results/matrix-714/cells/`](docs/results/matrix-714/cells/).
+- **`BACKEND=vulkan` is now the recommended quickstart opt-in for best
+  single-stream tok/s** — vulkan `WITH_MTP=1` mtp-c1 measures **16.0 tok/s**
+  per-stream median vs 13.0 on hip (+23% headline). Project ruling
+  2026-08-18 (plan outcome (a), pre-registered rule: ≥15% win AND
+  anchor-clean); the quickstart **default stays hip** (headline <25%,
+  single-session Vulkan runtime, one ICD) and the "experimental, see
+  verdicts" label is kept. Ruling recorded per cell in
+  [`configs/benchmark-verdicts.json`](configs/benchmark-verdicts.json)
+  (`metrics.reviewed_by` = `controller-2026-08-18`); CI-enforced
+  ([`tests/test_verdicts.py`](tests/test_verdicts.py)).
+- **Cross-depth caveat, stated everywhere the +23% appears** — the hip
+  13.0 receipt (2026-08-17) ran the implicit `--spec-draft-n-max` default
+  3; every v0.1.2 cell passes its depth explicitly. The clean same-depth
+  cross-backend pairing is depth 4: vulkan mtp4 **15.05 vs hip mtp4 12.76
+  tok/s (+18%)**.
+- **MTP depth 1 beats depth 4 on both backends** — vulkan 16.00 vs 15.05,
+  hip 13.00 vs 12.76 tok/s at c1: `WITH_MTP=1` at depth 1 stays the
+  recommended variant; no mtp4 recommendation. Depth is configurable at
+  the pin (`--spec-draft-n-max`, upstream default 3), not fixed by the
+  checkpoint.
+- **The greedy-degradation pit does NOT reproduce on Vulkan** — 6/6 vulkan
+  cells anchor-clean (any measured depth and concurrency); hip mtp4-c1
+  anchored clean the same day. The pit stays a hip-family (gfx1151/HIP)
+  finding at this pin (5 avoid cells unchanged).
+- **Unified-default-boot c4@131072 measured (rider) — degrades
+  interactivity** — the stock quickstart's 4-slot unified default boot
+  under 4 concurrent users: 6.7 tok/s healthy-stream median vs 7.5 for
+  split-mode (`-np 4`); aggregate 5.0 vs 9.4 tok/s (3-of-4 streams stopped
+  within 8 tokens — early EOS, aggregate not comparable).
+  Measured-with-caveat, no config change; single-stream use unaffected.
+  This closes the v0.1.0/v0.1.1 bracketing gap.
+
+### Benchmark matrix
+
+**28 measured cells: 8 recommended / 14 caution / 6 avoid** (20 planned —
+time-boxed session, machinery complete; 8 dropped — vLLM ctx-32768 tier not
+offered). Verdicts for the 8 new cells are the MECHANICAL ladder results,
+confirmed by the controller-2026-08-18 review (zero overrides —
+`controller_override` null on all 8; the quickstart ruling recorded in each
+reason). Full tables:
+[`docs/results/benchmark.md`](docs/results/benchmark.md).
+
+| Cell (c1 @ctx131072) | Backend | Per-stream med | Verdict |
+|---|---|---|---|
+| `gguf-vulkan-…-mtp-c1` (depth 1) | vulkan | **16.0 tok/s** (+50.2% vs vulkan base) | ✅ recommended — quickstart opt-in |
+| `gguf-vulkan-…-mtp4-c1` (depth 4) | vulkan | 15.05 tok/s (+41.3% vs base) | ✅ recommended |
+| `gguf-hip-…-mtp4-c1` (depth 4) | hip | 12.76 tok/s (+25.8% vs base) | ✅ recommended |
+| `gguf-vulkan-…-base-c1` | vulkan | 10.65 tok/s | ✅ recommended |
+| c4 cells (all 5 new) | both | 5.0–6.7 tok/s (below the floor) | ⚠️ caution — batch only |
+
+At c4 on Vulkan, MTP is a REGRESSION vs the base counterpart (mtp −7.5%,
+mtp4 −13.0% aggregate) — the c1 payoff inverts under concurrency on this
+backend too (basis labeled in the verdicts).
+
+### Verdict-system fixes
+
+Two prose-template defects (disclosed by the independent verifier, frozen
+RULES unchanged — only factually wrong wording fixed):
+
+- The c4-caution MTP sentence now follows the actual numbers and basis
+  (previously it hardcoded "Better than base c4 (...)" even when the cell
+  was LOWER and labeled a c4-basis number "c1:").
+- The "c8/c16 hit the anchor-degradation pit (avoid cells)" clause no
+  longer leaks into vulkan conditions (no vulkan c8/c16 cells exist; that
+  pit history is hip-family) — it now derives from the backend's own
+  measured pit cells.
+- Stale "all measured cells are hip" / "unified c4 was not measured" /
+  single-reviewer attribution in the generated docs replaced with
+  data-derived statements (per-family review attribution: 20 cells
+  `controller-2026-08-17` frozen + 8 cells `controller-2026-08-18`).
+
+### Housekeeping
+
 - **Cell-id migration note** — legacy gguf ids without a backend tag are
   `hip` (historical v0.1.0/v0.1.1 entries stay interpretable under that
   rule).
+- [`CITATION.cff`](CITATION.cff) description updated to the 28-cell,
+  dual-backend matrix (version stays 0.1.2).
+- New adaptation-map section "Vulkan backend × MTP depth (v0.1.2)":
+  build facts, ICD identity, perf deltas with the cross-depth caveat, pit
+  status, quickstart opt-in status, unified rider finding
+  ([`docs/adaptation.md`](docs/adaptation.md)).
 
 ## v0.1.1 — 2026-08-18
 

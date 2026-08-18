@@ -65,6 +65,23 @@ def test_quickstart_backend_vulkan_opt_in():
     assert "hip|vulkan" in src
 
 
+def test_quickstart_backend_vulkan_opt_in_is_promoted_2026_08_18():
+    # CONTROLLER RULING (2026-08-18, plan outcome (a)): the echo promotes
+    # BACKEND=vulkan as the RECOMMENDED OPT-IN for best single-stream tok/s
+    # (16.0 vs 13.0 tok/s with WITH_MTP=1), keeping the experimental/see-
+    # verdicts note; the DEFAULT stays hip (pinned above). The mapping
+    # behind the promotion is enforced in tests/test_verdicts.py.
+    src = SCRIPT.read_text()
+    assert "RECOMMENDED OPT-IN" in src
+    assert "project ruling 2026-08-18" in src
+    assert "BACKEND=vulkan WITH_MTP=1" in src
+    assert "16.0" in src and "13.0" in src
+    # Conservative framing is kept: the promotion never rewrites the default
+    # or hides the caveats.
+    assert "experimental" in src.lower()
+    assert 'BACKEND="${BACKEND:-hip}"' in src
+
+
 def test_quickstart_spec_depth_passthrough():
     # SPEC_DEPTH=<n> maps to the depth flag discovered at the pin
     # (--spec-draft-n-max; see configs/validated-stack.json

@@ -12,5 +12,6 @@ license: Apache-2.0
 description: >-
   Reproducible AMD ROCm 7.14 reference for serving Qwen/Qwen3.8-27B on
   Radeon gfx1151 (Strix Halo): dual-path validation (vLLM source build and
-  llama.cpp HIP/GGUF), a 20-cell benchmark matrix with UX-first verdicts,
-  and evidence-linked documentation for every claim.
+  llama.cpp HIP/Vulkan GGUF), a 28-cell benchmark matrix across both
+  llama.cpp backends with UX-first verdicts, and evidence-linked
+  documentation for every claim.

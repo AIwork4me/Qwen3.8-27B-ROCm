@@ -20,6 +20,18 @@ carry an explicit -hip-|-vulkan- tag (legacy unprefixed ids ARE hip) and an
 mtp4 depth variant; vLLM ids are unchanged. Verdict CONTENT is unaffected
 by the migration — ids aside, regeneration is byte-stable (families and
 base-counterparts are matched within one backend; hip and vulkan never mix).
+
+2026-08-18 Task 4 (verdicts + ruling): the 8 v0.1.2 cells carry the
+controller-2026-08-18 review (per-cell `metrics.reviewed_by` plus a ruling
+note in each reason — the quickstart opt-in promotion, the
+depth-1-over-depth-4 finding, the unified-rider finding); the frozen
+2026-08-17 review continues to govern the 20 migrated cells. Two
+prose-template defects disclosed by the verifier were fixed in the same
+release (the c4-caution MTP sentence now follows the actual
+numbers/basis instead of asserting "Better than base" with a mislabeled
+"c1:" tag; the hip-family "c8/c16 hit the pit" clause is gated on the
+backend), and the unified-default c4 caveat was rewritten — the v0.1.2
+rider MEASURED that configuration.
 """
 
 from __future__ import annotations
@@ -42,7 +54,8 @@ FLOOR_CAUTION_BAND_TOK_S = 8.0
 # be an avoid-candidate (guards against noise-level "regressions").
 REGRESSION_TOLERANCE = 0.05
 
-CONTROLLER_REVIEW_DATE = "2026-08-17"
+LEGACY_REVIEW_DATE = "2026-08-17"  # the frozen review of the 20 migrated cells
+CONTROLLER_REVIEW_DATE = "2026-08-18"  # v0.1.2 review; produced this file state
 REVIEWED_BY = f"controller-{CONTROLLER_REVIEW_DATE}"
 
 
@@ -264,26 +277,238 @@ GGUF_PIT_WORKAROUND = ("Restart the server to restore greedy decoding; for "
                        "anchors stayed clean, including anchors run "
                        "immediately after 16-stream benches (METHODOLOGY §7).")
 
-# Final-review caveat (2026-08-17, controller ruling — CAVEAT route, no new
-# matrix cell, no post-freeze matrix edit): the stock quickstart's 4-slot
-# default under 4 concurrent users (unified default boot, ctx 131072) is an
-# UNMEASURED configuration. It is recorded as a caveat on the two recommended
-# quickstart c1 cells (mirrored in the README quickstart); measuring it is
-# deferred to the release plan. Honesty basis: bracketed below by the
-# c4@32768 greedy pit (unified boot — degraded) and above by the clean
-# split-mode c4@131072 cell; single-stream use is unaffected (all c1 cells
-# anchor-clean at every ctx tier).
+# Final-review caveat, UPDATED 2026-08-18 (Task 4): the v0.1.2 unified rider
+# MEASURED the configuration the 2026-08-17 final review had to bracket —
+# the "was NOT measured" wording is gone. Finding (measured-with-caveat):
+# unified-default-boot c4@131072 DEGRADES interactivity vs split-mode c4 on
+# the 8060S (healthy-stream median and aggregate both down; 3-of-4 streams
+# early-EOS so the unified aggregate is not comparable). Recorded on the two
+# recommended quickstart c1 cells (mirrored in the README quickstart) and on
+# the rider's own verdict; numbers interpolate from the receipts.
 QUICKSTART_C4_CAVEAT_CELLS = (
     "gguf-hip-udq4kxl-auto-base-c1-ctx131072",
     "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072",
 )
-QUICKSTART_C4_CAVEAT = (
-    "Caveat (2026-08-17 final review): unified-default-boot c4 at ctx 131072 "
-    "(the stock quickstart's 4-slot default under 4 concurrent users) was "
-    "NOT measured — bracketed by the c4@32768 greedy pit (unified boot, "
-    "degraded) and the clean split-mode c4@131072 cell; single-stream use is "
-    "unaffected."
-)
+UNIFIED_RIDER_ID = "gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified"
+SPLIT_C4_131072_ID = "gguf-hip-udq4kxl-auto-base-c4-ctx131072"
+# "Early EOS" for the rider prose: a stream that stops (finish_reason=stop)
+# within this many tokens never produced a real answer (the rider receipt:
+# 2/4/8-token stops + one full 221-token answer). Stated in the prose, not
+# a verdict metric — healthy-stream exclusion stays the UX rule.
+EARLY_EOS_MAX_TOKENS = 8
+
+
+def early_eos_streams(cell: dict) -> int:
+    return sum(1 for s in cell["client"]["streams"]
+               if s.get("finish_reason") == "stop"
+               and (s.get("completion_tokens") or 0) <= EARLY_EOS_MAX_TOKENS)
+
+
+def quickstart_c4_caveat(all_metrics: dict | None,
+                         unified_cell: dict | None) -> str:
+    u, s = all_metrics[UNIFIED_RIDER_ID], all_metrics[SPLIT_C4_131072_ID]
+    early = early_eos_streams(unified_cell) if unified_cell else None
+    eos_txt = (f"{early}-of-{u['streams']} streams stopped within "
+               f"{EARLY_EOS_MAX_TOKENS} tokens — early EOS — so the "
+               f"aggregate {fmt(u['aggregate_tok_s'])} tok/s is not "
+               f"comparable"
+               if early is not None else
+               f"{u['streams'] - u['healthy_streams']}-of-{u['streams']} "
+               f"streams carry no defined TPOT (aggregate not comparable)")
+    return (f"Caveat (measured 2026-08-18, rider `{UNIFIED_RIDER_ID}`): "
+            f"unified-default-boot c4 at ctx 131072 (the stock quickstart's "
+            f"4-slot default under 4 concurrent users) measures "
+            f"{fmt(u['per_stream_tok_s_median'])} tok/s healthy-stream median "
+            f"({eos_txt}) "
+            f"vs the split-mode c4 cell "
+            f"{fmt(s['per_stream_tok_s_median'])} tok/s median / "
+            f"{fmt(s['aggregate_tok_s'])} tok/s aggregate — unified default "
+            f"boot degrades interactivity; prefer the split boot "
+            f"(`EXTRA_ARGS='-np 4'`) for light multi-user. Single-stream use "
+            f"is unaffected.")
+
+
+# ---------------------------------------------- v0.1.2 controller ruling (T4)
+#
+# Task 4 ruling (2026-08-18) — plan outcome (a), the pre-registered rule
+# triggered; recorded, not re-deliberated: `BACKEND=vulkan` is promoted in
+# the gguf-quickstart echo as the recommended OPT-IN for best single-stream
+# tok/s (the "experimental, see verdicts" note kept); the quickstart DEFAULT
+# stays hip. Trigger: >=15% win over hip mtp-c1 AND anchor-clean —
+# mixed-depth headline +23.1% (16.0 vs 13.0 tok/s) plus the clean
+# same-depth depth-4 pairing +18.0% (15.05 vs 12.76 tok/s, both explicit
+# depth 4, same day); 6/6 vulkan anchors clean. Default unchanged because
+# the headline is <25%, the Vulkan runtime is single-session, and one ICD
+# (RADV 25.2.8) is covered. mtp (depth 1) stays the recommended variant on
+# both backends — depth 4 never beats depth 1 on either. The unified rider
+# is measured-with-caveat, no config change.
+V012_REVIEWED_BY = "controller-2026-08-18"
+V012_CELLS = frozenset({
+    "gguf-vulkan-udq4kxl-auto-base-c1-ctx131072",
+    "gguf-vulkan-udq4kxl-auto-base-c4-ctx131072",
+    "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072",
+    "gguf-vulkan-udq4kxl-auto-mtp-c4-ctx131072",
+    "gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072",
+    "gguf-vulkan-udq4kxl-auto-mtp4-c4-ctx131072",
+    "gguf-hip-udq4kxl-auto-mtp4-c1-ctx131072",
+    UNIFIED_RIDER_ID,
+})
+
+# The cross-depth caveat (configs/validated-stack.json
+# llama_cpp_vulkan.mtp_depth.note): the historical hip mtp receipts
+# (2026-08-17) ran the IMPLICIT --spec-draft-n-max default 3; every v0.1.2
+# cell passes its depth explicitly. Cited wherever a hip-vs-vulkan MTP
+# number is quoted.
+CROSS_DEPTH_CAVEAT = ("the hip mtp-c1 receipt (2026-08-17) ran the implicit "
+                      "--spec-draft-n-max default 3 while every v0.1.2 cell "
+                      "passes its depth explicitly "
+                      "(configs/validated-stack.json llama_cpp_vulkan."
+                      "mtp_depth.note)")
+
+
+def _pct(this: float, other: float) -> str:
+    return f"{(this / other - 1) * 100:+.1f}%"
+
+
+def v012_ruling_note(cid: str, all_metrics: dict | None,
+                     unified_cell: dict | None = None) -> str | None:
+    """Per-cell controller-2026-08-18 review/ruling prose. Numbers are
+    interpolated from the raw-cell metrics so the notes can never drift
+    from the receipts (same convention as the review prose above)."""
+    if cid not in V012_CELLS or not all_metrics:
+        return None
+    vk = {k: all_metrics[k] for k in V012_CELLS if k in all_metrics}
+    vk_base1 = vk["gguf-vulkan-udq4kxl-auto-base-c1-ctx131072"]
+    vk_mtp1 = vk["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]
+    vk_mtp41 = vk["gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072"]
+    hip_base1 = all_metrics["gguf-hip-udq4kxl-auto-base-c1-ctx131072"]
+    hip_mtp1 = all_metrics["gguf-hip-udq4kxl-auto-mtp-c1-ctx131072"]
+    hip_mtp41 = vk["gguf-hip-udq4kxl-auto-mtp4-c1-ctx131072"]
+    headline = _pct(vk_mtp1["per_stream_tok_s_median"],
+                    hip_mtp1["per_stream_tok_s_median"])
+    same_depth = _pct(vk_mtp41["per_stream_tok_s_median"],
+                      hip_mtp41["per_stream_tok_s_median"])
+    n_vk = len([k for k in all_metrics
+                if parse_cell_id(k)["backend"] == "vulkan"])
+    n_ok = len([k for k in all_metrics
+                if parse_cell_id(k)["backend"] == "vulkan"
+                and all_metrics[k]["anchor_ok"]])
+
+    if cid == "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072":
+        return (f"Controller ruling 2026-08-18 (v0.1.2, plan outcome (a) — "
+                f"pre-registered rule triggered): promoted in the "
+                f"gguf-quickstart echo as the recommended OPT-IN for best "
+                f"single-stream tok/s ({fmt(vk_mtp1['per_stream_tok_s_median'])} "
+                f"vs hip mtp-c1 {fmt(hip_mtp1['per_stream_tok_s_median'])} "
+                f"tok/s, {headline}); the quickstart DEFAULT stays hip "
+                f"(headline <25%, single-session Vulkan runtime, one ICD — "
+                f"RADV 25.2.8; the 'experimental, see verdicts' label is "
+                f"kept). Cross-depth caveat: the {headline} headline is "
+                f"MIXED-DEPTH — {CROSS_DEPTH_CAVEAT}; the clean same-depth "
+                f"cross-backend pairing is depth 4 — vulkan mtp4 "
+                f"{fmt(vk_mtp41['per_stream_tok_s_median'])} vs hip mtp4 "
+                f"{fmt(hip_mtp41['per_stream_tok_s_median'])} tok/s "
+                f"({same_depth}, both explicit depth 4, same day). "
+                f"Anchor-clean trigger met ({n_ok}-of-{n_vk} vulkan anchors "
+                f"byte-identical — the hip greedy pit does not reproduce on "
+                f"this backend). mtp (depth 1) stays the recommended "
+                f"variant: depth 4 never beats it on either backend.")
+    if cid == "gguf-vulkan-udq4kxl-auto-base-c1-ctx131072":
+        return (f"Controller review 2026-08-18: mechanical verdict confirmed, "
+                f"no override. Backend alone is a small c1 delta — "
+                f"{fmt(vk_base1['per_stream_tok_s_median'])} vs hip "
+                f"{fmt(hip_base1['per_stream_tok_s_median'])} tok/s "
+                f"({_pct(vk_base1['per_stream_tok_s_median'], hip_base1['per_stream_tok_s_median'])}) "
+                f"— the AMD 24.5 tok/s Day-0 anchor gap is not a pure "
+                f"backend effect; the biggest single-stream lever measured on "
+                f"this host is Vulkan+MTP "
+                f"({fmt(vk_mtp1['per_stream_tok_s_median'])} tok/s, the "
+                f"recommended opt-in). {n_ok}-of-{n_vk} vulkan anchors clean "
+                f"— the hip greedy pit does not reproduce on this backend.")
+    if cid == "gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072":
+        return (f"Controller review 2026-08-18: depth 4 does NOT beat depth 1 "
+                f"on Vulkan ({fmt(vk_mtp41['per_stream_tok_s_median'])} vs "
+                f"{fmt(vk_mtp1['per_stream_tok_s_median'])} tok/s) — mtp "
+                f"(depth 1) stays the recommended variant on both backends; "
+                f"no mtp4 recommendation. Clean same-depth cross-backend "
+                f"pairing vs hip mtp4 "
+                f"({fmt(hip_mtp41['per_stream_tok_s_median'])} tok/s): "
+                f"{same_depth} (both cells explicit --spec-draft-n-max 4, "
+                f"measured the same day).")
+    if cid == "gguf-hip-udq4kxl-auto-mtp4-c1-ctx131072":
+        return (f"Controller review 2026-08-18: depth 4 does NOT beat depth 1 "
+                f"on hip either ({fmt(hip_mtp41['per_stream_tok_s_median'])} "
+                f"vs {fmt(hip_mtp1['per_stream_tok_s_median'])} tok/s) — mtp "
+                f"(depth 1) stays the recommended variant on both backends; "
+                f"no mtp4 recommendation anywhere. Cross-depth caveat: "
+                f"{CROSS_DEPTH_CAVEAT}, so the "
+                f"{fmt(hip_mtp41['per_stream_tok_s_median'])}-vs-"
+                f"{fmt(hip_mtp1['per_stream_tok_s_median'])} pairing is "
+                f"depth-4-explicit vs implicit-depth-3; the fixed-depth "
+                f"cross-backend comparison lives on the vulkan side "
+                f"(depth 1: {fmt(vk_mtp1['per_stream_tok_s_median'])} vs "
+                f"depth 4: {fmt(vk_mtp41['per_stream_tok_s_median'])} tok/s). "
+                f"Anchor clean, measured the same day as the vulkan cells.")
+    if cid == "gguf-vulkan-udq4kxl-auto-base-c4-ctx131072":
+        return (f"Controller review 2026-08-18: caution confirmed. Vulkan c4 "
+                f"aggregates well above hip split-mode "
+                f"({fmt(vk['gguf-vulkan-udq4kxl-auto-base-c4-ctx131072']['aggregate_tok_s'])} "
+                f"vs {fmt(all_metrics[SPLIT_C4_131072_ID]['aggregate_tok_s'])} "
+                f"tok/s) but per-stream stays below the floor — interactive "
+                f"guidance is unchanged cross-backend (the c1 cells). Anchor "
+                f"clean; the hip-family greedy pit does not reproduce on "
+                f"Vulkan ({n_ok}-of-{n_vk} v0.1.2 anchors clean).")
+    if cid == "gguf-vulkan-udq4kxl-auto-mtp-c4-ctx131072":
+        g = vk[cid]
+        b = vk["gguf-vulkan-udq4kxl-auto-base-c4-ctx131072"]
+        return (f"Controller review 2026-08-18: caution confirmed, with the "
+                f"basis corrected this release (the c4-caution template "
+                f"previously asserted 'Better than base c4' regardless of "
+                f"direction and mislabeled a c4-basis number as 'c1:'): MTP "
+                f"vs the base counterpart at c4 on Vulkan is a REGRESSION — "
+                f"aggregate {fmt(g['aggregate_tok_s'])} vs "
+                f"{fmt(b['aggregate_tok_s'])} tok/s "
+                f"({_pct(g['aggregate_tok_s'], b['aggregate_tok_s'])}), "
+                f"per-stream {fmt(g['per_stream_tok_s_median'])} vs "
+                f"{fmt(b['per_stream_tok_s_median'])} tok/s "
+                f"({_pct(g['per_stream_tok_s_median'], b['per_stream_tok_s_median'])}) "
+                f"— the c1 MTP payoff inverts under concurrency on this "
+                f"backend too.")
+    if cid == "gguf-vulkan-udq4kxl-auto-mtp4-c4-ctx131072":
+        g = vk[cid]
+        b = vk["gguf-vulkan-udq4kxl-auto-base-c4-ctx131072"]
+        return (f"Controller review 2026-08-18: caution confirmed (corrected "
+                f"basis, same template fix): depth-4 MTP vs the base "
+                f"counterpart at c4 on Vulkan regresses — aggregate "
+                f"{fmt(g['aggregate_tok_s'])} vs {fmt(b['aggregate_tok_s'])} "
+                f"tok/s ({_pct(g['aggregate_tok_s'], b['aggregate_tok_s'])}), "
+                f"per-stream {fmt(g['per_stream_tok_s_median'])} vs "
+                f"{fmt(b['per_stream_tok_s_median'])} tok/s "
+                f"({_pct(g['per_stream_tok_s_median'], b['per_stream_tok_s_median'])}); "
+                f"depth 1 beats depth 4 at c1 as well — no mtp4 "
+                f"recommendation.")
+    if cid == UNIFIED_RIDER_ID:
+        u = all_metrics[UNIFIED_RIDER_ID]
+        s = all_metrics[SPLIT_C4_131072_ID]
+        early = (early_eos_streams(unified_cell) if unified_cell
+                 else u["streams"] - u["healthy_streams"])
+        return (f"Controller ruling 2026-08-18 (measured-with-caveat rider): "
+                f"the stock quickstart's 4-slot unified default boot under 4 "
+                f"concurrent users DEGRADES interactivity vs split-mode c4 at "
+                f"ctx 131072 — healthy-stream median "
+                f"{fmt(u['per_stream_tok_s_median'])} vs "
+                f"{fmt(s['per_stream_tok_s_median'])} tok/s, aggregate "
+                f"{fmt(u['aggregate_tok_s'])} vs "
+                f"{fmt(s['aggregate_tok_s'])} tok/s "
+                f"({early}-of-{u['streams']} streams stopped within "
+                f"{EARLY_EOS_MAX_TOKENS} tokens — early EOS: the unified "
+                f"aggregate is not comparable; UX claims use the "
+                f"healthy-stream median). No config change: single-stream "
+                f"quickstart use is unaffected and light multi-user already "
+                f"steers to vLLM. This closes the v0.1.0/v0.1.1 "
+                f"'unified-default-boot c4@131072 not measured' bracketing "
+                f"gap.")
+    return None
 
 
 def _pit_correlation(m: dict) -> str:
@@ -297,7 +522,8 @@ def _pit_correlation(m: dict) -> str:
 
 def compose_verdict(cid: str, cell: dict, m: dict, base_m: dict | None,
                     family_best_lower: float | None,
-                    all_metrics: dict | None = None) -> dict:
+                    all_metrics: dict | None = None,
+                    unified_cell: dict | None = None) -> dict:
     parts = parse_cell_id(cid)
     m = dict(m)
     m["c"] = parts["c"]
@@ -402,9 +628,23 @@ def compose_verdict(cid: str, cell: dict, m: dict, base_m: dict | None,
                             f"count toward latency claims.")
         mtp_txt = ""
         if gains:
-            mtp_txt = (f" Better than base c4 ({fmt(gains['base_aggregate_tok_s'])} tok/s "
-                       f"aggregate), but MTP's payoff shrinks with concurrency "
-                       f"(c1: +{gains['per_stream_pct']:.1f}% per-stream).")
+            # 2026-08-18 defect fix (Task 4): direction and basis now follow
+            # the actual numbers — both comparisons are THIS cell vs the BASE
+            # counterpart at the same c (never a "c1:" basis), and a lowering
+            # aggregate/per-stream is stated as a regression, never "Better".
+            agg_pct = gains["aggregate_pct"]
+            if agg_pct > 0:
+                lead = (f"Above the base c{parts['c']} aggregate "
+                        f"({fmt(agg)} vs {fmt(gains['base_aggregate_tok_s'])} "
+                        f"tok/s, +{agg_pct:.1f}%)")
+            else:
+                lead = (f"Aggregate {fmt(agg)} vs base c{parts['c']} "
+                        f"{fmt(gains['base_aggregate_tok_s'])} tok/s "
+                        f"({agg_pct:+.1f}%)")
+            mtp_txt = (f" {lead}, but MTP's payoff shrinks with concurrency "
+                       f"(per-stream at c{parts['c']}: {fmt(med)} vs "
+                       f"{fmt(gains['base_per_stream_tok_s_median'])} tok/s, "
+                       f"{gains['per_stream_pct']:+.1f}%).")
         gttn = f"; GTT {gtt_gib} GiB at load" if gtt_gib else ""
         reason = (f"Per-stream median {fmt(med)} tok/s (TPOT "
                   f"{fmt(m['tpot_ms_median'])} ms/token) is below the 10 tok/s "
@@ -440,18 +680,47 @@ def compose_verdict(cid: str, cell: dict, m: dict, base_m: dict | None,
                       f"{fmt(ttft_s)} s on ~1.4K-token prompts; concurrency "
                       f"demotes per-stream below the floor (see the c4 cells).")
         if parts["mtp"] in ("mtp", "mtp4"):
-            c4 = (all_metrics or {}).get(
-                f"gguf-{parts['backend']}-udq4kxl-auto-mtp-c4-ctx{parts['ctx']}")
+            # Same-variant c4 cell first (mtp4 cells cite mtp4-c4 when
+            # measured), falling back to the depth-1 mtp-c4 of the same
+            # backend (the pre-2026-08-18 behavior).
+            c4 = ((all_metrics or {}).get(
+                    f"gguf-{parts['backend']}-{parts['weight']}-{parts['kv']}-"
+                    f"{parts['mtp']}-c4-ctx{parts['ctx']}")
+                or (all_metrics or {}).get(
+                    f"gguf-{parts['backend']}-udq4kxl-auto-mtp-c4-ctx{parts['ctx']}"))
             c4_txt = (f"c4 median {fmt(c4['per_stream_tok_s_median'])} tok/s "
                       f"(below floor)" if c4 else "c4 below floor")
+            # 2026-08-18 defect fix (Task 4): the "c8/c16 hit the pit" clause
+            # is hip-family history measured at this ctx — it must not leak
+            # into backends/families with no pit cells (vulkan). The tiers
+            # enumerate from the backend's own measured pit cells at this
+            # ctx, so hip output is unchanged.
+            pit_tiers = sorted({parse_cell_id(k)["c"] for k, mm
+                                in (all_metrics or {}).items()
+                                if parse_cell_id(k)["backend"] == parts["backend"]
+                                and parse_cell_id(k)["ctx"] == parts["ctx"]
+                                and not mm["anchor_ok"] and mm["boot_ok"]
+                                and not mm["failed_streams"]})
+            if pit_tiers:
+                pit_txt = (f", and {'/'.join(f'c{t}' for t in pit_tiers)} "
+                           f"hit the anchor-degradation pit (avoid cells)")
+            else:
+                n_b = len([k for k in all_metrics
+                           if parse_cell_id(k)["backend"] == parts["backend"]])
+                n_ok = len([k for k, mm in all_metrics.items()
+                            if parse_cell_id(k)["backend"] == parts["backend"]
+                            and mm["anchor_ok"]])
+                pit_txt = (f"; c8/c16 are unmeasured on this backend, and "
+                           f"the hip-family greedy pit does not reproduce "
+                           f"here ({n_ok}-of-{n_b} anchors clean in the "
+                           f"v0.1.2 cells)")
             conditions = (f"+{gains['per_stream_pct']}% is the PER-STREAM basis "
                           f"({fmt(med)} vs "
                           f"{fmt(gains['base_per_stream_tok_s_median'])} tok/s "
                           f"median, c1 ctx {parts['ctx']}); aggregate basis "
                           f"+{gains['aggregate_pct']}% ({fmt(agg)} vs "
                           f"{fmt(gains['base_aggregate_tok_s'])} tok/s). Payoff "
-                          f"shrinks under concurrency: {c4_txt}, and c8/c16 "
-                          f"hit the anchor-degradation pit (avoid cells).")
+                          f"shrinks under concurrency: {c4_txt}{pit_txt}.")
         if parts["ctx"] == 262144:
             conditions += (" GTT grows +8.0 GiB over the 131072 boot (34,742 "
                            "vs 26,548 MiB = 64 KiB/token bf16 KV, the closed "
@@ -462,10 +731,21 @@ def compose_verdict(cid: str, cell: dict, m: dict, base_m: dict | None,
             conditions += (" Long-context retrieval smoke PASSED at this tier "
                            "(needle recalled at ~30K-token depth).")
         if cid in QUICKSTART_C4_CAVEAT_CELLS:
-            conditions = f"{conditions} {QUICKSTART_C4_CAVEAT}"
+            conditions = (f"{conditions} "
+                          f"{quickstart_c4_caveat(all_metrics, unified_cell)}")
+
+    if cid == UNIFIED_RIDER_ID and conditions:
+        conditions = (f"{conditions} Prefer the split boot "
+                      f"(`EXTRA_ARGS='-np 4'`) for light multi-user — the "
+                      f"unified default boot degrades interactivity (see the "
+                      f"ruling in the reason).")
 
     if override:
         reason += f" [{override['note']}]"
+
+    ruling = v012_ruling_note(cid, all_metrics, unified_cell)
+    if ruling:
+        reason = f"{reason} {ruling}"
 
     out = {
         "id": cid,
@@ -485,6 +765,12 @@ def compose_verdict(cid: str, cell: dict, m: dict, base_m: dict | None,
                                      "note": override["note"]}),
         },
     }
+    if cid in V012_CELLS:
+        # v0.1.2 review trail: per-cell reviewer of record for the 8 new
+        # cells (the 20 migrated cells stay governed by the frozen
+        # controller-2026-08-17 review and carry no per-cell field — their
+        # content is byte-stable modulo the id migration).
+        out["metrics"]["reviewed_by"] = V012_REVIEWED_BY
     if gains:
         out["metrics"]["mtp_gain_vs_base"] = gains
     if conditions:
@@ -530,7 +816,8 @@ def build_verdicts(root: Path = ROOT) -> dict:
                   and p["ctx"] == parts["ctx"] and p["c"] < parts["c"]]
         family_best = max(lowers) if lowers else None
         out_cells.append(compose_verdict(cid, cells[cid], metrics[cid],
-                                         base_m, family_best, metrics))
+                                         base_m, family_best, metrics,
+                                         cells.get(UNIFIED_RIDER_ID)))
 
     # Top-level shape is locked by schemas/benchmark-verdicts.schema.json
     # (additionalProperties: false) — provenance stays in this generator's

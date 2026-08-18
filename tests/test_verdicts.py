@@ -15,9 +15,12 @@ Three guarantees under test, all CPU-safe:
 3. The quickstart can never point at a pit (test_quickstart_configs_*): every
    config the user-facing scripts reference by default maps to the verdict
    the controller ruling of 2026-08-17 recorded — gguf defaults + WITH_MTP
-   recommended; vllm serve confs caution WITH non-empty conditions. If a
-   future measurement changes that, this test fails and the controller must
-   either change the quickstart default or record a new justified ruling.
+   recommended; vllm serve confs caution WITH non-empty conditions — and,
+   since the controller ruling of 2026-08-18 (v0.1.2), the BACKEND=vulkan
+   opt-in maps to a recommended, anchor-clean cell while the DEFAULT stays
+   hip. If a future measurement changes that, this test fails and the
+   controller must either change the quickstart default or record a new
+   justified ruling.
 """
 
 import importlib.util
@@ -431,6 +434,11 @@ def test_quickstart_configs_are_recommended():
     opt-in) are the recommended interactive configs. If a future measurement
     invalidates this mapping, this test FAILS and the controller must change
     the quickstart default or record a justified new ruling.
+
+    CONTROLLER RULING (2026-08-18, binding, v0.1.2): `BACKEND=vulkan` is the
+    recommended OPT-IN for best single-stream tok/s — the opt-in cell must
+    be recommended AND anchor-clean, while the default-boot cells stay hip
+    (the script's BACKEND default is pinned by test_gguf_quickstart_ux.py).
     """
     gguf, ctx, mtp_opt_in = quickstart_defaults()
     assert "UD-Q4_K_XL" in gguf, "quickstart default must stay the validated quant"
@@ -445,6 +453,16 @@ def test_quickstart_configs_are_recommended():
     cell = verdict_of("gguf-hip-udq4kxl-auto-mtp-c1-ctx131072")
     assert cell["verdict"] == "recommended"
     assert cell["metrics"]["per_stream_tok_s_median"] > 13.0 - 0.05
+
+    # BACKEND=vulkan + WITH_MTP=1 (the 2026-08-18 recommended opt-in) ->
+    # the vulkan mtp c1 cell must be recommended and anchor-clean, and must
+    # beat the hip default recommendation it is promoted against.
+    vk = verdict_of("gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072")
+    assert vk["verdict"] == "recommended"
+    assert vk["metrics"]["anchor_ok"], (
+        "the promoted opt-in must be anchor-clean (ruling trigger)")
+    assert (vk["metrics"]["per_stream_tok_s_median"]
+            > cell["metrics"]["per_stream_tok_s_median"])
 
     # vLLM serve confs -> the validated 262144 cells: caution WITH conditions
     # (the ruling above); never a bare pass, never avoid (the path is the
@@ -467,8 +485,12 @@ def test_quickstart_configs_are_recommended():
 
 
 def test_no_quickstart_referenced_config_is_avoid():
+    # 2026-08-18: the promoted BACKEND=vulkan opt-in joins the protected
+    # set — the recommended opt-in path must never be a pit/avoid cell.
     for cid in ("gguf-hip-udq4kxl-auto-base-c1-ctx131072",
                 "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072",
+                "gguf-vulkan-udq4kxl-auto-base-c1-ctx131072",
+                "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072",
                 "vllm-bf16-auto-base-c1-ctx262144",
                 "vllm-bf16-auto-mtp-c1-ctx262144"):
         assert verdict_of(cid)["verdict"] != "avoid", (
@@ -563,12 +585,32 @@ def test_verdict_content_is_byte_stable_modulo_the_id_migration():
     assert set(new_cells) - migrated_ids == t3_additions, (
         "beyond the migrated pre-commit set, only the measured v0.1.2 "
         "cells may carry verdicts")
+    # Task 4 (2026-08-18) controller-review prose corrections — the ONLY
+    # permitted content drift beyond the id migration on the pre-commit
+    # cells. Verdict and every metric stay byte-stable; only the
+    # reason/conditions PROSE changed (dated and explained in
+    # scripts/gen-verdicts.py): the unified-c4 caveat was rewritten because
+    # the v0.1.2 rider measured that configuration, and the c4-caution MTP
+    # sentence was corrected to follow the actual numbers/basis.
+    t4_prose_corrected = {
+        "gguf-hip-udq4kxl-auto-base-c1-ctx131072",
+        "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072",
+        "gguf-hip-udq4kxl-auto-mtp-c4-ctx131072",
+    }
     for old_id, old_cell in sorted(old_cells.items()):
         new_id = migrated(old_id)
         migrated_cell = dict(new_cells[new_id])
         expected = dict(old_cell)
         assert migrated_cell.pop("id") == new_id
         assert expected.pop("id") == old_id
+        if new_id in t4_prose_corrected:
+            assert migrated_cell["verdict"] == expected["verdict"], (
+                f"{new_id}: prose correction must never change the verdict")
+            assert migrated_cell["metrics"] == expected["metrics"], (
+                f"{new_id}: prose correction must never change metrics")
+            assert migrated_cell.get("upstream") == expected.get("upstream")
+            assert migrated_cell.get("workaround") == expected.get("workaround")
+            continue
         assert migrated_cell == expected, (
             f"{new_id}: content drifted beyond the id string during the "
             f"migration")
@@ -650,3 +692,163 @@ def test_declared_v012_cells_are_measured_and_verdicted():
             f"{cid}: spec_depth {sf['spec_depth']} != grammar depth")
         assert sf["slots"] == ("unified-rider" if cid.endswith("-unified")
                                else "default"), f"{cid}: slots mismatch"
+
+
+# ------------------- 6. v0.1.2 controller ruling (2026-08-18) — the mapping
+#
+# Plan outcome (a), the pre-registered rule triggered (>=15% win over hip
+# mtp-c1 AND anchor-clean): `BACKEND=vulkan` is promoted in the quickstart
+# echo as the recommended OPT-IN; the quickstart DEFAULT stays hip; mtp
+# (depth 1) stays the recommended variant on both backends; the unified
+# rider is measured-with-caveat. Recorded per cell — metrics.reviewed_by
+# plus the ruling prose in each reason (the frozen 2026-08-17 review keeps
+# governing the 20 migrated cells, which carry no per-cell field).
+
+V012_IDS = {
+    "gguf-vulkan-udq4kxl-auto-base-c1-ctx131072",
+    "gguf-vulkan-udq4kxl-auto-base-c4-ctx131072",
+    "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072",
+    "gguf-vulkan-udq4kxl-auto-mtp-c4-ctx131072",
+    "gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072",
+    "gguf-vulkan-udq4kxl-auto-mtp4-c4-ctx131072",
+    "gguf-hip-udq4kxl-auto-mtp4-c1-ctx131072",
+    "gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified",
+}
+
+
+def test_v012_cells_have_verdicts_and_the_ruling_recorded():
+    v = load(VERDICTS)
+    by_id = {c["id"]: c for c in v["cells"]}
+    assert V012_IDS <= set(by_id), "the 8 v0.1.2 cells must all carry verdicts"
+    for cid in sorted(V012_IDS):
+        cell = by_id[cid]
+        # Review trail: per-cell reviewer of record; the MECHANICAL verdict
+        # was confirmed (no override — the ruling notes live in the reason).
+        assert cell["metrics"].get("reviewed_by") == "controller-2026-08-18", (
+            f"{cid}: missing the 2026-08-18 per-cell review record")
+        assert cell["metrics"]["controller_override"] is None, (
+            f"{cid}: v0.1.2 cells are rule-correct, zero overrides")
+        assert "2026-08-18" in cell["reason"], (
+            f"{cid}: the ruling/review note is missing from the reason")
+    # Corpus attribution: the 2026-08-18 review produced this file state;
+    # exactly the 8 v0.1.2 cells carry a per-cell reviewed_by (the 20
+    # migrated cells stay governed by the frozen 2026-08-17 review).
+    assert v["reviewed_by"] == "controller-2026-08-18"
+    per_cell = [c for c in v["cells"] if c["metrics"].get("reviewed_by")]
+    assert len(per_cell) == 8
+
+
+def test_ruling_vulkan_optin_trigger_and_default_stays_hip():
+    """The ruling is justified by the receipts AND recorded where it binds:
+    >=15% single-stream win, anchor-clean, quickstart opt-in promoted,
+    default hip unchanged, cross-depth caveat stated with the clean
+    same-depth pairing."""
+    by_id = {c["id"]: c for c in load(VERDICTS)["cells"]}
+    vk = by_id["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]
+    hip = by_id["gguf-hip-udq4kxl-auto-mtp-c1-ctx131072"]
+    # Trigger: >=15% win AND anchor-clean (plan outcome (a)).
+    assert (vk["metrics"]["per_stream_tok_s_median"]
+            >= 1.15 * hip["metrics"]["per_stream_tok_s_median"]), (
+        "the opt-in promotion requires the >=15% trigger")
+    assert vk["metrics"]["anchor_ok"]
+    assert vk["verdict"] == "recommended"
+    # The recorded rationale on the promoted cell.
+    r = vk["reason"]
+    assert "recommended OPT-IN" in r
+    assert "DEFAULT stays hip" in r
+    assert "<25%" in r and "single-session" in r and "RADV 25.2.8" in r
+    assert "MIXED-DEPTH" in r and "implicit --spec-draft-n-max default 3" in r
+    assert "depth 4" in r and "explicit depth 4" in r  # same-depth pairing
+    # The quickstart binds: opt-in promoted in the echo, DEFAULT unchanged.
+    src = QUICKSTART.read_text()
+    assert 'BACKEND="${BACKEND:-hip}"' in src, "default must stay hip"
+    assert "RECOMMENDED OPT-IN" in src
+    assert "BACKEND=vulkan WITH_MTP=1" in src
+    assert "16.0" in src
+
+
+def test_ruling_mtp_depth1_beats_depth4_on_both_backends():
+    """The recommendation mapping extends to depth: depth 4 never beats
+    depth 1 on either backend, so mtp (depth 1) stays the recommended
+    variant and nothing promotes mtp4."""
+    by_id = {c["id"]: c for c in load(VERDICTS)["cells"]}
+    for backend in ("hip", "vulkan"):
+        mtp = by_id[f"gguf-{backend}-udq4kxl-auto-mtp-c1-ctx131072"]
+        mtp4 = by_id[f"gguf-{backend}-udq4kxl-auto-mtp4-c1-ctx131072"]
+        assert mtp["verdict"] == "recommended"
+        assert mtp4["verdict"] == "recommended"  # clean, just not preferred
+        assert (mtp4["metrics"]["per_stream_tok_s_median"]
+                < mtp["metrics"]["per_stream_tok_s_median"]), (
+            f"{backend}: depth 4 must never beat depth 1 (no mtp4 rec)")
+        assert "no mtp4 recommendation" in mtp4["reason"]
+    # The quickstart promotes no depth-4 path.
+    assert "mtp4" not in QUICKSTART.read_text()
+
+
+def test_ruling_unified_rider_finding_recorded():
+    by_id = {c["id"]: c for c in load(VERDICTS)["cells"]}
+    rider = by_id["gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified"]
+    split = by_id["gguf-hip-udq4kxl-auto-base-c4-ctx131072"]
+    assert rider["verdict"] == "caution"
+    assert "DEGRADES interactivity" in rider["reason"]
+    assert rider["metrics"]["per_stream_tok_s_median"] < split[
+        "metrics"]["per_stream_tok_s_median"], "unified must not beat split"
+    assert "early EOS" in rider["reason"]
+    assert "not measured" not in rider["reason"].replace(
+        "'unified-default-boot c4@131072 not measured'", "")
+    # The quickstart c1 caveat cells now cite the MEASURED rider (the old
+    # "was NOT measured" bracketing caveat is gone everywhere).
+    for cid in ("gguf-hip-udq4kxl-auto-base-c1-ctx131072",
+                "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072"):
+        cond = by_id[cid].get("conditions", "")
+        assert "was NOT measured" not in cond, (
+            f"{cid}: stale unmeasured-caveat wording survived")
+        assert "measured 2026-08-18" in cond
+        assert "degrades interactivity" in cond
+
+
+# --------------------- 7. 2026-08-18 template-defect fixes stay fixed
+
+def test_vulkan_verdict_text_never_claims_the_hip_pit():
+    """Defect fix: the 'c8/c16 hit the anchor-degradation pit (avoid
+    cells)' clause is hip-family history — no vulkan cell may carry it
+    (no vulkan c8/c16 cells exist; the pit does not reproduce there)."""
+    for cell in load(VERDICTS)["cells"]:
+        if not cell["id"].startswith("gguf-vulkan-"):
+            continue
+        blob = cell["reason"] + cell.get("conditions", "")
+        assert "hit the anchor-degradation pit" not in blob, (
+            f"{cell['id']}: hip pit clause leaked into a vulkan verdict")
+        if "pit" in blob:
+            assert "does not reproduce" in blob, (
+                f"{cell['id']}: mentions the pit without the "
+                f"non-reproduction finding")
+
+
+def test_caution_mtp_sentence_follows_the_actual_numbers():
+    """Defect fix: the c4-caution MTP sentence must state direction and
+    basis from the actual gains (never a hardcoded 'Better than base c4',
+    never a 'c1:' tag on a c4-basis number)."""
+    for cell in load(VERDICTS)["cells"]:
+        if not cell["id"].startswith("gguf-"):
+            continue  # the defect was in the GGUF c4-caution template
+        g = cell["metrics"].get("mtp_gain_vs_base")
+        if not g or cell["verdict"] != "caution":
+            continue
+        c = cell["metrics"]["c"]
+        # The template-generated portion only (the 2026-08-18 review note
+        # legitimately QUOTES the old defective wording it corrected).
+        r = cell["reason"].split(" Controller review 2026-08-18")[0]
+        assert "Better than base" not in r, (
+            f"{cell['id']}: hardcoded direction is back")
+        assert f"base c{c}" in r, (
+            f"{cell['id']}: the aggregate comparison must name its "
+            f"same-concurrency basis")
+        assert "(c1: " not in r, (
+            f"{cell['id']}: mislabeled c1 basis is back")
+        # The stated direction matches the sign of the measured gains.
+        if g["aggregate_pct"] > 0:
+            assert "Above the base c" in r
+        else:
+            assert "Above the base c" not in r, (
+                f"{cell['id']}: says 'Above base' on a regressing cell")
