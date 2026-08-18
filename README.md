@@ -9,7 +9,7 @@ The reproducible, evidence-first reference for running
 RDNA GPUs via ROCm — dual serving paths (vLLM + llama.cpp), a 20-cell
 measured benchmark matrix with UX-first ✅/⚠️/❌ verdicts, and a community
 hardware-validation protocol.
-
+![](./docs/hero.jpg)
 Status: both serving paths (vLLM and llama.cpp/GGUF) validated on the
 reference host — AMD Ryzen AI MAX+ PRO 395 / Radeon 8060S (`gfx1151`),
 ROCm 7.14.0. W7900D (`gfx1100`) is community-validated (GGUF path, per the
