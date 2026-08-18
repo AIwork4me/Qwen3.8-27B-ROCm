@@ -1,0 +1,1159 @@
+{
+  "id": "soak-gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072",
+  "label": "soak-gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072",
+  "kind": "stability-soak",
+  "base_url": "http://127.0.0.1:8080",
+  "started_utc": "2026-08-18T11:31:03Z",
+  "script": "scripts/stability-soak.sh",
+  "script_git_rev": "683108e90952fb5845ed8952a78f1cb6a6928cb8",
+  "worktree_dirty_at_run": false,
+  "soak_minutes": 30,
+  "server_flags": {
+    "backend": "vulkan",
+    "ctx_size": 131072,
+    "concurrency_np": 1,
+    "with_mtp": true,
+    "mtp_part": "mtp",
+    "spec_depth": 1,
+    "slots": "default",
+    "extra_args": "",
+    "port": 8080,
+    "kv_semantics_expected": "unified (default boot: auto n_parallel=4, shared ctx pool)",
+    "quickstart": "scripts/gguf-quickstart.sh",
+    "llama_server_flags": [
+      "--ctx-size",
+      "131072",
+      "-ngl",
+      "99",
+      "--jinja",
+      "--spec-type",
+      "draft-mtp",
+      "--spec-draft-n-max",
+      "1"
+    ]
+  },
+  "model_pins": {
+    "gguf": "models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf",
+    "mmproj": "models/Qwen3.8-27B-GGUF/mmproj-F16.gguf",
+    "llama_server_version": null,
+    "llama_cpp_commit": "4df29be4f4c3673f428170fda944a5b19f743bb8",
+    "build_dir": "third_party/llama.cpp/build-714-vk",
+    "icd": "RADV"
+  },
+  "slot_info": {
+    "n_slots": 4,
+    "n_ctx_slot": 131072,
+    "kv_unified": "true",
+    "log_line": "n_slots = 4, n_ctx_slot = 131072, kv_unified = 'true'"
+  },
+  "load": {
+    "vram_mib": 29453,
+    "gtt_mib": 1223
+  },
+  "boot": {
+    "ok": true,
+    "health_wall_s": 7
+  },
+  "cycles": [
+    {
+      "index": 1,
+      "started_utc": "2026-08-18T11:31:35Z",
+      "wall_s": 22.073184074019082,
+      "tok_per_s": 10.148060164263113,
+      "stream_median_tok_s": 16.555,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 2,
+      "started_utc": "2026-08-18T11:31:52Z",
+      "wall_s": 17.07169877400156,
+      "tok_per_s": 14.99557855307649,
+      "stream_median_tok_s": 15.905,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 3,
+      "started_utc": "2026-08-18T11:32:09Z",
+      "wall_s": 16.41711400495842,
+      "tok_per_s": 15.593483722089092,
+      "stream_median_tok_s": 16.577,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 4,
+      "started_utc": "2026-08-18T11:32:25Z",
+      "wall_s": 16.42891861393582,
+      "tok_per_s": 15.582279394996098,
+      "stream_median_tok_s": 16.566,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 5,
+      "started_utc": "2026-08-18T11:32:42Z",
+      "wall_s": 16.57872095401399,
+      "tok_per_s": 15.441480721588361,
+      "stream_median_tok_s": 16.41,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 6,
+      "started_utc": "2026-08-18T11:32:59Z",
+      "wall_s": 16.654888176941313,
+      "tok_per_s": 15.370862732926176,
+      "stream_median_tok_s": 16.333,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 7,
+      "started_utc": "2026-08-18T11:33:15Z",
+      "wall_s": 16.504341977997683,
+      "tok_per_s": 15.511069774322387,
+      "stream_median_tok_s": 16.501,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 8,
+      "started_utc": "2026-08-18T11:33:32Z",
+      "wall_s": 16.299931191955693,
+      "tok_per_s": 15.70558777121345,
+      "stream_median_tok_s": 16.716,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 9,
+      "started_utc": "2026-08-18T11:33:48Z",
+      "wall_s": 16.61199718003627,
+      "tok_per_s": 15.410549208836374,
+      "stream_median_tok_s": 16.378,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 10,
+      "started_utc": "2026-08-18T11:34:05Z",
+      "wall_s": 16.405306339031085,
+      "tok_per_s": 15.604707081325957,
+      "stream_median_tok_s": 16.592,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 11,
+      "started_utc": "2026-08-18T11:34:21Z",
+      "wall_s": 16.236833831993863,
+      "tok_per_s": 15.766620675489387,
+      "stream_median_tok_s": 16.779,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 12,
+      "started_utc": "2026-08-18T11:34:38Z",
+      "wall_s": 16.856412290013395,
+      "tok_per_s": 15.187098867513317,
+      "stream_median_tok_s": 16.124,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 13,
+      "started_utc": "2026-08-18T11:34:55Z",
+      "wall_s": 16.434158007032238,
+      "tok_per_s": 15.57731159031431,
+      "stream_median_tok_s": 16.568,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 14,
+      "started_utc": "2026-08-18T11:35:11Z",
+      "wall_s": 16.646597883896902,
+      "tok_per_s": 15.378517687847904,
+      "stream_median_tok_s": 16.344,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 15,
+      "started_utc": "2026-08-18T11:35:29Z",
+      "wall_s": 17.124469491071068,
+      "tok_per_s": 14.949368220340016,
+      "stream_median_tok_s": 15.843,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 16,
+      "started_utc": "2026-08-18T11:35:45Z",
+      "wall_s": 16.697031270014122,
+      "tok_per_s": 15.332066872255638,
+      "stream_median_tok_s": 16.287,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 17,
+      "started_utc": "2026-08-18T11:36:02Z",
+      "wall_s": 16.833246611058712,
+      "tok_per_s": 15.207999140927402,
+      "stream_median_tok_s": 16.141,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 18,
+      "started_utc": "2026-08-18T11:36:19Z",
+      "wall_s": 16.641035396954976,
+      "tok_per_s": 15.383658161489375,
+      "stream_median_tok_s": 16.34,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 19,
+      "started_utc": "2026-08-18T11:36:36Z",
+      "wall_s": 16.50674620398786,
+      "tok_per_s": 15.508810569714402,
+      "stream_median_tok_s": 16.483,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 20,
+      "started_utc": "2026-08-18T11:36:52Z",
+      "wall_s": 15.805586203932762,
+      "tok_per_s": 15.184504826545627,
+      "stream_median_tok_s": 16.302,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 21,
+      "started_utc": "2026-08-18T11:37:08Z",
+      "wall_s": 16.53642594302073,
+      "tok_per_s": 15.480975204805116,
+      "stream_median_tok_s": 16.462,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 22,
+      "started_utc": "2026-08-18T11:37:25Z",
+      "wall_s": 16.37472788291052,
+      "tok_per_s": 15.26742928417836,
+      "stream_median_tok_s": 16.247,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 23,
+      "started_utc": "2026-08-18T11:37:41Z",
+      "wall_s": 16.316196976113133,
+      "tok_per_s": 15.689930709636768,
+      "stream_median_tok_s": 16.697,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 24,
+      "started_utc": "2026-08-18T11:37:58Z",
+      "wall_s": 16.519537183921784,
+      "tok_per_s": 15.13359588810522,
+      "stream_median_tok_s": 16.077,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 25,
+      "started_utc": "2026-08-18T11:38:14Z",
+      "wall_s": 16.566176111926325,
+      "tok_per_s": 15.453173880947723,
+      "stream_median_tok_s": 16.435,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 26,
+      "started_utc": "2026-08-18T11:38:31Z",
+      "wall_s": 16.75841631507501,
+      "tok_per_s": 15.275906457205958,
+      "stream_median_tok_s": 16.233,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 27,
+      "started_utc": "2026-08-18T11:38:48Z",
+      "wall_s": 16.25285506399814,
+      "tok_per_s": 15.320385188911354,
+      "stream_median_tok_s": 16.424,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 28,
+      "started_utc": "2026-08-18T11:39:05Z",
+      "wall_s": 17.00200442795176,
+      "tok_per_s": 15.057048190102162,
+      "stream_median_tok_s": 15.976,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 29,
+      "started_utc": "2026-08-18T11:39:21Z",
+      "wall_s": 15.773164730984718,
+      "tok_per_s": 15.53271040901027,
+      "stream_median_tok_s": 16.688,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 30,
+      "started_utc": "2026-08-18T11:39:37Z",
+      "wall_s": 16.11156063899398,
+      "tok_per_s": 15.889211835904737,
+      "stream_median_tok_s": 16.915,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 31,
+      "started_utc": "2026-08-18T11:39:53Z",
+      "wall_s": 16.2744697839953,
+      "tok_per_s": 15.730159163265428,
+      "stream_median_tok_s": 16.752,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 32,
+      "started_utc": "2026-08-18T11:40:09Z",
+      "wall_s": 15.379729425068945,
+      "tok_per_s": 15.08479073902563,
+      "stream_median_tok_s": 16.229,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 33,
+      "started_utc": "2026-08-18T11:40:25Z",
+      "wall_s": 15.93629401398357,
+      "tok_per_s": 15.43646219027731,
+      "stream_median_tok_s": 16.459,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 34,
+      "started_utc": "2026-08-18T11:40:41Z",
+      "wall_s": 16.547273617004976,
+      "tok_per_s": 15.47082654975373,
+      "stream_median_tok_s": 16.455,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 35,
+      "started_utc": "2026-08-18T11:40:58Z",
+      "wall_s": 16.502490623970516,
+      "tok_per_s": 15.51280990447284,
+      "stream_median_tok_s": 16.509,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 36,
+      "started_utc": "2026-08-18T11:41:15Z",
+      "wall_s": 16.76665842195507,
+      "tok_per_s": 15.26839716999192,
+      "stream_median_tok_s": 16.223,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 37,
+      "started_utc": "2026-08-18T11:41:31Z",
+      "wall_s": 15.84586210991256,
+      "tok_per_s": 15.713881534046369,
+      "stream_median_tok_s": 16.754,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 38,
+      "started_utc": "2026-08-18T11:41:48Z",
+      "wall_s": 17.024838489945978,
+      "tok_per_s": 15.03685336875183,
+      "stream_median_tok_s": 15.957,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 39,
+      "started_utc": "2026-08-18T11:42:04Z",
+      "wall_s": 16.07500590896234,
+      "tok_per_s": 15.05442681455421,
+      "stream_median_tok_s": 16.157,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 40,
+      "started_utc": "2026-08-18T11:42:21Z",
+      "wall_s": 16.40163063397631,
+      "tok_per_s": 15.608204190971769,
+      "stream_median_tok_s": 16.605,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 41,
+      "started_utc": "2026-08-18T11:42:37Z",
+      "wall_s": 16.349513221997768,
+      "tok_per_s": 15.65795852903803,
+      "stream_median_tok_s": 16.658,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 42,
+      "started_utc": "2026-08-18T11:42:54Z",
+      "wall_s": 16.389607277931646,
+      "tok_per_s": 15.619654312565505,
+      "stream_median_tok_s": 16.631,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 43,
+      "started_utc": "2026-08-18T11:43:10Z",
+      "wall_s": 16.263492751982994,
+      "tok_per_s": 15.740776222179342,
+      "stream_median_tok_s": 16.749,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 44,
+      "started_utc": "2026-08-18T11:43:26Z",
+      "wall_s": 15.845742098987103,
+      "tok_per_s": 16.092651161872702,
+      "stream_median_tok_s": 17.159,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 45,
+      "started_utc": "2026-08-18T11:43:43Z",
+      "wall_s": 16.820691040949896,
+      "tok_per_s": 15.219350939671216,
+      "stream_median_tok_s": 16.178,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 46,
+      "started_utc": "2026-08-18T11:44:00Z",
+      "wall_s": 16.548230616026558,
+      "tok_per_s": 15.469931857975816,
+      "stream_median_tok_s": 16.447,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 47,
+      "started_utc": "2026-08-18T11:44:16Z",
+      "wall_s": 16.708948245970532,
+      "tok_per_s": 15.321131900790704,
+      "stream_median_tok_s": 16.286,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 48,
+      "started_utc": "2026-08-18T11:44:33Z",
+      "wall_s": 16.38214413402602,
+      "tok_per_s": 15.626770092217855,
+      "stream_median_tok_s": 16.627,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 49,
+      "started_utc": "2026-08-18T11:44:50Z",
+      "wall_s": 16.966963469050825,
+      "tok_per_s": 15.08814470349781,
+      "stream_median_tok_s": 16.013,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 50,
+      "started_utc": "2026-08-18T11:45:07Z",
+      "wall_s": 16.582552418927662,
+      "tok_per_s": 15.43791290584412,
+      "stream_median_tok_s": 16.409,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 51,
+      "started_utc": "2026-08-18T11:45:23Z",
+      "wall_s": 16.415681422920898,
+      "tok_per_s": 15.594844551658523,
+      "stream_median_tok_s": 16.586,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 52,
+      "started_utc": "2026-08-18T11:45:40Z",
+      "wall_s": 16.3645827799337,
+      "tok_per_s": 14.726926023162347,
+      "stream_median_tok_s": 15.651,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 53,
+      "started_utc": "2026-08-18T11:45:56Z",
+      "wall_s": 16.643519992008805,
+      "tok_per_s": 15.381361642423926,
+      "stream_median_tok_s": 16.343,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 54,
+      "started_utc": "2026-08-18T11:46:13Z",
+      "wall_s": 16.649123128969222,
+      "tok_per_s": 15.376185161040937,
+      "stream_median_tok_s": 16.346,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 55,
+      "started_utc": "2026-08-18T11:46:30Z",
+      "wall_s": 16.82411455793772,
+      "tok_per_s": 15.216253973925639,
+      "stream_median_tok_s": 16.16,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 56,
+      "started_utc": "2026-08-18T11:46:47Z",
+      "wall_s": 16.94794182595797,
+      "tok_per_s": 15.105078990057827,
+      "stream_median_tok_s": 16.026,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 57,
+      "started_utc": "2026-08-18T11:47:04Z",
+      "wall_s": 16.541053054039367,
+      "tok_per_s": 15.47664463463432,
+      "stream_median_tok_s": 16.471,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 58,
+      "started_utc": "2026-08-18T11:47:20Z",
+      "wall_s": 16.55029221600853,
+      "tok_per_s": 15.468004833919489,
+      "stream_median_tok_s": 16.449,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 59,
+      "started_utc": "2026-08-18T11:47:37Z",
+      "wall_s": 16.558687154087238,
+      "tok_per_s": 15.399771589806107,
+      "stream_median_tok_s": 16.38,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 60,
+      "started_utc": "2026-08-18T11:47:53Z",
+      "wall_s": 16.00807304098271,
+      "tok_per_s": 14.929966860354117,
+      "stream_median_tok_s": 16.03,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 61,
+      "started_utc": "2026-08-18T11:48:10Z",
+      "wall_s": 16.9021287469659,
+      "tok_per_s": 15.146021180672555,
+      "stream_median_tok_s": 16.08,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 62,
+      "started_utc": "2026-08-18T11:48:27Z",
+      "wall_s": 16.461920384084806,
+      "tok_per_s": 15.55104107097358,
+      "stream_median_tok_s": 16.555,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 63,
+      "started_utc": "2026-08-18T11:48:43Z",
+      "wall_s": 15.726135657983832,
+      "tok_per_s": 14.879688506387968,
+      "stream_median_tok_s": 15.889,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 64,
+      "started_utc": "2026-08-18T11:48:57Z",
+      "wall_s": 14.417612876975909,
+      "tok_per_s": 14.35743917986361,
+      "stream_median_tok_s": 15.557,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 65,
+      "started_utc": "2026-08-18T11:49:14Z",
+      "wall_s": 16.492463164031506,
+      "tok_per_s": 15.52224173271532,
+      "stream_median_tok_s": 16.52,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 66,
+      "started_utc": "2026-08-18T11:49:30Z",
+      "wall_s": 16.294780510943383,
+      "tok_per_s": 15.710552211984286,
+      "stream_median_tok_s": 16.732,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 67,
+      "started_utc": "2026-08-18T11:49:47Z",
+      "wall_s": 16.969258941942826,
+      "tok_per_s": 15.086103693499908,
+      "stream_median_tok_s": 16.038,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 68,
+      "started_utc": "2026-08-18T11:50:04Z",
+      "wall_s": 16.979036652948707,
+      "tok_per_s": 15.07741606503577,
+      "stream_median_tok_s": 16.009,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 69,
+      "started_utc": "2026-08-18T11:50:22Z",
+      "wall_s": 17.67628648399841,
+      "tok_per_s": 14.482679958358103,
+      "stream_median_tok_s": 15.334,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 70,
+      "started_utc": "2026-08-18T11:50:39Z",
+      "wall_s": 16.876334651955403,
+      "tok_per_s": 14.872897769357607,
+      "stream_median_tok_s": 15.841,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 71,
+      "started_utc": "2026-08-18T11:50:56Z",
+      "wall_s": 16.98866926599294,
+      "tok_per_s": 14.951141612277095,
+      "stream_median_tok_s": 15.999,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 72,
+      "started_utc": "2026-08-18T11:51:13Z",
+      "wall_s": 17.104231680976227,
+      "tok_per_s": 14.967056385510135,
+      "stream_median_tok_s": 15.889,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 73,
+      "started_utc": "2026-08-18T11:51:30Z",
+      "wall_s": 17.11148589802906,
+      "tok_per_s": 14.610069604112848,
+      "stream_median_tok_s": 15.544,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 74,
+      "started_utc": "2026-08-18T11:51:47Z",
+      "wall_s": 16.471966924029402,
+      "tok_per_s": 14.7523365679851,
+      "stream_median_tok_s": 15.691,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 75,
+      "started_utc": "2026-08-18T11:52:04Z",
+      "wall_s": 17.123576347948983,
+      "tok_per_s": 14.950147959638292,
+      "stream_median_tok_s": 15.879,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 76,
+      "started_utc": "2026-08-18T11:52:18Z",
+      "wall_s": 13.690582738025114,
+      "tok_per_s": 15.192925237746621,
+      "stream_median_tok_s": 16.531,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 77,
+      "started_utc": "2026-08-18T11:52:35Z",
+      "wall_s": 16.787900729104877,
+      "tok_per_s": 15.24907754286261,
+      "stream_median_tok_s": 16.217,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 78,
+      "started_utc": "2026-08-18T11:52:52Z",
+      "wall_s": 17.258424305939116,
+      "tok_per_s": 14.83333561986323,
+      "stream_median_tok_s": 15.749,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 79,
+      "started_utc": "2026-08-18T11:53:09Z",
+      "wall_s": 17.091782049043104,
+      "tok_per_s": 14.97795837001867,
+      "stream_median_tok_s": 15.915,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 80,
+      "started_utc": "2026-08-18T11:53:27Z",
+      "wall_s": 17.16099535196554,
+      "tok_per_s": 14.917549637974757,
+      "stream_median_tok_s": 15.825,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 81,
+      "started_utc": "2026-08-18T11:53:43Z",
+      "wall_s": 16.11256268795114,
+      "tok_per_s": 15.081399818646705,
+      "stream_median_tok_s": 16.063,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 82,
+      "started_utc": "2026-08-18T11:53:57Z",
+      "wall_s": 14.103822760982439,
+      "tok_per_s": 14.676871902606132,
+      "stream_median_tok_s": 15.907,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 83,
+      "started_utc": "2026-08-18T11:54:14Z",
+      "wall_s": 16.782819413929246,
+      "tok_per_s": 15.253694488753633,
+      "stream_median_tok_s": 16.218,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 84,
+      "started_utc": "2026-08-18T11:54:31Z",
+      "wall_s": 16.691328111919574,
+      "tok_per_s": 15.337305592667958,
+      "stream_median_tok_s": 16.298,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 85,
+      "started_utc": "2026-08-18T11:54:48Z",
+      "wall_s": 17.018853471963666,
+      "tok_per_s": 15.042141377016172,
+      "stream_median_tok_s": 15.971,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 86,
+      "started_utc": "2026-08-18T11:55:06Z",
+      "wall_s": 17.615414934,
+      "tok_per_s": 14.53272607878724,
+      "stream_median_tok_s": 15.391,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 87,
+      "started_utc": "2026-08-18T11:55:23Z",
+      "wall_s": 16.816597723052837,
+      "tok_per_s": 15.22305547269323,
+      "stream_median_tok_s": 16.185,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 88,
+      "started_utc": "2026-08-18T11:55:40Z",
+      "wall_s": 17.671236700960435,
+      "tok_per_s": 14.486818570320342,
+      "stream_median_tok_s": 15.344,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 89,
+      "started_utc": "2026-08-18T11:55:56Z",
+      "wall_s": 15.58460342604667,
+      "tok_per_s": 14.822321344021363,
+      "stream_median_tok_s": 15.823,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 90,
+      "started_utc": "2026-08-18T11:56:13Z",
+      "wall_s": 17.102564988075756,
+      "tok_per_s": 14.96851496711097,
+      "stream_median_tok_s": 15.892,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 91,
+      "started_utc": "2026-08-18T11:56:31Z",
+      "wall_s": 17.287388833938166,
+      "tok_per_s": 14.808482788182982,
+      "stream_median_tok_s": 15.716,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 92,
+      "started_utc": "2026-08-18T11:56:49Z",
+      "wall_s": 17.939724494004622,
+      "tok_per_s": 14.270007328460037,
+      "stream_median_tok_s": 15.096,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 93,
+      "started_utc": "2026-08-18T11:57:07Z",
+      "wall_s": 17.737272595986724,
+      "tok_per_s": 14.432884120973771,
+      "stream_median_tok_s": 15.278,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 94,
+      "started_utc": "2026-08-18T11:57:24Z",
+      "wall_s": 17.201625042944215,
+      "tok_per_s": 14.882314860421074,
+      "stream_median_tok_s": 15.79,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 95,
+      "started_utc": "2026-08-18T11:57:41Z",
+      "wall_s": 16.901541215949692,
+      "tok_per_s": 15.146547686338641,
+      "stream_median_tok_s": 16.082,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 96,
+      "started_utc": "2026-08-18T11:57:58Z",
+      "wall_s": 16.828105650027283,
+      "tok_per_s": 15.212645161850702,
+      "stream_median_tok_s": 16.163,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 97,
+      "started_utc": "2026-08-18T11:58:15Z",
+      "wall_s": 16.67936206201557,
+      "tok_per_s": 15.348308829088658,
+      "stream_median_tok_s": 16.306,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 98,
+      "started_utc": "2026-08-18T11:58:32Z",
+      "wall_s": 16.781003913958557,
+      "tok_per_s": 15.255344752470823,
+      "stream_median_tok_s": 16.202,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 99,
+      "started_utc": "2026-08-18T11:58:49Z",
+      "wall_s": 17.536584151908755,
+      "tok_per_s": 14.598053861711483,
+      "stream_median_tok_s": 15.46,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 100,
+      "started_utc": "2026-08-18T11:59:06Z",
+      "wall_s": 16.403468500007875,
+      "tok_per_s": 14.387201097126908,
+      "stream_median_tok_s": 15.42,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 101,
+      "started_utc": "2026-08-18T11:59:23Z",
+      "wall_s": 17.408525229082443,
+      "tok_per_s": 14.705438664748575,
+      "stream_median_tok_s": 15.581,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 102,
+      "started_utc": "2026-08-18T11:59:38Z",
+      "wall_s": 14.547629293985665,
+      "tok_per_s": 15.191478661844005,
+      "stream_median_tok_s": 16.428,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 103,
+      "started_utc": "2026-08-18T11:59:54Z",
+      "wall_s": 16.28040454199072,
+      "tok_per_s": 15.11018963721155,
+      "stream_median_tok_s": 16.085,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 104,
+      "started_utc": "2026-08-18T12:00:11Z",
+      "wall_s": 16.732750236056745,
+      "tok_per_s": 15.299337908502075,
+      "stream_median_tok_s": 16.258,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 105,
+      "started_utc": "2026-08-18T12:00:28Z",
+      "wall_s": 16.694497877033427,
+      "tok_per_s": 15.334393516092417,
+      "stream_median_tok_s": 16.284,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 106,
+      "started_utc": "2026-08-18T12:00:46Z",
+      "wall_s": 17.97807237098459,
+      "tok_per_s": 14.239568887995295,
+      "stream_median_tok_s": 15.066,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 107,
+      "started_utc": "2026-08-18T12:01:04Z",
+      "wall_s": 17.509948533959687,
+      "tok_per_s": 14.62025999125586,
+      "stream_median_tok_s": 15.493,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    },
+    {
+      "index": 108,
+      "started_utc": "2026-08-18T12:01:21Z",
+      "wall_s": 16.86346816108562,
+      "tok_per_s": 15.180744408836922,
+      "stream_median_tok_s": 16.128,
+      "ok_streams": 1,
+      "failed_streams": 0,
+      "error": null
+    }
+  ],
+  "anchor": {
+    "ok": true,
+    "content_tail": "OK"
+  },
+  "totals": {
+    "cycles": 108,
+    "ok_cycles": 108,
+    "failed_cycles": 0,
+    "tok_per_s_min": 10.148,
+    "tok_per_s_median": 15.221,
+    "tok_per_s_max": 16.093,
+    "first_half_median": 15.437,
+    "second_half_median": 15.01,
+    "drift_pct": -2.77,
+    "wall_minutes": 30.1
+  },
+  "anomalies": [],
+  "exit_gpu_clean": true,
+  "degraded": false,
+  "degraded_reason": null
+}
