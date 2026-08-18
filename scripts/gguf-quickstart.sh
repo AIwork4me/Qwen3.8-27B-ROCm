@@ -239,7 +239,7 @@ fi
 
 echo "llama-server : $SERVER ($("$SERVER" --version 2>&1 | head -n1))"
 if [ "$BACKEND" = "vulkan" ]; then
-    echo "backend      : $BACKEND (RECOMMENDED OPT-IN for best single-stream tok/s — 16.0 vs 13.0 tok/s with WITH_MTP=1; project ruling 2026-08-18. Two independent measurement sessions (2026-08-18, independent boots) + 30-min soak (108 cycles, -2.6% settle). Still experimental: single host (gfx1151), one ICD (RADV 25.2.8) — see benchmark verdicts)"
+    echo "backend      : $BACKEND (RECOMMENDED OPT-IN for best single-stream tok/s — 16.0 vs 13.0 tok/s with WITH_MTP=1, mixed-depth pairing — see benchmark verdicts for the same-depth +19.5%; project ruling 2026-08-18. Two independent measurement sessions (2026-08-18, independent boots) + 30-min soak (108 cycles, -2.6% settle). Still experimental: single host (gfx1151), one ICD (RADV 25.2.8) — see benchmark verdicts)"
 else
     echo "backend      : $BACKEND (default, unchanged)"
     echo "tip (opt-in) : for best single-stream tok/s run: BACKEND=vulkan WITH_MTP=1 bash scripts/gguf-quickstart.sh  # 16.0 tok/s (build first: scripts/06-build-llama-vulkan.sh; experimental — see benchmark verdicts)"

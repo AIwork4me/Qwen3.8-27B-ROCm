@@ -502,7 +502,11 @@ def _row(cid: str, data: dict) -> str:
     auto = m.get("auto_verdict", "")
     final = c["verdict"]
     trail = auto if auto == final else f"{auto} → **{final}** (ruling)"
-    return (f"| [`{cid}`](matrix-714/cells/{cid}.json) | {backend_of(cid)} | "
+    # Backend: "—" when the id carries no backend tag (vLLM has exactly one
+    # backend) — same convention as the MTP-effect table, never a blank cell
+    # (2026-08-18 v0.1.3 debt fix).
+    return (f"| [`{cid}`](matrix-714/cells/{cid}.json) | "
+            f"{backend_of(cid) or '—'} | "
             f"{mark(final)} {final} | {fmt(m['per_stream_tok_s_median'], 2)} | "
             f"{fmt(m['per_stream_tok_s_min'], 2)} | "
             f"{fmt(m['tpot_ms_median'])} | {fmt(m['aggregate_tok_s'], 2)} | "
@@ -602,6 +606,7 @@ def render_benchmark_md(data: dict) -> str:
                "at the GGUF path.\n")
     vk_mtp = v["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]["metrics"]
     hip_mtp = v["gguf-hip-udq4kxl-auto-mtp-c1-ctx131072"]["metrics"]
+    vk_mtp4 = v["gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072"]["metrics"]
     hip_mtp4 = v["gguf-hip-udq4kxl-auto-mtp4-c1-ctx131072"]["metrics"]
     ev = GEN_VERDICTS.stability_evidence()
     s2_m1 = ev["cells"]["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]["s2_2dp"]
@@ -610,6 +615,12 @@ def render_benchmark_md(data: dict) -> str:
         (c["s2"] / c["s1"] - 1) * 100 for c in ev["cells"].values()]
     headline2 = (s2_m1 / hip_mtp["per_stream_tok_s_median"] - 1) * 100
     same_depth2 = (s2_m4 / hip_mtp4["per_stream_tok_s_median"] - 1) * 100
+    # Session-1 (v0.1.2 corpus) same-depth depth-4 pairing, interpolated
+    # from the same verdict metrics the ruling note quotes (2026-08-18
+    # v0.1.3 debt fix: the old hand literal "+18.0%" mis-rounded the exact
+    # 15.05/12.76 arithmetic, which is +17.9%).
+    same_depth1 = ((vk_mtp4["per_stream_tok_s_median"]
+                    / hip_mtp4["per_stream_tok_s_median"] - 1) * 100)
     out.append(
         "Controller ruling (2026-08-18, binding, v0.1.2 plan outcome (a); "
         "stability wording upgraded 2026-08-18, v0.1.3):\n"
@@ -619,7 +630,9 @@ def render_benchmark_md(data: dict) -> str:
         f"{fmt(hip_mtp['per_stream_tok_s_median'], 2)} tok/s "
         f"(+{(vk_mtp['per_stream_tok_s_median'] / hip_mtp['per_stream_tok_s_median'] - 1) * 100:.1f}% "
         "mixed-depth headline; the clean same-depth depth-4 pairing is "
-        "15.05 vs 12.76 tok/s, +18.0%), anchors clean 6/6 — while the "
+        f"{fmt(vk_mtp4['per_stream_tok_s_median'], 2)} vs "
+        f"{fmt(hip_mtp4['per_stream_tok_s_median'], 2)} tok/s, "
+        f"+{same_depth1:.1f}%), anchors clean 6/6 — while the "
         "quickstart DEFAULT stays `hip`. Stability evidence "
         f"(`{ev['pointer']}`): two independent measurement sessions "
         "(2026-08-18, hours apart, independent server boots) + 30-min "
@@ -716,8 +729,9 @@ def render_benchmark_md(data: dict) -> str:
                "real cells, anchor-clean). v0.1.2: MTP depth 1 beats depth 4 "
                "on both backends at c1 (vulkan 16.00 vs 15.05; hip 13.00 vs "
                "12.76 tok/s) — depth 1 stays the recommended variant; "
-               "cross-backend at c1 Vulkan leads HIP at both depths (+23.1% "
-               "mixed-depth headline, +18.0% at fixed depth 4 — the hip mtp "
+               f"cross-backend at c1 Vulkan leads HIP at both depths (+23.1% "
+               f"mixed-depth headline, +{same_depth1:.1f}% at fixed depth 4 — "
+               f"the hip mtp "
                "receipts of 2026-08-17 ran the implicit depth default 3, "
                "see `configs/validated-stack.json`).\n")
 

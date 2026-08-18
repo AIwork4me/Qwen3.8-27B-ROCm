@@ -36,11 +36,21 @@
 #
 # Receipt schema (follows the cell-receipt field conventions,
 # docs/results/matrix-714/cells/*.json): started_utc, server_flags verbatim
-# (incl. llama_server_flags), model/pin refs, slot_info from the server log,
-# load (rocm-smi VRAM/GTT at load), cycles[] (per-cycle: index, started_utc,
-# wall_s, tok_per_s aggregate, stream_median_tok_s, ok/failed, error), one
-# anchor block, totals (tok/s min/median/max, first/second-half drift,
-# wall_minutes), exit_gpu_clean, script_git_rev.
+# (incl. llama_server_flags), model/pin refs (llama_server_version comes
+# from the binary's own --version banner, which llama-server prints to
+# STDERR — both streams are captured so the field resolves), slot_info from
+# the server log, load (rocm-smi VRAM/GTT at load), cycles[] (per-cycle:
+# index, started_utc, wall_s, tok_per_s aggregate, stream_median_tok_s,
+# ok/failed, error), one anchor block, totals (tok/s min/median/max,
+# first/second-half drift, health_flaps, wall_minutes), exit_gpu_clean,
+# script_git_rev.
+#
+# health_flaps (v0.1.3 telemetry addition, 2026-08-18): count of mid-soak
+# health-check failures at cycle boundaries — each episode where
+# /health failed and the soak then waited (up to HEALTH_RECOVER_S) for
+# recovery, whether or not it recovered. 0 in a normal run; recorded in
+# totals and listed in anomalies when non-zero. Existing receipts are
+# never rewritten to backfill the field.
 #
 # CI note: --dry-run resolves and prints the plan without launching anything;
 # the test suite only exercises --dry-run and the refusal paths.
@@ -258,6 +268,7 @@ WORKTREE_DIRTY=0
 STARTED_UTC="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 DEGRADED=0
 DEGRADED_REASON=""
+HEALTH_FLAPS=0
 
 echo "== booting $QUICKSTART (backend $BACKEND, ctx $CTX, mtp $WITH_MTP, depth $SPEC_DEPTH, extra '${EXTRA_ARGS:-none}') =="
 STARTED_S=$SECONDS
@@ -356,6 +367,7 @@ PY
     CYCLE_INDEX=0
     while [ $((SECONDS - SOAK_START)) -lt $((SOAK_MINUTES * 60)) ]; do
         if ! server_alive; then
+            HEALTH_FLAPS=$((HEALTH_FLAPS + 1))
             echo "WARN: health check failed before cycle $((CYCLE_INDEX + 1)); waiting up to ${HEALTH_RECOVER_S}s" >&2
             RECOVER_OK=0
             for _ in $(seq 1 $((HEALTH_RECOVER_S / 2))); do
@@ -474,6 +486,7 @@ KV_MODE="$KV_MODE" SLOT_INFO_JSON="$SLOT_INFO_JSON" LOAD_JSON="$LOAD_JSON" \
 MODEL_JSON="$MODEL_JSON" BOOT_OK="$BOOT_OK" BOOT_WALL="$BOOT_WALL" \
 ANCHOR_OK="$ANCHOR_OK" ANCHOR_TAIL="$ANCHOR_TAIL" DEGRADED="$DEGRADED" \
 DEGRADED_REASON="$DEGRADED_REASON" CYCLES_FILE="$CYCLES_FILE" CYCLES_RAN="$CYCLES_RAN" \
+HEALTH_FLAPS="$HEALTH_FLAPS" \
 SOAK_MINUTES="$SOAK_MINUTES" SOAK_WALL_S="${SOAK_WALL_S:-0}" ABORTED="$ABORTED" \
 ABORT_REASON="$ABORT_REASON" GPU_CLEAN="$GPU_CLEAN" SCRIPT_GIT_REV="$SCRIPT_GIT_REV" \
 WORKTREE_DIRTY="$WORKTREE_DIRTY" LLAMA_BIN="$LLAMA_BIN" EXTRA_FLAGS="${CELL_FLAGS[*]}" \
@@ -503,11 +516,14 @@ totals = {
     "first_half_median": round(fh, 3) if fh is not None else None,
     "second_half_median": round(sh, 3) if sh is not None else None,
     "drift_pct": drift,
+    "health_flaps": int(env["HEALTH_FLAPS"]),
     "wall_minutes": round(int(env["SOAK_WALL_S"]) / 60.0, 1),
 }
 anomalies = []
 for c in failed:
     anomalies.append(f"cycle {c['index']}: {c.get('error') or c.get('failed_streams')} failed stream(s)")
+if int(env["HEALTH_FLAPS"]) > 0:
+    anomalies.append(f"{env['HEALTH_FLAPS']} mid-soak health flap(s)")
 if env["ABORTED"] == "1":
     anomalies.append(env["ABORT_REASON"])
 if env["GPU_CLEAN"] != "true":

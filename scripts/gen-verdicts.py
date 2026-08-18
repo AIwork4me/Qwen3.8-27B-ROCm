@@ -377,8 +377,13 @@ V012_CELLS = frozenset({
 # llama_cpp_vulkan.mtp_depth.note): the historical hip mtp receipts
 # (2026-08-17) ran the IMPLICIT --spec-draft-n-max default 3; every v0.1.2
 # cell passes its depth explicitly. Cited wherever a hip-vs-vulkan MTP
-# number is quoted.
-CROSS_DEPTH_CAVEAT = ("the hip mtp-c1 receipt (2026-08-17) ran the implicit "
+# number is quoted. The parenthetical states the date convention once
+# (2026-08-18, v0.1.3 debt fix): receipt timestamps are UTC, while caveat
+# dates before v0.1.2 were written in the operator's local UTC+8 — the
+# same day either way, never a different one.
+CROSS_DEPTH_CAVEAT = ("the hip mtp-c1 receipt (2026-08-17; receipt "
+                      "timestamps are UTC, caveat dates before v0.1.2 use "
+                      "local UTC+8) ran the implicit "
                       "--spec-draft-n-max default 3 while every v0.1.2 cell "
                       "passes its depth explicitly "
                       "(configs/validated-stack.json llama_cpp_vulkan."

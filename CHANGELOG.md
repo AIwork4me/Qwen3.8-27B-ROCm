@@ -65,6 +65,44 @@ strength. Receipts:
 - [`CITATION.cff`](CITATION.cff): version 0.1.3 (matrix description
   unchanged — still the 28-cell corpus).
 
+### Fixes (post-release debt batch — script/tests/docs only, no data change)
+
+- Precision: the "+18.0%" hand literal on the same-depth depth-4 pairing
+  (exact receipts math is +17.9%) is now interpolated from the same verdict
+  metrics the ruling note uses, in both places it appeared
+  ([`scripts/render-readme-blocks.py`](scripts/render-readme-blocks.py);
+  [`docs/results/benchmark.md`](docs/results/benchmark.md) regenerated).
+- The quickstart's `BACKEND=vulkan` echo now labels its "16.0 vs 13.0
+  tok/s" pairing as mixed-depth inline, pointing at the same-depth +19.5%
+  in the verdicts (the caveat previously lived one hop away).
+- The benchmark.md vLLM table's empty Backend cells now render as "—",
+  matching the MTP-effect table convention (renderer fix, regenerated).
+- The cross-depth caveat states the date convention once: receipt
+  timestamps are UTC, caveat dates before v0.1.2 use local (UTC+8)
+  ([`scripts/gen-verdicts.py`](scripts/gen-verdicts.py); verdicts
+  regenerated).
+- The cell runner's own c4-only `-unified` enforcement is now pinned by a
+  test that exercises it directly (a declared, grammatically c1-unified id
+  via a scratch `MATRIX_FILE`) instead of riding the matrix "not declared"
+  refusal ([`tests/test_cell_runner.py`](tests/test_cell_runner.py)).
+- The quickstart's `SPEC_DEPTH` validation gained an automated refusal test
+  (non-numeric and <1 values, run CI-safe against a stub server and scratch
+  model — the values the script actually refuses)
+  ([`tests/test_gguf_quickstart_ux.py`](tests/test_gguf_quickstart_ux.py)).
+- The v0.1.2 summary-table header said "Cell (c1 @ctx131072)" while its
+  last row covers c4 cells — corrected to "Cell @ctx131072" (controller
+  factual-labeling fix; DATA untouched, this note records the correction).
+- Stability README (S2 verifier minors): the stale "integrating these
+  numbers is a later step (S2)" line is now a done-statement, and the Δ
+  columns are exact-basis (recomputed from the receipts, 2dp display) so
+  each Δ matches its pct column.
+- Soak script telemetry (script-only; existing receipts never rewritten):
+  `llama_server_version` verified to resolve from the stderr banner
+  (both streams captured — CI-safe source contract added), and a
+  `health_flaps` counter added to the receipt totals (0 in normal runs),
+  both documented in the script header and pinned in
+  [`tests/test_stability_soak.py`](tests/test_stability_soak.py).
+
 ## v0.1.2 — 2026-08-18
 
 The Vulkan×MTP-depth comparison release: 8 new measured cells on the same
@@ -128,7 +166,7 @@ confirmed by the controller-2026-08-18 review (zero overrides —
 reason). Full tables:
 [`docs/results/benchmark.md`](docs/results/benchmark.md).
 
-| Cell (c1 @ctx131072) | Backend | Per-stream med | Verdict |
+| Cell @ctx131072 | Backend | Per-stream med | Verdict |
 |---|---|---|---|
 | `gguf-vulkan-…-mtp-c1` (depth 1) | vulkan | **16.0 tok/s** (+50.2% vs vulkan base) | ✅ recommended — quickstart opt-in |
 | `gguf-vulkan-…-mtp4-c1` (depth 4) | vulkan | 15.05 tok/s (+41.3% vs base) | ✅ recommended |

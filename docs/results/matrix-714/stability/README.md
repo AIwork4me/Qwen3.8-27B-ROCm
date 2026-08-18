@@ -9,9 +9,9 @@ matrix (`../matrix.json`), the verdicts (`configs/benchmark-verdicts.json`),
 are **untouched by design** — session receipts are collected through the cell
 runner's community `CELLS_DIR` mechanism (`scripts/run-cell-gguf.sh` with a
 non-default `CELLS_DIR` skips the matrix flip), and the soak receipt is a
-separate artifact from `scripts/stability-soak.sh`. Integrating these numbers
-into verdicts/docs wording is a later step (S2); this directory is the raw
-evidence.
+separate artifact from `scripts/stability-soak.sh`. These numbers were
+integrated into the verdicts/docs wording by S2 (v0.1.3); this directory
+remains the raw evidence.
 
 Host: gfx1151 (Ryzen AI MAX+ PRO 395 / 8060S), RADV (Mesa 25.2.8) ICD,
 llama.cpp pin `4df29be4` build `build-714-vk` — identical to the v0.1.2
@@ -37,11 +37,13 @@ this session's receipt. Both sides print at the corpus 2dp convention, so
 the numbers cross-reference cleanly with
 [`benchmark.md`](../../benchmark.md) — the
 s1 values are exactly the canonical cell medians (16.00 / 15.05 / 10.65,
-not re-roundings).
+not re-roundings). Delta columns are exact-basis (s2 − s1 computed from the
+receipts before rounding, displayed at 2dp) so each Δ matches its pct, which
+is also exact-basis.
 
 | Cell | stream tok/s s1 | stream tok/s s2 | delta | aggregate s1 | aggregate s2 | delta | anchor s1 | anchor s2 |
 |---|---|---|---|---|---|---|---|---|
-| `gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072` (recommended) | 16.00 | 16.25 | +0.25 (+1.5%) | 10.42 | 10.52 | +0.10 (+0.9%) | ok | ok |
+| `gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072` (recommended) | 16.00 | 16.25 | +0.24 (+1.5%) | 10.42 | 10.52 | +0.10 (+0.9%) | ok | ok |
 | `gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072` | 15.05 | 15.25 | +0.20 (+1.3%) | 9.76 | 10.11 | +0.35 (+3.6%) | ok | ok |
 | `gguf-vulkan-udq4kxl-auto-base-c1-ctx131072` | 10.65 | 10.91 | +0.27 (+2.5%) | 7.81 | 8.07 | +0.26 (+3.3%) | ok | ok |
 

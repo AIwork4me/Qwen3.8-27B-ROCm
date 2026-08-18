@@ -117,3 +117,34 @@ def test_soak_receipt_schema_keys_named_in_source():
     # Per-cycle record fields the drift trend is computed from.
     assert '"tok_per_s"' in src
     assert '"index"' in src
+    # v0.1.3 telemetry (2026-08-18 debt fix): health_flaps counts mid-soak
+    # health-check failures (0 in a normal run) into totals.
+    assert '"health_flaps"' in src, "soak totals must name health_flaps"
+
+
+def test_soak_captures_llama_server_banner_from_stderr():
+    # v0.1.3 debt fix verification (CI-safe, no host run): llama-server
+    # prints its --version banner to STDERR, so the receipt's
+    # llama_server_version resolves only when BOTH streams are captured
+    # (stdout alone — the pre-fix behavior that left the committed soak
+    # receipt with llama_server_version: null — is not enough). The capture
+    # lives in the real-execution MODEL_JSON block; this pins the source
+    # contract that keeps it resolving.
+    src = SCRIPT.read_text()
+    assert "llama_server_version" in src
+    assert "banner to stderr" in src or "prints to STDERR" in src, (
+        "the banner-is-on-stderr fact must stay documented next to the capture")
+    assert "ver = (p.stdout or \"\") + (p.stderr or \"\")" in src, (
+        "both streams must be captured for llama_server_version to resolve")
+
+
+def test_soak_counts_health_flaps_during_the_soak():
+    # The counter is incremented at every failed health check at a cycle
+    # boundary (the HEALTH_RECOVER_S wait path) and lands in totals — 0 in
+    # a normal run, >0 surfaced as an anomaly.
+    src = SCRIPT.read_text()
+    assert "HEALTH_FLAPS=0" in src, "the counter must start at 0"
+    assert 'HEALTH_FLAPS=$((HEALTH_FLAPS + 1))' in src, (
+        "a failed health check during the soak must count as a flap")
+    assert "mid-soak health flap(s)" in src, (
+        "a non-zero flap count must be surfaced as an anomaly")
