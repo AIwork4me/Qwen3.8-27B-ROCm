@@ -1,9 +1,9 @@
 {
-  "checked_at": "2026-08-17",
-  "reviewed_by": "controller-2026-08-17",
+  "checked_at": "2026-08-18",
+  "reviewed_by": "controller-2026-08-18",
   "cells": [
     {
-      "id": "gguf-udq4kxl-auto-base-c1-ctx131072",
+      "id": "gguf-hip-udq4kxl-auto-base-c1-ctx131072",
       "verdict": "recommended",
       "reason": "Interactive single-stream at the validated defaults (unified default boot, full 131072 window): per-stream 10.1 tok/s median (TPOT 98.6 ms/token) at/above the 10 tok/s interactive floor; greedy anchor byte-identical; GTT 25.9 GiB at load.",
       "metrics": {
@@ -31,10 +31,10 @@
         "avoid_candidate": false,
         "controller_override": null
       },
-      "conditions": "Single-user interactive chat at the validated defaults (UD-Q4_K_XL, ctx 131072). TTFT 5.1 s on ~1.4K-token prompts; concurrency demotes per-stream below the floor (see the c4 cells). Caveat (2026-08-17 final review): unified-default-boot c4 at ctx 131072 (the stock quickstart's 4-slot default under 4 concurrent users) was NOT measured — bracketed by the c4@32768 greedy pit (unified boot, degraded) and the clean split-mode c4@131072 cell; single-stream use is unaffected."
+      "conditions": "Single-user interactive chat at the validated defaults (UD-Q4_K_XL, ctx 131072). TTFT 5.1 s on ~1.4K-token prompts; concurrency demotes per-stream below the floor (see the c4 cells). Caveat (measured 2026-08-18, rider `gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified`): unified-default-boot c4 at ctx 131072 (the stock quickstart's 4-slot default under 4 concurrent users) measures 6.7 tok/s healthy-stream median (3-of-4 streams stopped within 8 tokens — early EOS — so the aggregate 5.0 tok/s is not comparable) vs the split-mode c4 cell 7.5 tok/s median / 9.4 tok/s aggregate — unified default boot degrades interactivity; prefer the split boot (`EXTRA_ARGS='-np 4'`) for light multi-user. Single-stream use is unaffected."
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c1-ctx262144",
+      "id": "gguf-hip-udq4kxl-auto-base-c1-ctx262144",
       "verdict": "recommended",
       "reason": "Interactive single-stream at the validated defaults (unified default boot, full 262144 window): per-stream 10.1 tok/s median (TPOT 98.8 ms/token) at/above the 10 tok/s interactive floor; greedy anchor byte-identical; GTT 33.9 GiB at load.",
       "metrics": {
@@ -65,7 +65,7 @@
       "conditions": "Single-user interactive chat at the validated defaults (UD-Q4_K_XL, ctx 262144). TTFT 5.3 s on ~1.4K-token prompts; concurrency demotes per-stream below the floor (see the c4 cells). GTT grows +8.0 GiB over the 131072 boot (34,742 vs 26,548 MiB = 64 KiB/token bf16 KV, the closed form); deep-context retrieval is not depth-reliable on this path (120K tier confident miss — see the context-capacity table)."
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c1-ctx32768",
+      "id": "gguf-hip-udq4kxl-auto-base-c1-ctx32768",
       "verdict": "recommended",
       "reason": "Interactive single-stream at the validated defaults (unified default boot, full 32768 window): per-stream 10.0 tok/s median (TPOT 99.6 ms/token) at/above the 10 tok/s interactive floor; greedy anchor byte-identical; GTT 19.9 GiB at load.",
       "metrics": {
@@ -96,7 +96,7 @@
       "conditions": "Single-user interactive chat at the validated defaults (UD-Q4_K_XL, ctx 32768). TTFT 5.3 s on ~1.4K-token prompts; concurrency demotes per-stream below the floor (see the c4 cells). Long-context retrieval smoke PASSED at this tier (needle recalled at ~30K-token depth)."
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c16-ctx131072",
+      "id": "gguf-hip-udq4kxl-auto-base-c16-ctx131072",
       "verdict": "avoid",
       "reason": "Greedy byte-identity anchor FAILED after the 16-stream bench (split boot (-np 16, n_ctx_slot 8192)): greedy decoding on the same server instance degenerates into a '////…' repetition loop (METHODOLOGY §6 pit). Recorded throughput (per-stream median 3.2 tok/s, aggregate 27.5 tok/s) is secondary — the cell is measured(degraded) and its anchor drift invalidates cross-path comparison.",
       "metrics": {
@@ -129,7 +129,7 @@
       "upstream": "llama.cpp HIP on gfx1151 — live at master HEAD 01818e495 (2026-08-17), same pit as the 4df29be4 pin; candidate fix PR #25863 https://github.com/ggml-org/llama.cpp/pull/25863 differentially verified on this host (patched 2/2 anchor PASS vs unpatched 3/3 FAIL on the idle host; receipts docs/results/upstream-controls/); tracked upstream in #25992 https://github.com/ggml-org/llama.cpp/issues/25992 (primary — same-host bisect, maintainer invited testing of the PR) and #23577 https://github.com/ggml-org/llama.cpp/issues/23577 (////-family); exact mechanism unresolved at session close (METHODOLOGY §6)"
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c4-ctx131072",
+      "id": "gguf-hip-udq4kxl-auto-base-c4-ctx131072",
       "verdict": "caution",
       "reason": "Per-stream median 7.5 tok/s (TPOT 133.0 ms/token) is below the 10 tok/s interactive floor at the c4 light-multi-user tier; aggregate 9.4 tok/s. Anchor clean; GTT 25.9 GiB at load.",
       "metrics": {
@@ -160,7 +160,39 @@
       "conditions": "Batch/light-multi-user use only — aggregate 9.4 tok/s; interactive chat → the c1 cells (mtp-c1 13.0 tok/s). UX claims exclude non-healthy streams: 1-of-4 stream(s) emitted <2 content tokens (no defined TPOT) and must not count toward latency claims."
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c4-ctx262144",
+      "id": "gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified",
+      "verdict": "caution",
+      "reason": "Per-stream median 6.7 tok/s (TPOT 149.9 ms/token) is below the 10 tok/s interactive floor at the c4 light-multi-user tier; aggregate 5.0 tok/s. Anchor clean; GTT 25.9 GiB at load. Controller ruling 2026-08-18 (measured-with-caveat rider): the stock quickstart's 4-slot unified default boot under 4 concurrent users DEGRADES interactivity vs split-mode c4 at ctx 131072 — healthy-stream median 6.7 vs 7.5 tok/s, aggregate 5.0 vs 9.4 tok/s (3-of-4 streams stopped within 8 tokens — early EOS: the unified aggregate is not comparable; UX claims use the healthy-stream median). No config change: single-stream quickstart use is unaffected and light multi-user already steers to vLLM. This closes the v0.1.0/v0.1.1 'unified-default-boot c4@131072 not measured' bracketing gap.",
+      "metrics": {
+        "streams": 4,
+        "ok_streams": 4,
+        "failed_streams": 0,
+        "healthy_streams": 3,
+        "per_stream_tok_s_median": 6.67,
+        "per_stream_tok_s_min": 1.02,
+        "tpot_ms_median": 149.9,
+        "ttft_ms_median": 22130.6,
+        "aggregate_tok_s": 5.02,
+        "wall_s": 46.8,
+        "anchor_ok": true,
+        "boot_ok": true,
+        "gtt_mib": 26556,
+        "vram_mib": 1556,
+        "min_completion_tokens": 2,
+        "capped_streams": 0,
+        "c": 4,
+        "ctx": 131072,
+        "gtt_gib": 25.9,
+        "auto_verdict": "caution",
+        "auto_rung": "rung2-interactive-floor",
+        "avoid_candidate": true,
+        "controller_override": null,
+        "reviewed_by": "controller-2026-08-18"
+      },
+      "conditions": "Batch/light-multi-user use only — aggregate 5.0 tok/s; interactive chat → the c1 cells (mtp-c1 13.0 tok/s). UX claims exclude non-healthy streams: 1-of-4 stream(s) emitted <2 content tokens (no defined TPOT) and must not count toward latency claims. Prefer the split boot (`EXTRA_ARGS='-np 4'`) for light multi-user — the unified default boot degrades interactivity (see the ruling in the reason)."
+    },
+    {
+      "id": "gguf-hip-udq4kxl-auto-base-c4-ctx262144",
       "verdict": "caution",
       "reason": "Per-stream median 8.4 tok/s (TPOT 119.1 ms/token) is below the 10 tok/s interactive floor at the c4 light-multi-user tier; aggregate 8.8 tok/s. Anchor clean; GTT 33.9 GiB at load.",
       "metrics": {
@@ -191,7 +223,7 @@
       "conditions": "Batch/light-multi-user use only — aggregate 8.8 tok/s; interactive chat → the c1 cells (mtp-c1 13.0 tok/s). UX claims exclude non-healthy streams: 2-of-4 stream(s) emitted <2 content tokens (no defined TPOT) and must not count toward latency claims. Full-context tier: GTT +8.0 GiB over the 131072 boot and the deep-context retrieval caveat apply (see the context-capacity table)."
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c4-ctx32768",
+      "id": "gguf-hip-udq4kxl-auto-base-c4-ctx32768",
       "verdict": "avoid",
       "reason": "Greedy byte-identity anchor FAILED after the 4-stream bench (unified default boot, n_ctx_slot 32768): greedy decoding on the same server instance degenerates into a '////…' repetition loop (METHODOLOGY §6 pit). Recorded throughput (per-stream median 5.8 tok/s, aggregate 15.7 tok/s) is secondary — the cell is measured(degraded) and its anchor drift invalidates cross-path comparison.",
       "metrics": {
@@ -224,7 +256,7 @@
       "upstream": "llama.cpp HIP on gfx1151 — live at master HEAD 01818e495 (2026-08-17), same pit as the 4df29be4 pin; candidate fix PR #25863 https://github.com/ggml-org/llama.cpp/pull/25863 differentially verified on this host (patched 2/2 anchor PASS vs unpatched 3/3 FAIL on the idle host; receipts docs/results/upstream-controls/); tracked upstream in #25992 https://github.com/ggml-org/llama.cpp/issues/25992 (primary — same-host bisect, maintainer invited testing of the PR) and #23577 https://github.com/ggml-org/llama.cpp/issues/23577 (////-family); exact mechanism unresolved at session close (METHODOLOGY §6)"
     },
     {
-      "id": "gguf-udq4kxl-auto-base-c8-ctx131072",
+      "id": "gguf-hip-udq4kxl-auto-base-c8-ctx131072",
       "verdict": "avoid",
       "reason": "Greedy byte-identity anchor FAILED after the 8-stream bench (split boot (-np 8, n_ctx_slot 16384)): greedy decoding on the same server instance degenerates into a '////…' repetition loop (METHODOLOGY §6 pit). Recorded throughput (per-stream median 3.6 tok/s, aggregate 18.4 tok/s) is secondary — the cell is measured(degraded) and its anchor drift invalidates cross-path comparison.",
       "metrics": {
@@ -257,7 +289,7 @@
       "upstream": "llama.cpp HIP on gfx1151 — live at master HEAD 01818e495 (2026-08-17), same pit as the 4df29be4 pin; candidate fix PR #25863 https://github.com/ggml-org/llama.cpp/pull/25863 differentially verified on this host (patched 2/2 anchor PASS vs unpatched 3/3 FAIL on the idle host; receipts docs/results/upstream-controls/); tracked upstream in #25992 https://github.com/ggml-org/llama.cpp/issues/25992 (primary — same-host bisect, maintainer invited testing of the PR) and #23577 https://github.com/ggml-org/llama.cpp/issues/23577 (////-family); exact mechanism unresolved at session close (METHODOLOGY §6)"
     },
     {
-      "id": "gguf-udq4kxl-auto-mtp-c1-ctx131072",
+      "id": "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072",
       "verdict": "recommended",
       "reason": "Interactive single-stream at the validated defaults (unified default boot, full 131072 window): per-stream 13.0 tok/s median (TPOT 76.9 ms/token) at/above the 10 tok/s interactive floor; greedy anchor byte-identical; GTT 28.6 GiB at load. MTP speculative decoding lifts per-stream throughput +28.2% (13.0 vs 10.1 tok/s median; aggregate basis +20.8%) — the quickstart's WITH_MTP=1 opt-in is safe for interactive chat.",
       "metrics": {
@@ -291,10 +323,10 @@
           "base_aggregate_tok_s": 8.45
         }
       },
-      "conditions": "+28.2% is the PER-STREAM basis (13.0 vs 10.1 tok/s median, c1 ctx 131072); aggregate basis +20.8% (10.2 vs 8.4 tok/s). Payoff shrinks under concurrency: c4 median 9.0 tok/s (below floor), and c8/c16 hit the anchor-degradation pit (avoid cells). Caveat (2026-08-17 final review): unified-default-boot c4 at ctx 131072 (the stock quickstart's 4-slot default under 4 concurrent users) was NOT measured — bracketed by the c4@32768 greedy pit (unified boot, degraded) and the clean split-mode c4@131072 cell; single-stream use is unaffected."
+      "conditions": "+28.2% is the PER-STREAM basis (13.0 vs 10.1 tok/s median, c1 ctx 131072); aggregate basis +20.8% (10.2 vs 8.4 tok/s). Payoff shrinks under concurrency: c4 median 9.0 tok/s (below floor), and c8/c16 hit the anchor-degradation pit (avoid cells). Caveat (measured 2026-08-18, rider `gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified`): unified-default-boot c4 at ctx 131072 (the stock quickstart's 4-slot default under 4 concurrent users) measures 6.7 tok/s healthy-stream median (3-of-4 streams stopped within 8 tokens — early EOS — so the aggregate 5.0 tok/s is not comparable) vs the split-mode c4 cell 7.5 tok/s median / 9.4 tok/s aggregate — unified default boot degrades interactivity; prefer the split boot (`EXTRA_ARGS='-np 4'`) for light multi-user. Single-stream use is unaffected."
     },
     {
-      "id": "gguf-udq4kxl-auto-mtp-c16-ctx131072",
+      "id": "gguf-hip-udq4kxl-auto-mtp-c16-ctx131072",
       "verdict": "avoid",
       "reason": "Greedy byte-identity anchor FAILED after the 16-stream bench (split boot (-np 16, n_ctx_slot 8192)): greedy decoding on the same server instance degenerates into a '////…' repetition loop (METHODOLOGY §6 pit). Recorded throughput (per-stream median 1.4 tok/s, aggregate 16.3 tok/s) is secondary — the cell is measured(degraded) and its anchor drift invalidates cross-path comparison.",
       "metrics": {
@@ -333,9 +365,9 @@
       "upstream": "llama.cpp HIP on gfx1151 — live at master HEAD 01818e495 (2026-08-17), same pit as the 4df29be4 pin; candidate fix PR #25863 https://github.com/ggml-org/llama.cpp/pull/25863 differentially verified on this host (patched 2/2 anchor PASS vs unpatched 3/3 FAIL on the idle host; receipts docs/results/upstream-controls/); tracked upstream in #25992 https://github.com/ggml-org/llama.cpp/issues/25992 (primary — same-host bisect, maintainer invited testing of the PR) and #23577 https://github.com/ggml-org/llama.cpp/issues/23577 (////-family); exact mechanism unresolved at session close (METHODOLOGY §6)"
     },
     {
-      "id": "gguf-udq4kxl-auto-mtp-c4-ctx131072",
+      "id": "gguf-hip-udq4kxl-auto-mtp-c4-ctx131072",
       "verdict": "caution",
-      "reason": "Per-stream median 9.0 tok/s (TPOT 110.9 ms/token) is below the 10 tok/s interactive floor at the c4 light-multi-user tier; aggregate 10.9 tok/s. Better than base c4 (9.4 tok/s aggregate), but MTP's payoff shrinks with concurrency (c1: +19.9% per-stream). Anchor clean; GTT 28.6 GiB at load.",
+      "reason": "Per-stream median 9.0 tok/s (TPOT 110.9 ms/token) is below the 10 tok/s interactive floor at the c4 light-multi-user tier; aggregate 10.9 tok/s. Above the base c4 aggregate (10.9 vs 9.4 tok/s, +15.6%), but MTP's payoff shrinks with concurrency (per-stream at c4: 9.0 vs 7.5 tok/s, +19.9%). Anchor clean; GTT 28.6 GiB at load.",
       "metrics": {
         "streams": 4,
         "ok_streams": 4,
@@ -370,7 +402,7 @@
       "conditions": "Batch/light-multi-user use only — aggregate 10.9 tok/s; interactive chat → the c1 cells (mtp-c1 13.0 tok/s). UX claims exclude non-healthy streams: 1-of-4 stream(s) emitted <2 content tokens (no defined TPOT) and must not count toward latency claims."
     },
     {
-      "id": "gguf-udq4kxl-auto-mtp-c8-ctx131072",
+      "id": "gguf-hip-udq4kxl-auto-mtp-c8-ctx131072",
       "verdict": "avoid",
       "reason": "Greedy byte-identity anchor FAILED after the 8-stream bench (split boot (-np 8, n_ctx_slot 16384)): greedy decoding on the same server instance degenerates into a '////…' repetition loop (METHODOLOGY §6 pit). Recorded throughput (per-stream median 2.1 tok/s, aggregate 10.7 tok/s) is secondary — the cell is measured(degraded) and its anchor drift invalidates cross-path comparison.",
       "metrics": {
@@ -407,6 +439,260 @@
       "conditions": "Pit correlation, stated honestly per the corrected §6 erratum: 7-of-8 streams hit the 256-token cap; the remaining stream(s) stopped early (content degraded anyway), while all clean cells had early-stopping streams; the exact trigger is unresolved (not split-KV-specific: this reproduces on the unified default boot too).",
       "workaround": "Restart the server to restore greedy decoding; for multi-stream loads use the vLLM path — all 8 vLLM anchors stayed clean, including anchors run immediately after 16-stream benches (METHODOLOGY §7).",
       "upstream": "llama.cpp HIP on gfx1151 — live at master HEAD 01818e495 (2026-08-17), same pit as the 4df29be4 pin; candidate fix PR #25863 https://github.com/ggml-org/llama.cpp/pull/25863 differentially verified on this host (patched 2/2 anchor PASS vs unpatched 3/3 FAIL on the idle host; receipts docs/results/upstream-controls/); tracked upstream in #25992 https://github.com/ggml-org/llama.cpp/issues/25992 (primary — same-host bisect, maintainer invited testing of the PR) and #23577 https://github.com/ggml-org/llama.cpp/issues/23577 (////-family); exact mechanism unresolved at session close (METHODOLOGY §6)"
+    },
+    {
+      "id": "gguf-hip-udq4kxl-auto-mtp4-c1-ctx131072",
+      "verdict": "recommended",
+      "reason": "Interactive single-stream at the validated defaults (unified default boot, full 131072 window): per-stream 12.8 tok/s median (TPOT 78.4 ms/token) at/above the 10 tok/s interactive floor; greedy anchor byte-identical; GTT 29.2 GiB at load. MTP speculative decoding lifts per-stream throughput +25.8% (12.8 vs 10.1 tok/s median; aggregate basis +18.6%) — the quickstart's WITH_MTP=1 opt-in is safe for interactive chat. Controller review 2026-08-18: depth 4 does NOT beat depth 1 on hip either (12.8 vs 13.0 tok/s) — mtp (depth 1) stays the recommended variant on both backends; no mtp4 recommendation anywhere. Cross-depth caveat: the hip mtp-c1 receipt (2026-08-17) ran the implicit --spec-draft-n-max default 3 while every v0.1.2 cell passes its depth explicitly (configs/validated-stack.json llama_cpp_vulkan.mtp_depth.note), so the 12.8-vs-13.0 pairing is depth-4-explicit vs implicit-depth-3; the fixed-depth cross-backend comparison lives on the vulkan side (depth 1: 16.0 vs depth 4: 15.1 tok/s). Anchor clean, measured the same day as the vulkan cells.",
+      "metrics": {
+        "streams": 1,
+        "ok_streams": 1,
+        "failed_streams": 0,
+        "healthy_streams": 1,
+        "per_stream_tok_s_median": 12.76,
+        "per_stream_tok_s_min": 12.76,
+        "tpot_ms_median": 78.4,
+        "ttft_ms_median": 5554.0,
+        "aggregate_tok_s": 10.02,
+        "wall_s": 25.6,
+        "anchor_ok": true,
+        "boot_ok": true,
+        "gtt_mib": 29888,
+        "vram_mib": 1554,
+        "min_completion_tokens": 256,
+        "capped_streams": 1,
+        "c": 1,
+        "ctx": 131072,
+        "gtt_gib": 29.2,
+        "auto_verdict": "recommended",
+        "auto_rung": "rung4-clean",
+        "avoid_candidate": false,
+        "controller_override": null,
+        "reviewed_by": "controller-2026-08-18",
+        "mtp_gain_vs_base": {
+          "per_stream_pct": 25.8,
+          "aggregate_pct": 18.6,
+          "base_per_stream_tok_s_median": 10.14,
+          "base_aggregate_tok_s": 8.45
+        }
+      },
+      "conditions": "+25.8% is the PER-STREAM basis (12.8 vs 10.1 tok/s median, c1 ctx 131072); aggregate basis +18.6% (10.0 vs 8.4 tok/s). Payoff shrinks under concurrency: c4 median 9.0 tok/s (below floor), and c8/c16 hit the anchor-degradation pit (avoid cells)."
+    },
+    {
+      "id": "gguf-vulkan-udq4kxl-auto-base-c1-ctx131072",
+      "verdict": "recommended",
+      "reason": "Interactive single-stream at the validated defaults (unified default boot, full 131072 window): per-stream 10.7 tok/s median (TPOT 93.9 ms/token) at/above the 10 tok/s interactive floor; greedy anchor byte-identical; GTT 1.0 GiB at load. Controller review 2026-08-18: mechanical verdict confirmed, no override. Backend alone is a small c1 delta — 10.7 vs hip 10.1 tok/s (+5.0%) — the AMD 24.5 tok/s Day-0 anchor gap is not a pure backend effect; the biggest single-stream lever measured on this host is Vulkan+MTP (16.0 tok/s, the recommended opt-in). 6-of-6 vulkan anchors clean — the hip greedy pit does not reproduce on this backend.",
+      "metrics": {
+        "streams": 1,
+        "ok_streams": 1,
+        "failed_streams": 0,
+        "healthy_streams": 1,
+        "per_stream_tok_s_median": 10.65,
+        "per_stream_tok_s_min": 10.65,
+        "tpot_ms_median": 93.9,
+        "ttft_ms_median": 8834.1,
+        "aggregate_tok_s": 7.81,
+        "wall_s": 32.8,
+        "anchor_ok": true,
+        "boot_ok": true,
+        "gtt_mib": 1057,
+        "vram_mib": 27872,
+        "min_completion_tokens": 256,
+        "capped_streams": 1,
+        "c": 1,
+        "ctx": 131072,
+        "gtt_gib": 1.0,
+        "auto_verdict": "recommended",
+        "auto_rung": "rung4-clean",
+        "avoid_candidate": false,
+        "controller_override": null,
+        "reviewed_by": "controller-2026-08-18"
+      },
+      "conditions": "Single-user interactive chat at the validated defaults (UD-Q4_K_XL, ctx 131072). TTFT 8.8 s on ~1.4K-token prompts; concurrency demotes per-stream below the floor (see the c4 cells)."
+    },
+    {
+      "id": "gguf-vulkan-udq4kxl-auto-base-c4-ctx131072",
+      "verdict": "caution",
+      "reason": "Per-stream median 6.6 tok/s (TPOT 152.0 ms/token) is below the 10 tok/s interactive floor at the c4 light-multi-user tier; aggregate 14.4 tok/s. Anchor clean; GTT 0.9 GiB at load. Controller review 2026-08-18: caution confirmed. Vulkan c4 aggregates well above hip split-mode (14.4 vs 9.4 tok/s) but per-stream stays below the floor — interactive guidance is unchanged cross-backend (the c1 cells). Anchor clean; the hip-family greedy pit does not reproduce on Vulkan (6-of-6 v0.1.2 anchors clean).",
+      "metrics": {
+        "streams": 4,
+        "ok_streams": 4,
+        "failed_streams": 0,
+        "healthy_streams": 4,
+        "per_stream_tok_s_median": 6.6,
+        "per_stream_tok_s_min": 6.21,
+        "tpot_ms_median": 152.0,
+        "ttft_ms_median": 32107.1,
+        "aggregate_tok_s": 14.42,
+        "wall_s": 71.0,
+        "anchor_ok": true,
+        "boot_ok": true,
+        "gtt_mib": 957,
+        "vram_mib": 27778,
+        "min_completion_tokens": 256,
+        "capped_streams": 4,
+        "c": 4,
+        "ctx": 131072,
+        "gtt_gib": 0.9,
+        "auto_verdict": "caution",
+        "auto_rung": "rung2-interactive-floor",
+        "avoid_candidate": false,
+        "controller_override": null,
+        "reviewed_by": "controller-2026-08-18"
+      },
+      "conditions": "Batch/light-multi-user use only — aggregate 14.4 tok/s; interactive chat → the c1 cells (mtp-c1 13.0 tok/s)."
+    },
+    {
+      "id": "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072",
+      "verdict": "recommended",
+      "reason": "Interactive single-stream at the validated defaults (unified default boot, full 131072 window): per-stream 16.0 tok/s median (TPOT 62.5 ms/token) at/above the 10 tok/s interactive floor; greedy anchor byte-identical; GTT 1.2 GiB at load. MTP speculative decoding lifts per-stream throughput +50.2% (16.0 vs 10.7 tok/s median; aggregate basis +33.4%) — the quickstart's WITH_MTP=1 opt-in is safe for interactive chat. Controller ruling 2026-08-18 (v0.1.2, plan outcome (a) — pre-registered rule triggered): promoted in the gguf-quickstart echo as the recommended OPT-IN for best single-stream tok/s (16.0 vs hip mtp-c1 13.0 tok/s, +23.1%); the quickstart DEFAULT stays hip (headline <25%, single-session Vulkan runtime, one ICD — RADV 25.2.8; the 'experimental, see verdicts' label is kept). Cross-depth caveat: the +23.1% headline is MIXED-DEPTH — the hip mtp-c1 receipt (2026-08-17) ran the implicit --spec-draft-n-max default 3 while every v0.1.2 cell passes its depth explicitly (configs/validated-stack.json llama_cpp_vulkan.mtp_depth.note); the clean same-depth cross-backend pairing is depth 4 — vulkan mtp4 15.1 vs hip mtp4 12.8 tok/s (+17.9%, both explicit depth 4, same day). Anchor-clean trigger met (6-of-6 vulkan anchors byte-identical — the hip greedy pit does not reproduce on this backend). mtp (depth 1) stays the recommended variant: depth 4 never beats it on either backend.",
+      "metrics": {
+        "streams": 1,
+        "ok_streams": 1,
+        "failed_streams": 0,
+        "healthy_streams": 1,
+        "per_stream_tok_s_median": 16.0,
+        "per_stream_tok_s_min": 16.0,
+        "tpot_ms_median": 62.5,
+        "ttft_ms_median": 8632.5,
+        "aggregate_tok_s": 10.42,
+        "wall_s": 24.6,
+        "anchor_ok": true,
+        "boot_ok": true,
+        "gtt_mib": 1219,
+        "vram_mib": 29458,
+        "min_completion_tokens": 256,
+        "capped_streams": 1,
+        "c": 1,
+        "ctx": 131072,
+        "gtt_gib": 1.2,
+        "auto_verdict": "recommended",
+        "auto_rung": "rung4-clean",
+        "avoid_candidate": false,
+        "controller_override": null,
+        "reviewed_by": "controller-2026-08-18",
+        "mtp_gain_vs_base": {
+          "per_stream_pct": 50.2,
+          "aggregate_pct": 33.4,
+          "base_per_stream_tok_s_median": 10.65,
+          "base_aggregate_tok_s": 7.81
+        }
+      },
+      "conditions": "+50.2% is the PER-STREAM basis (16.0 vs 10.7 tok/s median, c1 ctx 131072); aggregate basis +33.4% (10.4 vs 7.8 tok/s). Payoff shrinks under concurrency: c4 median 6.1 tok/s (below floor); c8/c16 are unmeasured on this backend, and the hip-family greedy pit does not reproduce here (6-of-6 anchors clean in the v0.1.2 cells)."
+    },
+    {
+      "id": "gguf-vulkan-udq4kxl-auto-mtp-c4-ctx131072",
+      "verdict": "caution",
+      "reason": "Per-stream median 6.1 tok/s (TPOT 163.9 ms/token) is below the 10 tok/s interactive floor at the c4 light-multi-user tier; aggregate 13.3 tok/s. Aggregate 13.3 vs base c4 14.4 tok/s (-7.5%), but MTP's payoff shrinks with concurrency (per-stream at c4: 6.1 vs 6.6 tok/s, -7.3%). Anchor clean; GTT 1.0 GiB at load. Controller review 2026-08-18: caution confirmed, with the basis corrected this release (the c4-caution template previously asserted 'Better than base c4' regardless of direction and mislabeled a c4-basis number as 'c1:'): MTP vs the base counterpart at c4 on Vulkan is a REGRESSION — aggregate 13.3 vs 14.4 tok/s (-7.5%), per-stream 6.1 vs 6.6 tok/s (-7.3%) — the c1 MTP payoff inverts under concurrency on this backend too.",
+      "metrics": {
+        "streams": 4,
+        "ok_streams": 4,
+        "failed_streams": 0,
+        "healthy_streams": 4,
+        "per_stream_tok_s_median": 6.12,
+        "per_stream_tok_s_min": 5.58,
+        "tpot_ms_median": 163.9,
+        "ttft_ms_median": 33254.3,
+        "aggregate_tok_s": 13.34,
+        "wall_s": 76.4,
+        "anchor_ok": true,
+        "boot_ok": true,
+        "gtt_mib": 1029,
+        "vram_mib": 29288,
+        "min_completion_tokens": 252,
+        "capped_streams": 3,
+        "c": 4,
+        "ctx": 131072,
+        "gtt_gib": 1.0,
+        "auto_verdict": "caution",
+        "auto_rung": "rung2-interactive-floor",
+        "avoid_candidate": true,
+        "controller_override": null,
+        "reviewed_by": "controller-2026-08-18",
+        "mtp_gain_vs_base": {
+          "per_stream_pct": -7.3,
+          "aggregate_pct": -7.5,
+          "base_per_stream_tok_s_median": 6.6,
+          "base_aggregate_tok_s": 14.42
+        }
+      },
+      "conditions": "Batch/light-multi-user use only — aggregate 13.3 tok/s; interactive chat → the c1 cells (mtp-c1 13.0 tok/s)."
+    },
+    {
+      "id": "gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072",
+      "verdict": "recommended",
+      "reason": "Interactive single-stream at the validated defaults (unified default boot, full 131072 window): per-stream 15.1 tok/s median (TPOT 66.4 ms/token) at/above the 10 tok/s interactive floor; greedy anchor byte-identical; GTT 1.2 GiB at load. MTP speculative decoding lifts per-stream throughput +41.3% (15.1 vs 10.7 tok/s median; aggregate basis +25.0%) — the quickstart's WITH_MTP=1 opt-in is safe for interactive chat. Controller review 2026-08-18: depth 4 does NOT beat depth 1 on Vulkan (15.1 vs 16.0 tok/s) — mtp (depth 1) stays the recommended variant on both backends; no mtp4 recommendation. Clean same-depth cross-backend pairing vs hip mtp4 (12.8 tok/s): +17.9% (both cells explicit --spec-draft-n-max 4, measured the same day).",
+      "metrics": {
+        "streams": 1,
+        "ok_streams": 1,
+        "failed_streams": 0,
+        "healthy_streams": 1,
+        "per_stream_tok_s_median": 15.05,
+        "per_stream_tok_s_min": 15.05,
+        "tpot_ms_median": 66.4,
+        "ttft_ms_median": 8641.0,
+        "aggregate_tok_s": 9.76,
+        "wall_s": 24.4,
+        "anchor_ok": true,
+        "boot_ok": true,
+        "gtt_mib": 1219,
+        "vram_mib": 31284,
+        "min_completion_tokens": 238,
+        "capped_streams": 0,
+        "c": 1,
+        "ctx": 131072,
+        "gtt_gib": 1.2,
+        "auto_verdict": "recommended",
+        "auto_rung": "rung4-clean",
+        "avoid_candidate": false,
+        "controller_override": null,
+        "reviewed_by": "controller-2026-08-18",
+        "mtp_gain_vs_base": {
+          "per_stream_pct": 41.3,
+          "aggregate_pct": 25.0,
+          "base_per_stream_tok_s_median": 10.65,
+          "base_aggregate_tok_s": 7.81
+        }
+      },
+      "conditions": "+41.3% is the PER-STREAM basis (15.1 vs 10.7 tok/s median, c1 ctx 131072); aggregate basis +25.0% (9.8 vs 7.8 tok/s). Payoff shrinks under concurrency: c4 median 6.2 tok/s (below floor); c8/c16 are unmeasured on this backend, and the hip-family greedy pit does not reproduce here (6-of-6 anchors clean in the v0.1.2 cells)."
+    },
+    {
+      "id": "gguf-vulkan-udq4kxl-auto-mtp4-c4-ctx131072",
+      "verdict": "caution",
+      "reason": "Per-stream median 6.2 tok/s (TPOT 160.4 ms/token) is below the 10 tok/s interactive floor at the c4 light-multi-user tier; aggregate 12.5 tok/s. Aggregate 12.5 vs base c4 14.4 tok/s (-13.0%), but MTP's payoff shrinks with concurrency (per-stream at c4: 6.2 vs 6.6 tok/s, -5.6%). Anchor clean; GTT 1.0 GiB at load. Controller review 2026-08-18: caution confirmed (corrected basis, same template fix): depth-4 MTP vs the base counterpart at c4 on Vulkan regresses — aggregate 12.5 vs 14.4 tok/s (-13.0%), per-stream 6.2 vs 6.6 tok/s (-5.6%); depth 1 beats depth 4 at c1 as well — no mtp4 recommendation.",
+      "metrics": {
+        "streams": 4,
+        "ok_streams": 4,
+        "failed_streams": 0,
+        "healthy_streams": 4,
+        "per_stream_tok_s_median": 6.23,
+        "per_stream_tok_s_min": 5.51,
+        "tpot_ms_median": 160.4,
+        "ttft_ms_median": 36824.2,
+        "aggregate_tok_s": 12.54,
+        "wall_s": 79.4,
+        "anchor_ok": true,
+        "boot_ok": true,
+        "gtt_mib": 1029,
+        "vram_mib": 31114,
+        "min_completion_tokens": 242,
+        "capped_streams": 2,
+        "c": 4,
+        "ctx": 131072,
+        "gtt_gib": 1.0,
+        "auto_verdict": "caution",
+        "auto_rung": "rung2-interactive-floor",
+        "avoid_candidate": true,
+        "controller_override": null,
+        "reviewed_by": "controller-2026-08-18",
+        "mtp_gain_vs_base": {
+          "per_stream_pct": -5.6,
+          "aggregate_pct": -13.0,
+          "base_per_stream_tok_s_median": 6.6,
+          "base_aggregate_tok_s": 14.42
+        }
+      },
+      "conditions": "Batch/light-multi-user use only — aggregate 12.5 tok/s; interactive chat → the c1 cells (mtp-c1 13.0 tok/s)."
     },
     {
       "id": "vllm-bf16-auto-base-c1-ctx262144",

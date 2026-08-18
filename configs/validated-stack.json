@@ -63,5 +63,35 @@
       "receipt": "docs/results/rocm-7.14/gguf-validation.md",
       "date": "2026-08-17"
     }
+  },
+  "llama_cpp_vulkan": {
+    "source_repo": "https://github.com/ggml-org/llama.cpp.git",
+    "commit": "4df29be4f4c3673f428170fda944a5b19f743bb8",
+    "backend": "vulkan",
+    "build_dir": "third_party/llama.cpp/build-714-vk",
+    "icd": "RADV",
+    "icd_details": {
+      "gpu0": {
+        "apiVersion": "1.4.318",
+        "deviceName": "AMD Radeon Graphics (RADV GFX1151)",
+        "driverID": "DRIVER_ID_MESA_RADV",
+        "driverInfo": "Mesa 25.2.8-0ubuntu0.24.04.2",
+        "driverName": "radv"
+      },
+      "instance_version": "1.3.275"
+    },
+    "mtp_depth": {
+      "flag": "--spec-draft-n-max",
+      "default": 3,
+      "mechanism": "draft-mtp self-chains the single trained qwen35 MTP head up to n_max drafted tokens per step (draft() feeds the head its own h output back); depth is configurable, NOT fixed by the checkpoint",
+      "evidence": "third_party/llama.cpp@4df29be4: common/arg.cpp:4077 (--spec-draft-n-max, env LLAMA_ARG_SPEC_DRAFT_N_MAX), common/common.h:325 (draft n_max default 3), common/speculative.cpp:1274+ (draft-mtp impl; single-head else-branch chains h_row), :1371 (n_max clamped to n_mtp_layers only for chain_heads checkpoints)",
+      "mtp4_expressible": true,
+      "runner_depths": {
+        "mtp": 1,
+        "mtp4": 4
+      },
+      "note": "hip mtp receipts measured 2026-08-17 predate this discovery and ran at the implicit default n_max=3; cells booted by run-cell-gguf.sh now pass the depth explicitly and record it in server_flags"
+    },
+    "built_at": "2026-08-18"
   }
 }

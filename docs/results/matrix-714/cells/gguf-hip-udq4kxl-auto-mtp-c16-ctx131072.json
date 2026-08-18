@@ -1,12 +1,12 @@
 {
-  "id": "gguf-udq4kxl-auto-base-c16-ctx131072",
-  "label": "gguf-udq4kxl-auto-base-c16-ctx131072",
+  "id": "gguf-hip-udq4kxl-auto-mtp-c16-ctx131072",
+  "label": "gguf-hip-udq4kxl-auto-mtp-c16-ctx131072",
   "base_url": "http://127.0.0.1:8080",
-  "started_utc": "2026-08-16T22:16:43Z",
+  "started_utc": "2026-08-16T22:35:38Z",
   "server_flags": {
     "ctx_size": 131072,
     "concurrency_np": 16,
-    "with_mtp": false,
+    "with_mtp": true,
     "extra_args": "-np 16",
     "port": 8080,
     "kv_semantics_expected": "split (explicit -np 16: per-slot window = 131072/16 = 8192, kv_unified=false)",
@@ -17,6 +17,8 @@
       "-ngl",
       "99",
       "--jinja",
+      "--spec-type",
+      "draft-mtp",
       "-np",
       "16"
     ]
@@ -29,20 +31,20 @@
   },
   "load": {
     "vram_mib": 1131,
-    "gtt_mib": 28392
+    "gtt_mib": 36628
   },
   "boot": {
     "ok": true,
     "health_wall_s": 6
   },
   "client": {
-    "label": "gguf-udq4kxl-auto-base-c16-ctx131072",
+    "label": "gguf-hip-udq4kxl-auto-mtp-c16-ctx131072",
     "concurrency": 16,
-    "started_utc": "2026-08-16T22:16:53.193491+00:00",
+    "started_utc": "2026-08-16T22:35:48.203481+00:00",
     "streams": [
       {
-        "ttft_ms": 87424.96387899155,
-        "tpot_ms": 240.7116911647951,
+        "ttft_ms": 90562.57191300392,
+        "tpot_ms": 628.5698214586934,
         "completion_tokens": 256,
         "prompt_tokens": 1412,
         "reasoning_tokens": 0,
@@ -51,8 +53,8 @@
         "error": null
       },
       {
-        "ttft_ms": 87422.32834198512,
-        "tpot_ms": 240.71538797260135,
+        "ttft_ms": 74893.27554398915,
+        "tpot_ms": 686.3126709568771,
         "completion_tokens": 256,
         "prompt_tokens": 1474,
         "reasoning_tokens": 0,
@@ -61,8 +63,8 @@
         "error": null
       },
       {
-        "ttft_ms": 85125.34115294693,
-        "tpot_ms": 249.06552991779594,
+        "ttft_ms": 90559.37096697744,
+        "tpot_ms": 628.574609341255,
         "completion_tokens": 256,
         "prompt_tokens": 1298,
         "reasoning_tokens": 0,
@@ -71,8 +73,8 @@
         "error": null
       },
       {
-        "ttft_ms": 87845.06529202918,
-        "tpot_ms": 239.46883420382315,
+        "ttft_ms": 66842.66190999188,
+        "tpot_ms": 715.4762468392066,
         "completion_tokens": 256,
         "prompt_tokens": 1469,
         "reasoning_tokens": 0,
@@ -81,8 +83,8 @@
         "error": null
       },
       {
-        "ttft_ms": 77810.02716696821,
-        "tpot_ms": 276.863213505952,
+        "ttft_ms": 83191.10041798558,
+        "tpot_ms": 655.4981378941139,
         "completion_tokens": 256,
         "prompt_tokens": 1336,
         "reasoning_tokens": 0,
@@ -91,8 +93,8 @@
         "error": null
       },
       {
-        "ttft_ms": 69812.72892298875,
-        "tpot_ms": 307.2252620196463,
+        "ttft_ms": 42511.70659705531,
+        "tpot_ms": 802.2601876115682,
         "completion_tokens": 256,
         "prompt_tokens": 1516,
         "reasoning_tokens": 0,
@@ -101,8 +103,8 @@
         "error": null
       },
       {
-        "ttft_ms": 85121.29300896777,
-        "tpot_ms": 249.06897115311128,
+        "ttft_ms": 90556.74853199162,
+        "tpot_ms": 628.5735163175701,
         "completion_tokens": 256,
         "prompt_tokens": 1462,
         "reasoning_tokens": 0,
@@ -111,8 +113,8 @@
         "error": null
       },
       {
-        "ttft_ms": 62124.53142501181,
-        "tpot_ms": 336.65395112155807,
+        "ttft_ms": 50571.12501299707,
+        "tpot_ms": 773.7491203255166,
         "completion_tokens": 256,
         "prompt_tokens": 1408,
         "reasoning_tokens": 0,
@@ -121,8 +123,8 @@
         "error": null
       },
       {
-        "ttft_ms": 87421.63883999456,
-        "tpot_ms": 240.7072855805631,
+        "ttft_ms": 66839.67061695876,
+        "tpot_ms": 715.4763636001221,
         "completion_tokens": 256,
         "prompt_tokens": 1412,
         "reasoning_tokens": 0,
@@ -131,8 +133,8 @@
         "error": null
       },
       {
-        "ttft_ms": 69809.42916200729,
-        "tpot_ms": 307.2304298941448,
+        "ttft_ms": 83187.9471730208,
+        "tpot_ms": 655.4973393763123,
         "completion_tokens": 256,
         "prompt_tokens": 1474,
         "reasoning_tokens": 0,
@@ -141,8 +143,8 @@
         "error": null
       },
       {
-        "ttft_ms": 30689.340993994847,
-        "tpot_ms": 456.61570539209515,
+        "ttft_ms": 26737.05139098456,
+        "tpot_ms": 857.4090225138135,
         "completion_tokens": 256,
         "prompt_tokens": 1298,
         "reasoning_tokens": 0,
@@ -151,8 +153,8 @@
         "error": null
       },
       {
-        "ttft_ms": 38604.713107983116,
-        "tpot_ms": 426.47253310207424,
+        "ttft_ms": 34577.08854199154,
+        "tpot_ms": 830.1184439960886,
         "completion_tokens": 256,
         "prompt_tokens": 1469,
         "reasoning_tokens": 0,
@@ -161,8 +163,8 @@
         "error": null
       },
       {
-        "ttft_ms": 46550.80310301855,
-        "tpot_ms": 396.1583073253232,
+        "ttft_ms": 58786.20668401709,
+        "tpot_ms": 744.3578163999607,
         "completion_tokens": 256,
         "prompt_tokens": 1336,
         "reasoning_tokens": 0,
@@ -171,8 +173,8 @@
         "error": null
       },
       {
-        "ttft_ms": 46548.65880595753,
-        "tpot_ms": 396.16284885115044,
+        "ttft_ms": 26735.891798045486,
+        "tpot_ms": 857.4109293292186,
         "completion_tokens": 256,
         "prompt_tokens": 1516,
         "reasoning_tokens": 0,
@@ -181,8 +183,8 @@
         "error": null
       },
       {
-        "ttft_ms": 30686.78450502921,
-        "tpot_ms": 456.61552183138315,
+        "ttft_ms": 89754.13750996813,
+        "tpot_ms": 631.1052686470907,
         "completion_tokens": 256,
         "prompt_tokens": 1462,
         "reasoning_tokens": 0,
@@ -191,8 +193,8 @@
         "error": null
       },
       {
-        "ttft_ms": 54243.94568701973,
-        "tpot_ms": 366.7740081724546,
+        "ttft_ms": 50568.24038998457,
+        "tpot_ms": 773.7486703097637,
         "completion_tokens": 256,
         "prompt_tokens": 1408,
         "reasoning_tokens": 0,
@@ -202,8 +204,8 @@
       }
     ],
     "aggregate": {
-      "tok_per_s": 27.5061309909484,
-      "wall_s": 148.9122552840272,
+      "tok_per_s": 16.32860454425033,
+      "wall_s": 250.8481351789669,
       "ok_streams": 16,
       "failed_streams": 0
     }
@@ -218,21 +220,21 @@
     "ctx-size     : 131072  (override: CTX_SIZE=<n>)",
     "gpu layers   : 99 (all)",
     "mmproj       : models/Qwen3.8-27B-GGUF/mmproj-F16.gguf",
-    "speculative  : off (opt in: WITH_MTP=1)",
+    "speculative  : draft-mtp (MTP head from the same GGUF)",
     "extra args   : -np 16",
     "Serving on http://127.0.0.1:8080 ...",
-    "0.00.028.039 W srv  llama_server: -----------------",
-    "0.00.028.039 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set",
-    "0.00.028.040 W srv  llama_server: this can be a security risk (cross-origin attacks)",
-    "0.00.028.040 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655",
-    "0.00.028.040 W srv  llama_server: -----------------",
-    "0.00.825.524 W model has unused tensor blk.64.attn_norm.weight (size = 20480 bytes) -- ignoring",
-    "0.00.825.531 W model has unused tensor blk.64.post_attention_norm.weight (size = 20480 bytes) -- ignoring",
-    "0.00.825.536 W model has unused tensor blk.64.attn_q.weight (size = 43253760 bytes) -- ignoring",
-    "0.00.825.537 W model has unused tensor blk.64.attn_k.weight (size = 3604480 bytes) -- ignoring",
-    "0.00.825.539 W model has unused tensor blk.64.attn_v.weight (size = 4300800 bytes) -- ignoring",
-    "0.00.825.545 W model has unused tensor blk.64.attn_output.weight (size = 21626880 bytes) -- ignoring",
-    "0.00.825.546 W model has unused tensor blk.64.attn_q_norm.weight (size = 1024 bytes) -- ignoring"
+    "0.00.039.413 W srv  llama_server: -----------------",
+    "0.00.039.415 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set",
+    "0.00.039.416 W srv  llama_server: this can be a security risk (cross-origin attacks)",
+    "0.00.039.416 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655",
+    "0.00.039.416 W srv  llama_server: -----------------",
+    "0.04.538.976 I common_speculative_init_result: creating MTP draft context against the target model 'models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf'",
+    "0.04.834.994 W load_hparams: Qwen-VL models require at minimum 1024 image tokens to function correctly on grounding tasks",
+    "0.04.834.999 W load_hparams: if you encounter problems with accuracy, try adding --image-min-tokens 1024",
+    "0.04.834.999 W load_hparams: more info: https://github.com/ggml-org/llama.cpp/issues/16842",
+    "0.05.368.025 I srv    load_model: initializing, n_slots = 16, n_ctx_slot = 8192, kv_unified = 'false'",
+    "0.05.368.381 W llama_sampler_backend_support: device 'ROCm0' does not have support for op TOP_K needed for sampler 'top-k'",
+    "0.05.368.392 W llama_sampler_backend_support: device 'ROCm0' does not have support for op TOP_K needed for sampler 'top-k'"
   ],
   "degraded": true,
   "degraded_reason": "anchor check failed (greedy byte-identity)"

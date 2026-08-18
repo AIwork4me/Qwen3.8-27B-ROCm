@@ -18,6 +18,14 @@ Usage:
     python3 scripts/render-readme-blocks.py --check # exit 1 if either is stale
 
 Hand-editing inside the markers is forbidden: the next regen destroys it.
+
+2026-08-18 backend-dimension migration (v0.1.2 Vulkan×MTP): gguf cell ids
+carry an explicit -hip-|-vulkan- tag (legacy unprefixed ids ARE hip; the
+cells/ files were renamed in lockstep, filename == id). Tables that mix
+backends render a Backend column derived from the id — the v0.1.2 session
+measured 6 vulkan cells + 2 hip cells (mtp4 depth, unified-boot c4 rider),
+so measured rows span both backends and every stale "all measured cells
+are hip" / "unmeasured" qualifier is derived from the data, never assumed.
 """
 
 from __future__ import annotations
@@ -60,6 +68,61 @@ def mark(verdict: str) -> str:
 
 def fmt(x, nd=1):
     return f"{x:.{nd}f}" if x is not None else "—"
+
+
+def backend_of(cid: str) -> str:
+    """Backend tag straight from the cell id (2026-08-18 grammar:
+    gguf-{backend}-...). vLLM has exactly one backend — no tag, no column."""
+    return cid.split("-")[1] if cid.startswith("gguf-") else ""
+
+
+def measured_date_range(cells: dict) -> str:
+    """The 'Measured <dates>' range, DERIVED from the raw receipts'
+    started_utc (2026-08-18 defect fix: the hardcoded 2026-08-16/17 range
+    went stale the day new cells landed)."""
+    ds = sorted({c["started_utc"][:10] for c in cells.values()})
+    if len(ds) == 1:
+        return ds[0]
+    if len(ds) == 2:
+        return f"{ds[0]} and {ds[1]}"
+    return f"{ds[0]} through {ds[-1]}"
+
+
+def review_attribution(verdicts: dict) -> str:
+    """Honest per-family review line for a mixed corpus (2026-08-18 defect
+    fix: a single `reviewed_by` overstated review for cells added after the
+    frozen review). The 20 migrated cells carry no per-cell
+    metrics.reviewed_by — they are governed by the frozen
+    controller-2026-08-17 review; every cell WITH metrics.reviewed_by names
+    its own reviewer of record."""
+    per_cell = [c for c in verdicts["cells"]
+                if c.get("metrics", {}).get("reviewed_by")]
+    legacy = [c for c in verdicts["cells"]
+              if not c.get("metrics", {}).get("reviewed_by")]
+    if not per_cell:
+        return (f"Verdicts reviewed and recorded by "
+                f"`{verdicts['reviewed_by']}`; ladder proposes, controller "
+                f"disposes.")
+    parts = []
+    if legacy:
+        parts.append(f"{len(legacy)} cells by `controller-2026-08-17` "
+                     f"(frozen review, unchanged by the later regeneration)")
+    reviewers = sorted({c["metrics"]["reviewed_by"] for c in per_cell})
+    for r in reviewers:
+        n = sum(1 for c in per_cell if c["metrics"]["reviewed_by"] == r)
+        parts.append(f"{n} cells by `{r}` (per-cell `metrics.reviewed_by`)")
+    return ("Verdicts reviewed and recorded: " + "; ".join(parts)
+            + ". Ladder proposes, controller disposes.")
+
+
+def short_id(cid: str) -> str:
+    """Table label: the id minus its fixed prefixes (path, backend, weight,
+    kv-mode) — e.g. `mtp-c1-ctx131072`."""
+    for prefix in (f"gguf-{backend_of(cid)}-udq4kxl-auto-",
+                   "vllm-bf16-auto-"):
+        if cid.startswith(prefix):
+            return cid[len(prefix):]
+    return cid
 
 
 def load_data() -> dict:
@@ -121,13 +184,15 @@ def render_performance_highlights(data: dict) -> str:
     v = data["vmap"]
     d = dist(data)
     gguf_reco = [v[i] for i in (
-        "gguf-udq4kxl-auto-mtp-c1-ctx131072",
-        "gguf-udq4kxl-auto-base-c1-ctx131072",
-        "gguf-udq4kxl-auto-base-c1-ctx32768",
-        "gguf-udq4kxl-auto-base-c1-ctx262144")]
+        "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072",
+        "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072",
+        "gguf-hip-udq4kxl-auto-base-c1-ctx131072",
+        "gguf-hip-udq4kxl-auto-base-c1-ctx32768",
+        "gguf-hip-udq4kxl-auto-base-c1-ctx262144")]
     lines = [
-        f"Measured 2026-08-16/17 on the reference host (gfx1151, ROCm 7.14, "
-        f"80 GiB GTT pool): **{len(data['verdicts']['cells'])} cells — "
+        f"Measured {measured_date_range(data['cells'])} on the reference "
+        f"host (gfx1151, ROCm 7.14, 80 GiB GTT pool): "
+        f"**{len(data['verdicts']['cells'])} cells — "
         f"{d.get('recommended', 0)} recommended / {d.get('caution', 0)} caution "
         f"/ {d.get('avoid', 0)} avoid**. Verdicts: "
         f"`configs/benchmark-verdicts.json`; raw receipts: "
@@ -136,22 +201,28 @@ def render_performance_highlights(data: dict) -> str:
         "",
         "**Recommended — interactive chat (GGUF path, UD-Q4_K_XL):**",
         "",
-        "| Config | Per-stream (median) | Aggregate | TTFT | Verdict |",
-        "|---|---|---|---|---|",
+        "| Config | Backend | Per-stream (median) | Aggregate | TTFT | Verdict |",
+        "|---|---|---|---|---|---|",
     ]
     for c in gguf_reco:
         m = c["metrics"]
         label = {
-            "gguf-udq4kxl-auto-mtp-c1-ctx131072":
-                "`WITH_MTP=1` mtp-c1 @131072 — +28% per-stream",
-            "gguf-udq4kxl-auto-base-c1-ctx131072":
+            "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072":
+                "`BACKEND=vulkan` + `WITH_MTP=1` mtp-c1 @131072 — "
+                "recommended opt-in, best single-stream (project ruling "
+                "2026-08-18)",
+            "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072":
+                "`WITH_MTP=1` mtp-c1 @131072 — +28% per-stream (the default "
+                "recommendation)",
+            "gguf-hip-udq4kxl-auto-base-c1-ctx131072":
                 "default boot base-c1 @131072",
-            "gguf-udq4kxl-auto-base-c1-ctx32768": "base-c1 @32768",
-            "gguf-udq4kxl-auto-base-c1-ctx262144":
+            "gguf-hip-udq4kxl-auto-base-c1-ctx32768": "base-c1 @32768",
+            "gguf-hip-udq4kxl-auto-base-c1-ctx262144":
                 "base-c1 @262144 (GTT +8.0 GiB)",
         }[c["id"]]
         lines.append(
-            f"| {label} | {fmt(m['per_stream_tok_s_median'])} tok/s "
+            f"| {label} | {backend_of(c['id'])} | "
+            f"{fmt(m['per_stream_tok_s_median'])} tok/s "
             f"(TPOT {fmt(m['tpot_ms_median'])} ms) | "
             f"{fmt(m['aggregate_tok_s'])} tok/s | "
             f"{fmt(m['ttft_ms_median'] / 1000)} s | {mark(c['verdict'])} "
@@ -180,6 +251,8 @@ def render_performance_highlights(data: dict) -> str:
             f"{fmt(m['aggregate_tok_s'])} tok/s | {mark('caution')} caution — "
             f"{note} |")
     best_batch = v["vllm-bf16-auto-base-c16-ctx262144"]["metrics"]
+    vk_mtp = v["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]["metrics"]
+    hip_mtp = v["gguf-hip-udq4kxl-auto-mtp-c1-ctx131072"]["metrics"]
     lines += [
         "",
         f"**Honesty clause (aggregate never headlines over UX):** the best "
@@ -187,10 +260,15 @@ def render_performance_highlights(data: dict) -> str:
         f"{fmt(best_batch['aggregate_tok_s'])} tok/s — runs each stream at "
         f"{fmt(best_batch['per_stream_tok_s_median'])} tok/s median "
         f"(min {fmt(best_batch['per_stream_tok_s_min'], 2)}): batch "
-        f"presentation only. GGUF c8/c16 aggregates (to 27.5 tok/s) are ❌ "
+        f"presentation only. GGUF-hip c8/c16 aggregates (to 27.5 tok/s) are ❌ "
         f"avoid cells — greedy decoding degrades after sustained multistream "
-        f"load (see Known good / known bad). Interactive chat → GGUF "
-        f"`WITH_MTP=1` (13.0 tok/s per stream).",
+        f"load (see Known good / known bad; the pit does NOT reproduce on "
+        f"Vulkan, whose c8/c16 tiers are unmeasured). Interactive chat → GGUF "
+        f"`WITH_MTP=1` ({fmt(hip_mtp['per_stream_tok_s_median'])} tok/s per "
+        f"stream; best single-stream measured: `BACKEND=vulkan WITH_MTP=1`, "
+        f"{fmt(vk_mtp['per_stream_tok_s_median'])} tok/s — opt-in, +"
+        f"{(vk_mtp['per_stream_tok_s_median'] / hip_mtp['per_stream_tok_s_median'] - 1) * 100:.0f}% "
+        f"mixed-depth headline, cross-depth caveat in the verdict).",
     ]
     return "\n".join(lines)
 
@@ -302,18 +380,31 @@ def render_known_good_bad(data: dict) -> str:
     cells = data["cells"]
     pit_ids = [cid for cid, c in v.items()
                if c["verdict"] == "avoid" and not c["metrics"]["anchor_ok"]]
+    vk_ids = sorted(cid for cid in v
+                    if cid.startswith("gguf-vulkan-"))
+    vk_clean = [cid for cid in vk_ids if v[cid]["metrics"]["anchor_ok"]]
+    vk_mtp = v["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]["metrics"]
     lines = [
         "**Known good** (verdict receipts in `configs/benchmark-verdicts.json`):",
         "",
-        "- ✅ **GGUF interactive at c1** — all three ctx tiers recommended; "
-        "default boot (10.1 tok/s per stream) and `WITH_MTP=1` "
-        "(13.0 tok/s, +28% per-stream).",
+        "- ✅ **GGUF interactive at c1** — hip: all three ctx tiers "
+        "recommended, default boot (10.1 tok/s per stream) and `WITH_MTP=1` "
+        "(13.0 tok/s, +28% per-stream); vulkan (opt-in): base 10.7 and mtp "
+        f"{fmt(vk_mtp['per_stream_tok_s_median'])} tok/s — the best "
+        "single-stream cells measured on this host.",
         "- ✅ **vLLM path anchor-clean in all 8 cells** — including anchors "
         "run immediately after 16-stream benches: the GGUF greedy-degradation "
         "pit does NOT reproduce here; the honest choice for 262144 context, "
         "vision, and batch throughput (38.6 tok/s aggregate @base-c16).",
+        "- ✅ **Vulkan backend (v0.1.2, opt-in)** — anchor-clean in all "
+        f"{len(vk_clean)} measured vulkan cells (the hip greedy pit does NOT "
+        "reproduce on this backend); `BACKEND=vulkan WITH_MTP=1` reaches "
+        f"{fmt(vk_mtp['per_stream_tok_s_median'])} tok/s per stream — the "
+        "recommended opt-in for best single-stream speed (project ruling "
+        "2026-08-18; the quickstart default stays hip).",
         "- ✅ **Boot reliability** — every declared-priority cell booted (GGUF "
-        "4–6 s warm; vLLM 171/226 s); zero failed streams across all 20 cells.",
+        "4–6 s warm; vLLM 171/226 s); zero failed streams across all "
+        f"{len(cells)} cells.",
         "",
         "**Known bad / pits:**",
         "",
@@ -358,6 +449,18 @@ def render_known_good_bad(data: dict) -> str:
         "- ⚠️ **Deep-context retrieval (GGUF)** — 120K tier returned a "
         "confident miss; non-monotonic vs depth, unverified above ~30K (see "
         "Context capacity).",
+        f"- ⚠️ **Unified default boot under concurrent users (GGUF, v0.1.2 "
+        f"rider)** — the stock quickstart's 4-slot unified boot at ctx 131072 "
+        f"with 4 concurrent users degrades interactivity vs the split boot: "
+        f"{fmt(v['gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified']['metrics']['per_stream_tok_s_median'])} "
+        f"vs "
+        f"{fmt(v['gguf-hip-udq4kxl-auto-base-c4-ctx131072']['metrics']['per_stream_tok_s_median'])} "
+        f"tok/s healthy-median, aggregate "
+        f"{fmt(v['gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified']['metrics']['aggregate_tok_s'])} "
+        f"vs "
+        f"{fmt(v['gguf-hip-udq4kxl-auto-base-c4-ctx131072']['metrics']['aggregate_tok_s'])} "
+        f"(3-of-4 streams early-EOS; single-stream use unaffected — see the "
+        f"rider verdict).",
         "",
         "Every verdict with its full reason/conditions/workaround: "
         "`configs/benchmark-verdicts.json`.",
@@ -373,8 +476,8 @@ def _row(cid: str, data: dict) -> str:
     auto = m.get("auto_verdict", "")
     final = c["verdict"]
     trail = auto if auto == final else f"{auto} → **{final}** (ruling)"
-    return (f"| [`{cid}`](matrix-714/cells/{cid}.json) | {mark(final)} "
-            f"{final} | {fmt(m['per_stream_tok_s_median'], 2)} | "
+    return (f"| [`{cid}`](matrix-714/cells/{cid}.json) | {backend_of(cid)} | "
+            f"{mark(final)} {final} | {fmt(m['per_stream_tok_s_median'], 2)} | "
             f"{fmt(m['per_stream_tok_s_min'], 2)} | "
             f"{fmt(m['tpot_ms_median'])} | {fmt(m['aggregate_tok_s'], 2)} | "
             f"{fmt(m['ttft_ms_median'] / 1000)} s | "
@@ -382,13 +485,16 @@ def _row(cid: str, data: dict) -> str:
             f"{m['gtt_mib']:,} | {trail} |")
 
 
-def gguf_c4_slot_note(cells: dict) -> str:
+def gguf_c4_slot_note(cells: dict, vmap: dict | None = None) -> str:
     """Footnote for the GGUF table: the `c4` rows are NOT one configuration
     across ctx tiers (METHODOLOGY §6) — derived from each cell's recorded
-    `slot_info` so the note can never drift from the receipts."""
+    `slot_info` so the note can never drift from the receipts. Updated
+    2026-08-18 (Task 4): the unified-default-boot c4@131072 rider MEASURED
+    that configuration — the old 'was not measured' caveat is replaced by
+    the measured finding (numbers from the verdicts)."""
     rows = []
     for ctx in (32768, 131072, 262144):
-        cell = cells.get(f"gguf-udq4kxl-auto-base-c4-ctx{ctx}")
+        cell = cells.get(f"gguf-hip-udq4kxl-auto-base-c4-ctx{ctx}")
         s = (cell or {}).get("slot_info") or {}
         if not s:
             continue
@@ -400,10 +506,20 @@ def gguf_c4_slot_note(cells: dict) -> str:
             mode = (f"split boot (`-np 4` explicit, `kv_unified='false'`, "
                     f"per-slot window {s.get('n_ctx_slot')} = ctx/4)")
         rows.append(f"ctx {ctx}: {mode}")
+    rider = ""
+    if vmap and "gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified" in vmap:
+        u = vmap["gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified"]["metrics"]
+        s = vmap["gguf-hip-udq4kxl-auto-base-c4-ctx131072"]["metrics"]
+        rider = (f" (the unified-default-boot c4@131072 rider is measured: "
+                 f"`gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified` — "
+                 f"{fmt(u['per_stream_tok_s_median'])} tok/s healthy-median / "
+                 f"{fmt(u['aggregate_tok_s'])} aggregate vs split-mode "
+                 f"{fmt(s['per_stream_tok_s_median'])} / "
+                 f"{fmt(s['aggregate_tok_s'])}; unified boot degrades "
+                 f"interactivity, 3-of-4 streams early-EOS)")
     return ("Note on the `c4` rows (slot semantics, METHODOLOGY §6): `c4` is "
-            "not one configuration across ctx tiers — " + "; ".join(rows) +
-            ". Compare like with like (and see the quickstart caveat: "
-            "unified-default-boot c4 at ctx 131072 was not measured).")
+            "not one configuration across ctx tiers — " + "; ".join(rows)
+            + ". Compare like with like" + rider + ".")
 
 
 def render_benchmark_md(data: dict) -> str:
@@ -425,9 +541,7 @@ def render_benchmark_md(data: dict) -> str:
         f"({planned} planned — time-boxed session, machinery complete; "
         f"{dropped} dropped — vLLM ctx-32768 tier not offered). "
         f"Method: [`METHODOLOGY.md`](METHODOLOGY.md) (rules frozen before any "
-        f"measurement). Verdicts reviewed and recorded by "
-        f"`{data['verdicts']['reviewed_by']}`; ladder proposes, controller "
-        f"disposes.\n")
+        f"measurement). {review_attribution(data['verdicts'])}\n")
     out.append("Generated by `scripts/gen-verdicts.py` + "
                "`scripts/render-readme-blocks.py` from the raw cells under "
                "`matrix-714/cells/` — every number below is reproducible from "
@@ -441,8 +555,10 @@ def render_benchmark_md(data: dict) -> str:
     out.append("|---|---|---|")
     for label, cid in (
             ("`scripts/gguf-quickstart.sh` default boot (UD-Q4_K_XL, ctx 131072)",
-             "gguf-udq4kxl-auto-base-c1-ctx131072"),
-            ("`WITH_MTP=1` opt-in", "gguf-udq4kxl-auto-mtp-c1-ctx131072"),
+             "gguf-hip-udq4kxl-auto-base-c1-ctx131072"),
+            ("`WITH_MTP=1` opt-in", "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072"),
+            ("`BACKEND=vulkan` + `WITH_MTP=1` opt-in (recommended, 2026-08-18)",
+             "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"),
             ("`scripts/03-serve-vllm.sh` (`serve-args.conf`, 262144)",
              "vllm-bf16-auto-base-c1-ctx262144"),
             ("`scripts/03-serve-vllm.sh --mtp` (`serve-args-mtp.conf`)",
@@ -458,19 +574,50 @@ def render_benchmark_md(data: dict) -> str:
                "as the greedy-degradation-free path; interactive chat → GGUF "
                "path (mtp-c1 13.0 tok/s)\". README quickstart guidance points "
                "at the GGUF path.\n")
+    vk_mtp = v["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]["metrics"]
+    hip_mtp = v["gguf-hip-udq4kxl-auto-mtp-c1-ctx131072"]["metrics"]
+    out.append(
+        "Controller ruling (2026-08-18, binding, v0.1.2 plan outcome (a)):\n"
+        "`BACKEND=vulkan` is promoted in the gguf-quickstart echo as the "
+        "recommended OPT-IN for best single-stream tok/s — vulkan mtp-c1 "
+        f"{fmt(vk_mtp['per_stream_tok_s_median'], 2)} vs hip "
+        f"{fmt(hip_mtp['per_stream_tok_s_median'], 2)} tok/s "
+        f"(+{(vk_mtp['per_stream_tok_s_median'] / hip_mtp['per_stream_tok_s_median'] - 1) * 100:.1f}% "
+        "mixed-depth headline; the clean same-depth depth-4 pairing is "
+        "15.05 vs 12.76 tok/s, +18.0%), anchors clean 6/6 — while the "
+        "quickstart DEFAULT stays `hip` (headline <25%, single-session "
+        "Vulkan runtime, one ICD: RADV 25.2.8). MTP depth 1 stays the "
+        "recommended variant on both backends (depth 4 never beats it); "
+        "cross-depth caveat: the hip 13.0 receipt ran the implicit "
+        "`--spec-draft-n-max` default 3 while every v0.1.2 cell passes "
+        "depth explicitly "
+        "(`configs/validated-stack.json` `llama_cpp_vulkan.mtp_depth.note`). "
+        "The unified-default-boot c4@131072 rider is measured-with-caveat "
+        "(degrades interactivity vs split boot; no config change).\n")
 
-    out.append("## GGUF path (llama.cpp `4df29be4` HIP, UD-Q4_K_XL)\n")
+    out.append("\n## GGUF path (llama.cpp `4df29be4`, UD-Q4_K_XL; Backend "
+               "column from the cell id)\n")
+    per_backend: dict[str, int] = {}
+    for cid in gguf_ids:
+        per_backend[backend_of(cid)] = per_backend.get(backend_of(cid), 0) + 1
+    backend_bits = " + ".join(
+        f"{n} `{b}`" + (" (ROCm build-714, incl. the mtp4 depth cell and "
+                        "the unified-boot c4 rider)" if b == "hip" else
+                        " (build-714-vk, Mesa RADV — the v0.1.2 cells)"
+                        if b == "vulkan" else "")
+        for b, n in sorted(per_backend.items()))
     out.append("Per-stream medians over **healthy streams only** (≥2 content "
                "tokens — streams with <2 tokens carry no defined TPOT and "
                "never count toward UX claims; see healthy-vs-total in the raw "
-               "cells).\n")
-    out.append("| Cell | Verdict | Per-stream med tok/s | min | TPOT med ms "
-               "| Aggregate tok/s | TTFT med | Anchor | GTT MiB | auto → final |")
-    out.append("|---|---|---|---|---|---|---|---|---|---|")
+               f"cells). Measured gguf cells: {backend_bits}.\n")
+    out.append("| Cell | Backend | Verdict | Per-stream med tok/s | min | "
+               "TPOT med ms | Aggregate tok/s | TTFT med | Anchor | GTT MiB "
+               "| auto → final |")
+    out.append("|---|---|---|---|---|---|---|---|---|---|---|")
     for cid in gguf_ids:
         out.append(_row(cid, data))
 
-    out.append("\n" + gguf_c4_slot_note(data["cells"]) + "\n")
+    out.append("\n" + gguf_c4_slot_note(data["cells"], v) + "\n")
 
     out.append("\n## vLLM path (`4d2a68d`, BF16, ctx 262144)\n")
     kv = parse_kv_line(data["cells"]["vllm-bf16-auto-base-c1-ctx262144"])
@@ -490,16 +637,17 @@ def render_benchmark_md(data: dict) -> str:
         out.append(_row(cid, data))
 
     out.append("\n## MTP effect (basis labeled)\n")
-    out.append("| Config | Per-stream basis | Aggregate basis | Verdict |")
-    out.append("|---|---|---|---|")
+    out.append("| Config | Backend | Per-stream basis | Aggregate basis | Verdict |")
+    out.append("|---|---|---|---|---|")
     for cid in sorted(v):
         g = v[cid]["metrics"].get("mtp_gain_vs_base")
         if not g:
             continue
-        base_cid = cid.replace("-mtp-", "-base-")
+        base_cid = cid.replace("-mtp-", "-base-").replace("-mtp4-", "-base-")
         out.append(
-            f"| `{cid.removeprefix('gguf-udq4kxl-auto-').removeprefix('vllm-bf16-auto-')}` "
-            f"vs {base_cid} | {g['per_stream_pct']:+.1f}% "
+            f"| `{short_id(cid)}` vs {short_id(base_cid)} | "
+            f"{backend_of(cid) or '—'} | "
+            f"{g['per_stream_pct']:+.1f}% "
             f"({fmt(v[cid]['metrics']['per_stream_tok_s_median'], 2)} vs "
             f"{fmt(g['base_per_stream_tok_s_median'], 2)} tok/s) | "
             f"{g['aggregate_pct']:+.1f}% ({fmt(v[cid]['metrics']['aggregate_tok_s'], 2)} "
@@ -510,9 +658,17 @@ def render_benchmark_md(data: dict) -> str:
                "vLLM path (+33%/+27% per-stream at c4/c8, aggregate "
                "+21%/+9%), but inverts at vLLM c16 (−19.4% aggregate — the "
                "avoid cell; muse-rocm DFlash lesson mirrored). On the GGUF "
-               "path the c8/c16 MTP cells are degraded by the §6 anchor pit, "
-               "so their negative deltas are pit artifacts, not MTP "
-               "evidence.\n")
+               "path the hip c8/c16 MTP cells are degraded by the §6 anchor "
+               "pit, so their negative deltas are pit artifacts, not MTP "
+               "evidence (the pit does NOT reproduce on Vulkan, whose c8/c16 "
+               "tiers are unmeasured; on Vulkan the c4 MTP regressions are "
+               "real cells, anchor-clean). v0.1.2: MTP depth 1 beats depth 4 "
+               "on both backends at c1 (vulkan 16.00 vs 15.05; hip 13.00 vs "
+               "12.76 tok/s) — depth 1 stays the recommended variant; "
+               "cross-backend at c1 Vulkan leads HIP at both depths (+23.1% "
+               "mixed-depth headline, +18.0% at fixed depth 4 — the hip mtp "
+               "receipts of 2026-08-17 ran the implicit depth default 3, "
+               "see `configs/validated-stack.json`).\n")
 
     out.append("## Context capacity & retrieval smoke\n")
     out.append(render_context_capacity(data))
@@ -533,7 +689,17 @@ def render_benchmark_md(data: dict) -> str:
         "- Controller overrides (recorded per cell in the verdicts JSON "
         "`metrics.controller_override`): 3 — the two vLLM c1 cells "
         "avoid→caution and mtp-c16 caution→avoid, all citing the "
-        "2026-08-17 ruling.\n")
+        "2026-08-17 ruling.\n"
+        "- Controller review 2026-08-18 (v0.1.2): the 8 new cells took their "
+        "MECHANICAL verdicts — no overrides (`controller_override` null) — "
+        "with the quickstart ruling recorded per cell (reason + "
+        "`metrics.reviewed_by` = `controller-2026-08-18`): vulkan promoted "
+        "as the recommended quickstart OPT-IN (default stays hip), mtp "
+        "depth 1 over depth 4 on both backends, unified rider "
+        "measured-with-caveat. Two prose-template defects (a mislabeled "
+        "'c1:' basis with a fixed 'Better than base' direction in the "
+        "c4-caution MTP sentence; the hip-family pit clause leaking into "
+        "vulkan conditions) were corrected in the same release.\n")
     out.append(reasoning_moot_mark(data["cells"]) + "\n")
     out.append("\n## Raw receipts\n")
     out.append("Every cell links from the tables above; the declaration "

@@ -6,10 +6,11 @@
 
 The reproducible, evidence-first reference for running
 [Qwen/Qwen3.8-27B](https://modelscope.cn/models/Qwen/Qwen3.8-27B) on AMD
-RDNA GPUs via ROCm — dual serving paths (vLLM + llama.cpp), a 20-cell
-measured benchmark matrix with UX-first ✅/⚠️/❌ verdicts, and a community
-hardware-validation protocol.
+RDNA GPUs via ROCm — dual serving paths (vLLM + llama.cpp, HIP and Vulkan
+backends), a 28-cell measured benchmark matrix with UX-first ✅/⚠️/❌
+verdicts, and a community hardware-validation protocol.
 ![](./docs/hero.jpg)
+
 Status: both serving paths (vLLM and llama.cpp/GGUF) validated on the
 reference host — AMD Ryzen AI MAX+ PRO 395 / Radeon 8060S (`gfx1151`),
 ROCm 7.14.0. W7900D (`gfx1100`) is community-validated (GGUF path, per the
@@ -29,10 +30,11 @@ for the GGUF path (+~52 GiB for the vLLM BF16 path), git / curl / python3
 
 ## Quick start (interactive chat: the GGUF path)
 
-The benchmark matrix (20 measured cells; verdicts in
-`configs/benchmark-verdicts.json`) puts interactive chat on the GGUF path:
-every measured vLLM cell runs below the 10 tok/s interactive floor on this
-host — project ruling (2026-08-17); see [Performance](#performance).
+The benchmark matrix (28 measured cells across the `hip` and `vulkan`
+llama.cpp backends; verdicts in `configs/benchmark-verdicts.json`) puts
+interactive chat on the GGUF path: every measured vLLM cell runs below the
+10 tok/s interactive floor on this host — project ruling (2026-08-17); see
+[Performance](#performance).
 
 ```bash
 git clone https://github.com/AIwork4me/Qwen3.8-27B-ROCm.git && cd Qwen3.8-27B-ROCm
@@ -41,6 +43,9 @@ bash scripts/install-rocm-7.14.sh         # only if the check says so (1.6 GiB a
 bash scripts/05-build-llama.sh            # pinned HIP build @ 4df29be4 for gfx1151 (compile ~7 min)
 SET=gguf bash scripts/02-fetch-model.sh   # ~18 GiB, SHA256-verified against the manifest
 WITH_MTP=1 bash scripts/gguf-quickstart.sh  # 13.0 tok/s per stream — server on :8080
+# best single-stream opt-in (project ruling 2026-08-18, experimental):
+#   bash scripts/06-build-llama-vulkan.sh
+#   BACKEND=vulkan WITH_MTP=1 bash scripts/gguf-quickstart.sh  # 16.0 tok/s
 ```
 
 In a second terminal, verify (keep `max_tokens` ≥ 512: this model thinks
@@ -57,21 +62,23 @@ stops the server.
 
 | Boot | Per-stream speed |
 |---|---|
-| `bash scripts/gguf-quickstart.sh` (default: UD-Q4_K_XL, ctx 131072) | 10.1 tok/s |
+| `bash scripts/gguf-quickstart.sh` (default: hip, UD-Q4_K_XL, ctx 131072) | 10.1 tok/s |
 | `WITH_MTP=1 bash scripts/gguf-quickstart.sh` | 13.0 tok/s (+28% per-stream) |
+| `BACKEND=vulkan WITH_MTP=1 bash scripts/gguf-quickstart.sh` (opt-in) | 16.0 tok/s — best single-stream measured (project ruling 2026-08-18; experimental, see verdicts) |
 
 Which serving path?
 
 | You want | Use | Why |
 |---|---|---|
-| Interactive chat | `WITH_MTP=1 bash scripts/gguf-quickstart.sh` (port 8080) | every measured vLLM cell is below the 10 tok/s interactive floor |
+| Interactive chat | `WITH_MTP=1 bash scripts/gguf-quickstart.sh` (port 8080); for best single-stream tok/s add `BACKEND=vulkan` (opt-in) | every measured vLLM cell is below the 10 tok/s interactive floor |
 | 262144-token context, vision, or aggregate batch throughput (to 38.6 tok/s) | `bash scripts/03-serve-vllm.sh` (port 8000) | the greedy-degradation-free path, but not interactive on this host |
-| Multi-user GGUF loads | Don't | greedy-degradation pit — see [Known good / known bad](#known-good--known-bad) |
+| Multi-user GGUF loads | Don't | greedy-degradation pit on hip — see [Known good / known bad](#known-good--known-bad) |
 
-Caveat: unified-default-boot c4 at ctx 131072 (the stock quickstart's
-4-slot default under 4 concurrent users) was **not measured** — bracketed
-by the c4@32768 pit and the clean split-mode c4@131072 cell; single-stream
-use is unaffected.
+Measured (2026-08-18, v0.1.2 rider): unified-default-boot c4 at ctx 131072
+(the stock quickstart's 4-slot default under 4 concurrent users) runs at
+6.7 tok/s healthy-stream median vs 7.5 for the split boot (`-np 4`) —
+3-of-4 streams stopped early, so the unified default boot degrades
+interactivity; single-stream use is unaffected.
 
 ## Serving paths
 
@@ -94,16 +101,17 @@ use is unaffected.
 ## Performance
 
 <!-- BEGIN GENERATED: performance-highlights -->
-Measured 2026-08-16/17 on the reference host (gfx1151, ROCm 7.14, 80 GiB GTT pool): **20 cells — 4 recommended / 10 caution / 6 avoid**. Verdicts: `configs/benchmark-verdicts.json`; raw receipts: `docs/results/matrix-714/cells/`; full tables: `docs/results/benchmark.md`.
+Measured 2026-08-16 and 2026-08-18 on the reference host (gfx1151, ROCm 7.14, 80 GiB GTT pool): **28 cells — 8 recommended / 14 caution / 6 avoid**. Verdicts: `configs/benchmark-verdicts.json`; raw receipts: `docs/results/matrix-714/cells/`; full tables: `docs/results/benchmark.md`.
 
 **Recommended — interactive chat (GGUF path, UD-Q4_K_XL):**
 
-| Config | Per-stream (median) | Aggregate | TTFT | Verdict |
-|---|---|---|---|---|
-| `WITH_MTP=1` mtp-c1 @131072 — +28% per-stream | 13.0 tok/s (TPOT 76.9 ms) | 10.2 tok/s | 5.5 s | ✅ recommended |
-| default boot base-c1 @131072 | 10.1 tok/s (TPOT 98.6 ms) | 8.4 tok/s | 5.1 s | ✅ recommended |
-| base-c1 @32768 | 10.0 tok/s (TPOT 99.6 ms) | 8.3 tok/s | 5.3 s | ✅ recommended |
-| base-c1 @262144 (GTT +8.0 GiB) | 10.1 tok/s (TPOT 98.8 ms) | 8.4 tok/s | 5.3 s | ✅ recommended |
+| Config | Backend | Per-stream (median) | Aggregate | TTFT | Verdict |
+|---|---|---|---|---|---|
+| `BACKEND=vulkan` + `WITH_MTP=1` mtp-c1 @131072 — recommended opt-in, best single-stream (project ruling 2026-08-18) | vulkan | 16.0 tok/s (TPOT 62.5 ms) | 10.4 tok/s | 8.6 s | ✅ recommended |
+| `WITH_MTP=1` mtp-c1 @131072 — +28% per-stream (the default recommendation) | hip | 13.0 tok/s (TPOT 76.9 ms) | 10.2 tok/s | 5.5 s | ✅ recommended |
+| default boot base-c1 @131072 | hip | 10.1 tok/s (TPOT 98.6 ms) | 8.4 tok/s | 5.1 s | ✅ recommended |
+| base-c1 @32768 | hip | 10.0 tok/s (TPOT 99.6 ms) | 8.3 tok/s | 5.3 s | ✅ recommended |
+| base-c1 @262144 (GTT +8.0 GiB) | hip | 10.1 tok/s (TPOT 98.8 ms) | 8.4 tok/s | 5.3 s | ✅ recommended |
 
 **Caution — batch / throughput (vLLM BF16 @262144):** every measured vLLM cell is below the 10 tok/s interactive floor — project ruling (2026-08-17); use this path for what it wins:
 
@@ -113,7 +121,7 @@ Measured 2026-08-16/17 on the reference host (gfx1151, ROCm 7.14, 80 GiB GTT poo
 | mtp-c8-ctx262144 | 4.2 (min 3.47) tok/s | 24.7 tok/s | ⚠️ caution — MTP beneficial through c8 |
 | mtp-c1-ctx262144 | 6.5 tok/s | 5.8 tok/s | ⚠️ caution — +52.6% per-stream vs base (+45.5% aggregate, basis labeled in the verdict) |
 
-**Honesty clause (aggregate never headlines over UX):** the best aggregate on this host — vLLM base-c16, 38.6 tok/s — runs each stream at 3.0 tok/s median (min 2.58): batch presentation only. GGUF c8/c16 aggregates (to 27.5 tok/s) are ❌ avoid cells — greedy decoding degrades after sustained multistream load (see Known good / known bad). Interactive chat → GGUF `WITH_MTP=1` (13.0 tok/s per stream).
+**Honesty clause (aggregate never headlines over UX):** the best aggregate on this host — vLLM base-c16, 38.6 tok/s — runs each stream at 3.0 tok/s median (min 2.58): batch presentation only. GGUF-hip c8/c16 aggregates (to 27.5 tok/s) are ❌ avoid cells — greedy decoding degrades after sustained multistream load (see Known good / known bad; the pit does NOT reproduce on Vulkan, whose c8/c16 tiers are unmeasured). Interactive chat → GGUF `WITH_MTP=1` (13.0 tok/s per stream; best single-stream measured: `BACKEND=vulkan WITH_MTP=1`, 16.0 tok/s — opt-in, +23% mixed-depth headline, cross-depth caveat in the verdict).
 <!-- END GENERATED: performance-highlights -->
 
 ## Context capacity
@@ -138,17 +146,18 @@ Boot ladder (S3) + deep-prompt retrieval smoke — GGUF path, needle sentence at
 <!-- BEGIN GENERATED: known-good-bad -->
 **Known good** (verdict receipts in `configs/benchmark-verdicts.json`):
 
-- ✅ **GGUF interactive at c1** — all three ctx tiers recommended; default boot (10.1 tok/s per stream) and `WITH_MTP=1` (13.0 tok/s, +28% per-stream).
+- ✅ **GGUF interactive at c1** — hip: all three ctx tiers recommended, default boot (10.1 tok/s per stream) and `WITH_MTP=1` (13.0 tok/s, +28% per-stream); vulkan (opt-in): base 10.7 and mtp 16.0 tok/s — the best single-stream cells measured on this host.
 - ✅ **vLLM path anchor-clean in all 8 cells** — including anchors run immediately after 16-stream benches: the GGUF greedy-degradation pit does NOT reproduce here; the honest choice for 262144 context, vision, and batch throughput (38.6 tok/s aggregate @base-c16).
-- ✅ **Boot reliability** — every declared-priority cell booted (GGUF 4–6 s warm; vLLM 171/226 s); zero failed streams across all 20 cells.
+- ✅ **Vulkan backend (v0.1.2, opt-in)** — anchor-clean in all 6 measured vulkan cells (the hip greedy pit does NOT reproduce on this backend); `BACKEND=vulkan WITH_MTP=1` reaches 16.0 tok/s per stream — the recommended opt-in for best single-stream speed (project ruling 2026-08-18; the quickstart default stays hip).
+- ✅ **Boot reliability** — every declared-priority cell booted (GGUF 4–6 s warm; vLLM 171/226 s); zero failed streams across all 28 cells.
 
 **Known bad / pits:**
 
-- ❌ `gguf-udq4kxl-auto-base-c16-ctx131072` — greedy `'////'` corruption after sustained multistream load (per-stream median 3.2 tok/s, aggregate 27.5 tok/s). Workaround: restart the server; multi-stream loads → vLLM.
-- ❌ `gguf-udq4kxl-auto-base-c4-ctx32768` — greedy `'////'` corruption after sustained multistream load (per-stream median 5.8 tok/s, aggregate 15.7 tok/s). Workaround: restart the server; multi-stream loads → vLLM.
-- ❌ `gguf-udq4kxl-auto-base-c8-ctx131072` — greedy `'////'` corruption after sustained multistream load (per-stream median 3.6 tok/s, aggregate 18.4 tok/s). Workaround: restart the server; multi-stream loads → vLLM.
-- ❌ `gguf-udq4kxl-auto-mtp-c16-ctx131072` — greedy `'////'` corruption after sustained multistream load (per-stream median 1.4 tok/s, aggregate 16.3 tok/s). Workaround: restart the server; multi-stream loads → vLLM.
-- ❌ `gguf-udq4kxl-auto-mtp-c8-ctx131072` — greedy `'////'` corruption after sustained multistream load (per-stream median 2.1 tok/s, aggregate 10.7 tok/s). Workaround: restart the server; multi-stream loads → vLLM.
+- ❌ `gguf-hip-udq4kxl-auto-base-c16-ctx131072` — greedy `'////'` corruption after sustained multistream load (per-stream median 3.2 tok/s, aggregate 27.5 tok/s). Workaround: restart the server; multi-stream loads → vLLM.
+- ❌ `gguf-hip-udq4kxl-auto-base-c4-ctx32768` — greedy `'////'` corruption after sustained multistream load (per-stream median 5.8 tok/s, aggregate 15.7 tok/s). Workaround: restart the server; multi-stream loads → vLLM.
+- ❌ `gguf-hip-udq4kxl-auto-base-c8-ctx131072` — greedy `'////'` corruption after sustained multistream load (per-stream median 3.6 tok/s, aggregate 18.4 tok/s). Workaround: restart the server; multi-stream loads → vLLM.
+- ❌ `gguf-hip-udq4kxl-auto-mtp-c16-ctx131072` — greedy `'////'` corruption after sustained multistream load (per-stream median 1.4 tok/s, aggregate 16.3 tok/s). Workaround: restart the server; multi-stream loads → vLLM.
+- ❌ `gguf-hip-udq4kxl-auto-mtp-c8-ctx131072` — greedy `'////'` corruption after sustained multistream load (per-stream median 2.1 tok/s, aggregate 10.7 tok/s). Workaround: restart the server; multi-stream loads → vLLM.
 
 **Upstream tracking (shared by the 5 greedy-pit cells):** live at llama.cpp master HEAD 01818e495 (2026-08-17); candidate fix PR #25863 https://github.com/ggml-org/llama.cpp/pull/25863 differentially verified on this host (patched 2/2 anchor PASS vs unpatched 3/3 FAIL idle-host; receipts docs/results/upstream-controls/); tracked in #25992 https://github.com/ggml-org/llama.cpp/issues/25992 (primary — same-host bisect, maintainer invited testing) and #23577 https://github.com/ggml-org/llama.cpp/issues/23577 (////-family); exact mechanism unresolved at session close (METHODOLOGY §6).
 
@@ -157,6 +166,7 @@ Boot ladder (S3) + deep-prompt retrieval smoke — GGUF path, needle sentence at
 - ⚠️ **GGUF ctx 262144 GTT growth** — +8.0 GiB over the 131072 boot (34,742 vs 26,548 MiB; 64 KiB/token bf16 KV): capacity-OK, caution-grade — fits the 80 GiB pool with headroom.
 - ⚠️ **vLLM KV ceiling at 262144** — KV 19.57 GiB = 313,650 tokens (1.20x max-len; MTP 1.06x): one full-depth stream fits, two don't.
 - ⚠️ **Deep-context retrieval (GGUF)** — 120K tier returned a confident miss; non-monotonic vs depth, unverified above ~30K (see Context capacity).
+- ⚠️ **Unified default boot under concurrent users (GGUF, v0.1.2 rider)** — the stock quickstart's 4-slot unified boot at ctx 131072 with 4 concurrent users degrades interactivity vs the split boot: 6.7 vs 7.5 tok/s healthy-median, aggregate 5.0 vs 9.4 (3-of-4 streams early-EOS; single-stream use unaffected — see the rider verdict).
 
 Every verdict with its full reason/conditions/workaround: `configs/benchmark-verdicts.json`.
 <!-- END GENERATED: known-good-bad -->
@@ -174,7 +184,7 @@ Full tables with links to the raw receipts: [docs/results/benchmark.md](docs/res
 
 ## Status & roadmap
 
-Current release: **v0.1.1** — [CHANGELOG](CHANGELOG.md) ·
+Current release: **v0.1.2** — [CHANGELOG](CHANGELOG.md) ·
 [Releases](https://github.com/AIwork4me/Qwen3.8-27B-ROCm/releases).
 
 Roadmap — evidence-gated intentions, not promises; each item lands when its
@@ -184,16 +194,23 @@ receipts do:
   reference vLLM stack is gfx1151-only (the TheRock nightly index has no
   gfx1100 builds), so submissions bring and document their own stack — the
   [protocol](docs/hardware-validation.md) is ready for it.
-- **Vulkan-vs-HIP backend comparison + MTP depth >1** — AMD's Day-0 anchor
+- **Vulkan-vs-HIP + MTP depth — answered (v0.1.2)** — AMD's Day-0 anchor
   for this model class is 24.5 tok/s (llama.cpp/Vulkan with MTP=4 on a
   128 GB Ryzen AI Max+ 395 host, where MTP-off was faster at 39.9 tok/s;
   spike receipt: [docs/results/spike/vllm.md](docs/results/spike/vllm.md))
-  vs our 13.0 tok/s per stream (HIP, MTP=1, on the 80 GiB pool) — a
-  cross-stack gap (backend, MTP depth, host) worth measuring, not a clean
-  24.5-vs-13.0 comparison.
-- **The bracketing gap** — the unified-default c4@131072 cell was not
-  measured (the Quick start caveat); fill it.
-- **The remaining planned matrix cells** — 20 of the matrix's 48 declared
+  vs our 13.0 tok/s per stream (HIP, MTP=1, on the 80 GiB pool). Measured
+  on this host ([adaptation map](docs/adaptation.md), [benchmark
+  tables](docs/results/benchmark.md)): Vulkan+MTP depth-1 reaches 16.0
+  tok/s (+23% over hip, mixed-depth caveat recorded in the verdicts) and
+  depth-4 never beats depth-1 on either backend (vulkan 15.05, hip 12.76)
+  — backend and depth each contribute, and neither closes the gap to
+  24.5 on an 80 GiB host. `BACKEND=vulkan` is now the recommended
+  quickstart opt-in (default stays hip).
+- **The bracketing gap — filled (v0.1.2)** — the unified-default c4@131072
+  cell is measured (rider): 6.7 tok/s healthy-stream median vs 7.5
+  split-mode — unified default boot degrades interactivity; no config
+  change (the Quick start note).
+- **The remaining planned matrix cells** — 20 of the matrix's 56 declared
   cells are still `planned` (8 more are dropped unsupported tiers);
   `docs/results/matrix-714/matrix.json` is the ledger.
 - **More community platforms** — every 🚧 invitation stands; see

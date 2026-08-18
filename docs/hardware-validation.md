@@ -126,7 +126,7 @@ community namespace:
 
 ```bash
 CELLS_DIR=docs/results/matrix-714/community/<platform-id>/cells \
-  bash scripts/run-cell-gguf.sh gguf-udq4kxl-auto-base-c4-ctx131072
+  bash scripts/run-cell-gguf.sh gguf-hip-udq4kxl-auto-base-c4-ctx131072
 
 CELLS_DIR=docs/results/matrix-714/community/<platform-id>/cells \
   bash scripts/run-cell-vllm.sh vllm-bf16-auto-base-c1-ctx262144

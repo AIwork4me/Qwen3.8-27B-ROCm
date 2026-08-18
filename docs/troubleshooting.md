@@ -29,7 +29,10 @@ the full tables in [`results/benchmark.md`](results/benchmark.md).
 <a id="greedy-degradation"></a>
 
 Measured 2026-08-17 ([METHODOLOGY.md §6](results/METHODOLOGY.md)). Five of the
-20 measured cells are `avoid` because of this pit.
+28 measured cells are `avoid` because of this pit — all five on the HIP
+build; the pit does **not** reproduce on the Vulkan backend (6/6 v0.1.2
+cells anchor-clean on `build-714-vk`, same host and pin) nor on the vLLM
+path.
 
 **Symptom.** After a sustained multi-stream bench on a *single* llama-server
 instance, every subsequent greedy request (temperature 0, streaming or not)
@@ -51,11 +54,11 @@ boot at ctx 32768 (c4). Cell receipts:
 
 | Cell | Boot mode | Per-stream med / aggregate | Receipt |
 |---|---|---|---|
-| `gguf-udq4kxl-auto-base-c4-ctx32768` | unified default (`kv_unified='true'`, n_ctx_slot 32768) | 5.8 / 15.7 tok/s | [`cells/…c4-ctx32768.json`](results/matrix-714/cells/gguf-udq4kxl-auto-base-c4-ctx32768.json) |
-| `gguf-udq4kxl-auto-base-c8-ctx131072` | split (`-np 8`, n_ctx_slot 16384) | 3.6 / 18.4 tok/s | [`cells/…c8.json`](results/matrix-714/cells/gguf-udq4kxl-auto-base-c8-ctx131072.json) |
-| `gguf-udq4kxl-auto-base-c16-ctx131072` | split (`-np 16`, n_ctx_slot 8192) | 3.2 / 27.5 tok/s | [`cells/…c16.json`](results/matrix-714/cells/gguf-udq4kxl-auto-base-c16-ctx131072.json) |
-| `gguf-udq4kxl-auto-mtp-c8-ctx131072` | split + `--spec-type draft-mtp` | 2.1 / 10.7 tok/s | [`cells/…mtp-c8.json`](results/matrix-714/cells/gguf-udq4kxl-auto-mtp-c8-ctx131072.json) |
-| `gguf-udq4kxl-auto-mtp-c16-ctx131072` | split + `--spec-type draft-mtp` | 1.4 / 16.3 tok/s | [`cells/…mtp-c16.json`](results/matrix-714/cells/gguf-udq4kxl-auto-mtp-c16-ctx131072.json) |
+| `gguf-hip-udq4kxl-auto-base-c4-ctx32768` | unified default (`kv_unified='true'`, n_ctx_slot 32768) | 5.8 / 15.7 tok/s | [`cells/…c4-ctx32768.json`](results/matrix-714/cells/gguf-hip-udq4kxl-auto-base-c4-ctx32768.json) |
+| `gguf-hip-udq4kxl-auto-base-c8-ctx131072` | split (`-np 8`, n_ctx_slot 16384) | 3.6 / 18.4 tok/s | [`cells/…c8.json`](results/matrix-714/cells/gguf-hip-udq4kxl-auto-base-c8-ctx131072.json) |
+| `gguf-hip-udq4kxl-auto-base-c16-ctx131072` | split (`-np 16`, n_ctx_slot 8192) | 3.2 / 27.5 tok/s | [`cells/…c16.json`](results/matrix-714/cells/gguf-hip-udq4kxl-auto-base-c16-ctx131072.json) |
+| `gguf-hip-udq4kxl-auto-mtp-c8-ctx131072` | split + `--spec-type draft-mtp` | 2.1 / 10.7 tok/s | [`cells/…mtp-c8.json`](results/matrix-714/cells/gguf-hip-udq4kxl-auto-mtp-c8-ctx131072.json) |
+| `gguf-hip-udq4kxl-auto-mtp-c16-ctx131072` | split + `--spec-type draft-mtp` | 1.4 / 16.3 tok/s | [`cells/…mtp-c16.json`](results/matrix-714/cells/gguf-hip-udq4kxl-auto-mtp-c16-ctx131072.json) |
 
 Slot semantics at the pin (METHODOLOGY §6, source-verified and confirmed by
 every cell's boot line): the default boot resolves auto `n_parallel=4` and
