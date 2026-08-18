@@ -8,6 +8,63 @@ receipts [`docs/results/matrix-714/cells/`](docs/results/matrix-714/cells/),
 and the rehearsal receipt
 [`docs/results/rocm-7.14/one-pass-rehearsal.md`](docs/results/rocm-7.14/one-pass-rehearsal.md).
 
+## v0.1.3 — 2026-08-18
+
+Stability-confirmation release for the v0.1.2 Vulkan opt-in ruling: a
+second, independent measurement session and a 30-minute sustained-load soak
+reproduce the promoted numbers, so the "single-session runtime" caveat is
+upgraded to two-session + soak wording on every living surface.
+**No configuration changed** — the quickstart default stays `hip`,
+`BACKEND=vulkan WITH_MTP=1` stays the recommended opt-in at unchanged
+strength. Receipts:
+[`docs/results/matrix-714/stability/`](docs/results/matrix-714/stability/)
+(receipts-only; the 28-cell matrix and `matrix.json` are untouched).
+
+### Stability confirmation (v0.1.2 → session 2, same day, hours apart)
+
+- **Every Vulkan c1 cell reproduced** by an independent session (independent
+  server boots, same host/model/prompts/harness): mtp-c1 16.00→16.25 tok/s
+  (+1.5%), mtp4-c1 15.05→15.25 (+1.3%), base-c1 10.65→10.91 (+2.5%) —
+  session 2 uniformly slightly faster, consistent with a warmer machine;
+  anchors 7/7 across all runs.
+- **30-min sustained soak** on the recommended config (one boot,
+  runner-identical flags): 108/108 cycles clean, zero health flaps, mild
+  settle (stream-rate halves 16.43→16.00 tok/s, -2.6%; aggregate halves
+  -2.8%), clean post-soak greedy anchor — sustained load shows no
+  progressive degradation.
+- **No default flip — the arithmetic, recorded so +25.0% is never misread
+  as a trigger**: the session-2 headline (16.25 vs hip 13.00 tok/s) is
+  **exactly +25.0%**, and the pre-registered flip rule requires **>25% AND
+  stability** — exactly +25.0% is not >25% — and the headline is still
+  mixed-depth (the hip receipt ran implicit depth 3; the clean same-depth
+  d4 pairing on session-2 numbers is 15.25 vs 12.76 tok/s, +19.5%).
+- **Remaining limits, unchanged and still stated**: single host (gfx1151),
+  single ICD (RADV, Mesa 25.2.8), same-day sessions, boot-per-cell — the
+  soak covers sustained load only.
+
+### Wording upgrades (no behavior change)
+
+- [`scripts/gen-verdicts.py`](scripts/gen-verdicts.py) v0.1.2 ruling note:
+  "single-session Vulkan runtime" → the two-session + soak wording with the
+  evidence pointer and the no-flip arithmetic (numbers interpolate from the
+  session-2/soak receipts, same never-drift convention as the cells).
+  Verdicts, README blocks, and
+  [`docs/results/benchmark.md`](docs/results/benchmark.md) regenerated;
+  no verdict, metric, or cell changed.
+- [`scripts/gguf-quickstart.sh`](scripts/gguf-quickstart.sh) echo: the
+  "Experimental: single-session runtime, one ICD" note → two-session +
+  soak phrasing, with the remaining limits kept (single host/ICD); the
+  default boot is byte-identical (`BACKEND` default `hip`).
+- [`docs/adaptation.md`](docs/adaptation.md): stability paragraph added to
+  the Vulkan section (session-2 deltas, soak stats, remaining limits).
+- [`docs/results/matrix-714/stability/README.md`](docs/results/matrix-714/stability/README.md):
+  session-2 index timestamp corrected to the receipt-derived span
+  (11:28:12Z–12:01:21Z), and the session-1 column aligned to the corpus
+  2dp convention (mtp-c1 16.01 → 16.00, delta +0.24 → +0.25) so the
+  v0.1.2-canonical and session-2 numbers cross-reference cleanly.
+- [`CITATION.cff`](CITATION.cff): version 0.1.3 (matrix description
+  unchanged — still the 28-cell corpus).
+
 ## v0.1.2 — 2026-08-18
 
 The Vulkan×MTP-depth comparison release: 8 new measured cells on the same

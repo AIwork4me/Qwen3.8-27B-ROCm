@@ -26,6 +26,12 @@ backends render a Backend column derived from the id — the v0.1.2 session
 measured 6 vulkan cells + 2 hip cells (mtp4 depth, unified-boot c4 rider),
 so measured rows span both backends and every stale "all measured cells
 are hip" / "unmeasured" qualifier is derived from the data, never assumed.
+
+2026-08-18 stability follow-up S2 (v0.1.3): the 2026-08-18 ruling
+paragraph and the known-good vulkan bullet quote the two-session + soak
+evidence via gen-verdicts.stability_evidence() (session-2 deltas, soak
+cycles/settle) — the "single-session runtime" caveat is gone from every
+generated surface, and the no-flip arithmetic is printed with it.
 """
 
 from __future__ import annotations
@@ -59,7 +65,21 @@ def _load_hardware_matrix_renderer():
     return module
 
 
+def _load_gen_verdicts():
+    """scripts/gen-verdicts.py — imported (not copied) for its
+    stability_evidence() loader (2026-08-18, v0.1.3 S2): the session-2
+    deltas + soak stats quoted in the ruling paragraph and the known-good
+    bullet interpolate from the same receipts the ruling note uses, so
+    there is one source of truth for the stability numbers."""
+    spec = importlib.util.spec_from_file_location(
+        "gen_verdicts_stability", ROOT / "scripts" / "gen-verdicts.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 HARDWARE_MATRIX = _load_hardware_matrix_renderer()
+GEN_VERDICTS = _load_gen_verdicts()
 
 
 def mark(verdict: str) -> str:
@@ -384,6 +404,7 @@ def render_known_good_bad(data: dict) -> str:
                     if cid.startswith("gguf-vulkan-"))
     vk_clean = [cid for cid in vk_ids if v[cid]["metrics"]["anchor_ok"]]
     vk_mtp = v["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]["metrics"]
+    ev = GEN_VERDICTS.stability_evidence()
     lines = [
         "**Known good** (verdict receipts in `configs/benchmark-verdicts.json`):",
         "",
@@ -401,7 +422,12 @@ def render_known_good_bad(data: dict) -> str:
         "reproduce on this backend); `BACKEND=vulkan WITH_MTP=1` reaches "
         f"{fmt(vk_mtp['per_stream_tok_s_median'])} tok/s per stream — the "
         "recommended opt-in for best single-stream speed (project ruling "
-        "2026-08-18; the quickstart default stays hip).",
+        "2026-08-18; the quickstart default stays hip). Stability: "
+        "reproduced by two independent measurement sessions (2026-08-18) "
+        f"+ a 30-min soak ({ev['soak']['cycles']} cycles, "
+        f"{ev['soak']['settle_pct']:+.1f}% settle; "
+        f"`{ev['pointer']}`), one host / one ICD (RADV 25.2.8) remain the "
+        "limits.",
         "- ✅ **Boot reliability** — every declared-priority cell booted (GGUF "
         "4–6 s warm; vLLM 171/226 s); zero failed streams across all "
         f"{len(cells)} cells.",
@@ -576,8 +602,17 @@ def render_benchmark_md(data: dict) -> str:
                "at the GGUF path.\n")
     vk_mtp = v["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]["metrics"]
     hip_mtp = v["gguf-hip-udq4kxl-auto-mtp-c1-ctx131072"]["metrics"]
+    hip_mtp4 = v["gguf-hip-udq4kxl-auto-mtp4-c1-ctx131072"]["metrics"]
+    ev = GEN_VERDICTS.stability_evidence()
+    s2_m1 = ev["cells"]["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]["s2_2dp"]
+    s2_m4 = ev["cells"]["gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072"]["s2_2dp"]
+    delta_range = [
+        (c["s2"] / c["s1"] - 1) * 100 for c in ev["cells"].values()]
+    headline2 = (s2_m1 / hip_mtp["per_stream_tok_s_median"] - 1) * 100
+    same_depth2 = (s2_m4 / hip_mtp4["per_stream_tok_s_median"] - 1) * 100
     out.append(
-        "Controller ruling (2026-08-18, binding, v0.1.2 plan outcome (a)):\n"
+        "Controller ruling (2026-08-18, binding, v0.1.2 plan outcome (a); "
+        "stability wording upgraded 2026-08-18, v0.1.3):\n"
         "`BACKEND=vulkan` is promoted in the gguf-quickstart echo as the "
         "recommended OPT-IN for best single-stream tok/s — vulkan mtp-c1 "
         f"{fmt(vk_mtp['per_stream_tok_s_median'], 2)} vs hip "
@@ -585,8 +620,24 @@ def render_benchmark_md(data: dict) -> str:
         f"(+{(vk_mtp['per_stream_tok_s_median'] / hip_mtp['per_stream_tok_s_median'] - 1) * 100:.1f}% "
         "mixed-depth headline; the clean same-depth depth-4 pairing is "
         "15.05 vs 12.76 tok/s, +18.0%), anchors clean 6/6 — while the "
-        "quickstart DEFAULT stays `hip` (headline <25%, single-session "
-        "Vulkan runtime, one ICD: RADV 25.2.8). MTP depth 1 stays the "
+        "quickstart DEFAULT stays `hip`. Stability evidence "
+        f"(`{ev['pointer']}`): two independent measurement sessions "
+        "(2026-08-18, hours apart, independent server boots) + 30-min "
+        f"sustained soak ({ev['soak']['cycles']} cycles, "
+        f"{ev['soak']['settle_pct']:+.1f}% settle) — session-2 reproduced "
+        f"every c1 cell within {min(delta_range):+.1f}%…"
+        f"{max(delta_range):+.1f}% per-stream, anchors 7/7 across "
+        "all runs; remaining limits: one host (gfx1151), one ICD "
+        "(RADV 25.2.8), same-day sessions, boot-per-cell, and the soak "
+        "covers sustained load only. NO default flip, read the arithmetic "
+        "(recorded so the session-2 headline is never misread as a "
+        "trigger): the pre-registered flip rule requires >25% AND "
+        "stability — the session-2 headline "
+        f"{s2_m1:.2f} vs {fmt(hip_mtp['per_stream_tok_s_median'], 2)} tok/s "
+        f"is exactly {headline2:+.1f}% (NOT >25%) and stays mixed-depth; "
+        "the clean same-depth d4 pairing is "
+        f"{s2_m4:.2f} vs {fmt(hip_mtp4['per_stream_tok_s_median'], 2)} "
+        f"tok/s, {same_depth2:+.1f}%. MTP depth 1 stays the "
         "recommended variant on both backends (depth 4 never beats it); "
         "cross-depth caveat: the hip 13.0 receipt ran the implicit "
         "`--spec-draft-n-max` default 3 while every v0.1.2 cell passes "

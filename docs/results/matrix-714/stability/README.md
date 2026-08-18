@@ -22,8 +22,8 @@ a second host; the ICD dimension stays single (untested claim, by scope).
 
 | Session | Date (UTC) | Contents | Method |
 |---|---|---|---|
-| session 1 (= v0.1.2) | 2026-08-18 morning | the 3 Vulkan c1 cells in [`../cells/`](../cells/) | `scripts/run-cell-gguf.sh`, project `CELLS_DIR` |
-| [session2-2026-08-18](session2-2026-08-18/) | 2026-08-18 ~12:40Z | 3 re-measured cells + one 30-min sustained-load soak | runner with `CELLS_DIR=<this session dir>` (matrix untouched); `scripts/stability-soak.sh` for the soak |
+| session 1 (= v0.1.2) | 2026-08-18 morning (cells started 05:41–05:43Z) | the 3 Vulkan c1 cells in [`../cells/`](../cells/) | `scripts/run-cell-gguf.sh`, project `CELLS_DIR` |
+| [session2-2026-08-18](session2-2026-08-18/) | 2026-08-18, receipt timestamps span 11:28:12Z–12:01:21Z | 3 re-measured cells + one 30-min sustained-load soak | runner with `CELLS_DIR=<this session dir>` (matrix untouched); `scripts/stability-soak.sh` for the soak |
 
 ## Cell re-measurement: v0.1.2 vs session 2
 
@@ -31,10 +31,17 @@ Each run is one boot + one throughput bench + one greedy anchor. c1 cells
 have a single stream, so the per-run median is that stream's value.
 "stream tok/s" is `1000/tpot_ms` (the project's headline metric);
 "aggregate tok/s" is `completion_tokens / wall_s` (TTFT included, hence lower).
+The s1 column is the **v0.1.2-canonical cell** (the receipts in
+[`../cells/`](../cells/) behind the 28-cell matrix and the verdicts); s2 is
+this session's receipt. Both sides print at the corpus 2dp convention, so
+the numbers cross-reference cleanly with
+[`benchmark.md`](../../benchmark.md) — the
+s1 values are exactly the canonical cell medians (16.00 / 15.05 / 10.65,
+not re-roundings).
 
 | Cell | stream tok/s s1 | stream tok/s s2 | delta | aggregate s1 | aggregate s2 | delta | anchor s1 | anchor s2 |
 |---|---|---|---|---|---|---|---|---|
-| `gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072` (recommended) | 16.01 | 16.25 | +0.24 (+1.5%) | 10.42 | 10.52 | +0.10 (+0.9%) | ok | ok |
+| `gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072` (recommended) | 16.00 | 16.25 | +0.25 (+1.5%) | 10.42 | 10.52 | +0.10 (+0.9%) | ok | ok |
 | `gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072` | 15.05 | 15.25 | +0.20 (+1.3%) | 9.76 | 10.11 | +0.35 (+3.6%) | ok | ok |
 | `gguf-vulkan-udq4kxl-auto-base-c1-ctx131072` | 10.65 | 10.91 | +0.27 (+2.5%) | 7.81 | 8.07 | +0.26 (+3.3%) | ok | ok |
 
