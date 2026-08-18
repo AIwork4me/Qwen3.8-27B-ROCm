@@ -32,6 +32,10 @@ full narratives in [`../results/upstream-controls/README.md`](../results/upstrea
 | E2 | master HEAD `01818e495` + PR #25863 patch (head `ce82541a`) | on | PASS `"OK"` — 2/2 runs | **pit absent with the PR** | [`../results/upstream-controls/e2-master-pr25863.json`](../results/upstream-controls/e2-master-pr25863.json) |
 | E3 | master HEAD `01818e495` (patch reverted) | **off** | FAIL, tail `"////////////////"` | pit reproduces without mmproj | [`../results/upstream-controls/e3-master-nommproj.json`](../results/upstream-controls/e3-master-nommproj.json) |
 
+## Reported
+
+- 2026-08-18: differential results reported by the repository owner (own words, per llama.cpp AI policy) in [#25992](https://github.com/ggml-org/llama.cpp/issues/25992#issuecomment-5321885979).
+
 ## Recommended owner action
 
 1. **Comment on [#25992](https://github.com/ggml-org/llama.cpp/issues/25992)
