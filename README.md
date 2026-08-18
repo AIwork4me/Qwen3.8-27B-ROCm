@@ -8,7 +8,7 @@
 > Status: both serving paths (vLLM and llama.cpp/GGUF) validated on the
 > reference host (see the table).
 > Validated platform: AMD Ryzen AI MAX+ PRO 395 / Radeon 8060S (`gfx1151`).
-> W7900 (`gfx1100`) is planned, evidence-gated.
+> W7900D (`gfx1100`) is community-validated (GGUF path, per the hardware matrix below); more platforms are evidence-gated.
 
 Design spec: `docs/superpowers/specs/2026-08-16-qwen3.8-27b-rocm-design.md`
 
