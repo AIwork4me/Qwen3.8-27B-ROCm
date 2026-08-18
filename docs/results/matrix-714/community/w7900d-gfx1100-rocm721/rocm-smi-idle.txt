@@ -1,0 +1,38 @@
+# rocm-smi receipts (idle) — captured 2026-08-18T00:45:04Z UTC
+
+## rocm-smi --showproductname
+
+
+============================ ROCm System Management Interface ============================
+====================================== Product Info ======================================
+GPU[0]		: Card Series: 		AMD Radeon Graphics
+GPU[0]		: Card Model: 		0x744b
+GPU[0]		: Card Vendor: 		Advanced Micro Devices, Inc. [AMD/ATI]
+GPU[0]		: Card SKU: 		D7070910
+GPU[0]		: Subsystem ID: 	0x0e0c
+GPU[0]		: Device Rev: 		0x00
+GPU[0]		: Node ID: 		3
+GPU[0]		: GUID: 		49884
+GPU[0]		: GFX Version: 		gfx1100
+==========================================================================================
+================================== End of ROCm SMI Log ===================================
+
+## rocm-smi --showmeminfo vram
+
+
+============================ ROCm System Management Interface ============================
+================================== Memory Usage (Bytes) ==================================
+GPU[0]		: VRAM Total Memory (B): 51522830336
+GPU[0]		: VRAM Total Used Memory (B): 27987968
+==========================================================================================
+================================== End of ROCm SMI Log ===================================
+
+## rocm-smi --showmeminfo gtt
+
+
+============================ ROCm System Management Interface ============================
+================================== Memory Usage (Bytes) ==================================
+GPU[0]		: GTT Total Memory (B): 540931018752
+GPU[0]		: GTT Total Used Memory (B): 15933440
+==========================================================================================
+================================== End of ROCm SMI Log ===================================

@@ -1,0 +1,239 @@
+{
+  "id": "gguf-udq4kxl-auto-base-c16-ctx131072",
+  "label": "gguf-udq4kxl-auto-base-c16-ctx131072",
+  "base_url": "http://127.0.0.1:8080",
+  "started_utc": "2026-08-18T00:50:31Z",
+  "server_flags": {
+    "ctx_size": 131072,
+    "concurrency_np": 16,
+    "with_mtp": false,
+    "extra_args": "-np 16",
+    "port": 8080,
+    "kv_semantics_expected": "split (explicit -np 16: per-slot window = 131072/16 = 8192, kv_unified=false)",
+    "quickstart": "scripts/gguf-quickstart.sh",
+    "llama_server_flags": [
+      "--ctx-size",
+      "131072",
+      "-ngl",
+      "99",
+      "--jinja",
+      "-np",
+      "16"
+    ]
+  },
+  "slot_info": {
+    "n_slots": 16,
+    "n_ctx_slot": 8192,
+    "kv_unified": "false",
+    "log_line": "n_slots = 16, n_ctx_slot = 8192, kv_unified = 'false'"
+  },
+  "load": {
+    "vram_mib": 28207,
+    "gtt_mib": 21
+  },
+  "boot": {
+    "ok": true,
+    "health_wall_s": 9
+  },
+  "client": {
+    "label": "gguf-udq4kxl-auto-base-c16-ctx131072",
+    "concurrency": 16,
+    "started_utc": "2026-08-18T00:50:43.904702+00:00",
+    "streams": [
+      {
+        "ttft_ms": 33388.91305215657,
+        "tpot_ms": 92.93323900516427,
+        "completion_tokens": 219,
+        "prompt_tokens": 1412,
+        "reasoning_tokens": 0,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 18543.942792341113,
+        "tpot_ms": 155.93615122383736,
+        "completion_tokens": 245,
+        "prompt_tokens": 1474,
+        "reasoning_tokens": 0,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 32986.59033700824,
+        "tpot_ms": 102.74953191332958,
+        "completion_tokens": 256,
+        "prompt_tokens": 1298,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 24567.685475572944,
+        "tpot_ms": 134.6299953466537,
+        "completion_tokens": 256,
+        "prompt_tokens": 1469,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 33387.62895204127,
+        "tpot_ms": 101.45549128452937,
+        "completion_tokens": 256,
+        "prompt_tokens": 1336,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 33384.29947569966,
+        "tpot_ms": 101.46485470673618,
+        "completion_tokens": 256,
+        "prompt_tokens": 1516,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 24567.087495699525,
+        "tpot_ms": 134.6262584349104,
+        "completion_tokens": 256,
+        "prompt_tokens": 1462,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 15680.146725848317,
+        "tpot_ms": 178.74940374887058,
+        "completion_tokens": 179,
+        "prompt_tokens": 1408,
+        "reasoning_tokens": 0,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 9738.013928756118,
+        "tpot_ms": 192.93979488671087,
+        "completion_tokens": 230,
+        "prompt_tokens": 1412,
+        "reasoning_tokens": 0,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 12727.025156840682,
+        "tpot_ms": 178.8264792777744,
+        "completion_tokens": 256,
+        "prompt_tokens": 1474,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 30625.68898871541,
+        "tpot_ms": 111.24367218302643,
+        "completion_tokens": 254,
+        "prompt_tokens": 1298,
+        "reasoning_tokens": 0,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 21520.092882215977,
+        "tpot_ms": 146.07371395709467,
+        "completion_tokens": 256,
+        "prompt_tokens": 1469,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 15677.107583731413,
+        "tpot_ms": 167.92240394096748,
+        "completion_tokens": 256,
+        "prompt_tokens": 1336,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 27547.00036905706,
+        "tpot_ms": 123.40923929769619,
+        "completion_tokens": 256,
+        "prompt_tokens": 1516,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 30625.37508830428,
+        "tpot_ms": 111.67666039192208,
+        "completion_tokens": 256,
+        "prompt_tokens": 1462,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 9734.471678733826,
+        "tpot_ms": 196.87389958373927,
+        "completion_tokens": 217,
+        "prompt_tokens": 1408,
+        "reasoning_tokens": 0,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      }
+    ],
+    "aggregate": {
+      "tok_per_s": 65.87753303072509,
+      "wall_s": 59.26147838868201,
+      "ok_streams": 16,
+      "failed_streams": 0
+    }
+  },
+  "anchor": {
+    "ok": true,
+    "content_tail": "OK"
+  },
+  "log_excerpt": [
+    "llama-server : /root/llama.cpp/build-714gfx1100/bin/llama-server (version: 0.1.0-dev (build 10454, commit 4df29be4f))",
+    "model        : models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf (17G)",
+    "ctx-size     : 131072  (override: CTX_SIZE=<n>)",
+    "gpu layers   : 99 (all)",
+    "mmproj       : models/Qwen3.8-27B-GGUF/mmproj-F16.gguf",
+    "speculative  : off (opt in: WITH_MTP=1)",
+    "extra args   : -np 16",
+    "Serving on http://127.0.0.1:8080 ...",
+    "0.00.079.008 W srv  llama_server: -----------------",
+    "0.00.079.011 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set",
+    "0.00.079.011 W srv  llama_server: this can be a security risk (cross-origin attacks)",
+    "0.00.079.011 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655",
+    "0.00.079.012 W srv  llama_server: -----------------",
+    "0.00.766.070 W model has unused tensor blk.64.attn_norm.weight (size = 20480 bytes) -- ignoring",
+    "0.00.766.078 W model has unused tensor blk.64.post_attention_norm.weight (size = 20480 bytes) -- ignoring",
+    "0.00.766.084 W model has unused tensor blk.64.attn_q.weight (size = 43253760 bytes) -- ignoring",
+    "0.00.766.087 W model has unused tensor blk.64.attn_k.weight (size = 3604480 bytes) -- ignoring",
+    "0.00.766.089 W model has unused tensor blk.64.attn_v.weight (size = 4300800 bytes) -- ignoring",
+    "0.00.766.097 W model has unused tensor blk.64.attn_output.weight (size = 21626880 bytes) -- ignoring",
+    "0.00.766.099 W model has unused tensor blk.64.attn_q_norm.weight (size = 1024 bytes) -- ignoring"
+  ],
+  "degraded": false,
+  "degraded_reason": null
+}

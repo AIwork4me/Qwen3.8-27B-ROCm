@@ -1,0 +1,87 @@
+{
+  "id": "gguf-udq4kxl-auto-base-c1-ctx262144",
+  "label": "gguf-udq4kxl-auto-base-c1-ctx262144",
+  "base_url": "http://127.0.0.1:8080",
+  "started_utc": "2026-08-18T00:52:56Z",
+  "server_flags": {
+    "ctx_size": 262144,
+    "concurrency_np": 1,
+    "with_mtp": false,
+    "extra_args": "",
+    "port": 8080,
+    "kv_semantics_expected": "unified (default boot: auto n_parallel=4, shared ctx pool)",
+    "quickstart": "scripts/gguf-quickstart.sh",
+    "llama_server_flags": [
+      "--ctx-size",
+      "262144",
+      "-ngl",
+      "99",
+      "--jinja"
+    ]
+  },
+  "slot_info": {
+    "n_slots": 4,
+    "n_ctx_slot": 262144,
+    "kv_unified": "true",
+    "log_line": "n_slots = 4, n_ctx_slot = 262144, kv_unified = 'true'"
+  },
+  "load": {
+    "vram_mib": 34805,
+    "gtt_mib": 21
+  },
+  "boot": {
+    "ok": true,
+    "health_wall_s": 8
+  },
+  "client": {
+    "label": "gguf-udq4kxl-auto-base-c1-ctx262144",
+    "concurrency": 1,
+    "started_utc": "2026-08-18T00:53:08.260892+00:00",
+    "streams": [
+      {
+        "ttft_ms": 1865.7273724675179,
+        "tpot_ms": 33.515173627757555,
+        "completion_tokens": 256,
+        "prompt_tokens": 1412,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      }
+    ],
+    "aggregate": {
+      "tok_per_s": 24.58249634323416,
+      "wall_s": 10.413913885131478,
+      "ok_streams": 1,
+      "failed_streams": 0
+    }
+  },
+  "anchor": {
+    "ok": true,
+    "content_tail": "OK"
+  },
+  "log_excerpt": [
+    "llama-server : /root/llama.cpp/build-714gfx1100/bin/llama-server (version: 0.1.0-dev (build 10454, commit 4df29be4f))",
+    "model        : models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf (17G)",
+    "ctx-size     : 262144  (override: CTX_SIZE=<n>)",
+    "gpu layers   : 99 (all)",
+    "mmproj       : models/Qwen3.8-27B-GGUF/mmproj-F16.gguf",
+    "speculative  : off (opt in: WITH_MTP=1)",
+    "extra args   : none",
+    "Serving on http://127.0.0.1:8080 ...",
+    "0.00.077.694 W srv  llama_server: -----------------",
+    "0.00.077.697 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set",
+    "0.00.077.697 W srv  llama_server: this can be a security risk (cross-origin attacks)",
+    "0.00.077.697 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655",
+    "0.00.077.697 W srv  llama_server: -----------------",
+    "0.00.752.860 W model has unused tensor blk.64.attn_norm.weight (size = 20480 bytes) -- ignoring",
+    "0.00.752.867 W model has unused tensor blk.64.post_attention_norm.weight (size = 20480 bytes) -- ignoring",
+    "0.00.752.874 W model has unused tensor blk.64.attn_q.weight (size = 43253760 bytes) -- ignoring",
+    "0.00.752.876 W model has unused tensor blk.64.attn_k.weight (size = 3604480 bytes) -- ignoring",
+    "0.00.752.879 W model has unused tensor blk.64.attn_v.weight (size = 4300800 bytes) -- ignoring",
+    "0.00.752.887 W model has unused tensor blk.64.attn_output.weight (size = 21626880 bytes) -- ignoring",
+    "0.00.752.889 W model has unused tensor blk.64.attn_q_norm.weight (size = 1024 bytes) -- ignoring"
+  ],
+  "degraded": false,
+  "degraded_reason": null
+}

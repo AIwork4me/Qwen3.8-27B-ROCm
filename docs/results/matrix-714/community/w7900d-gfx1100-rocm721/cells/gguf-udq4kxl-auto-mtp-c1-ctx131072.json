@@ -1,0 +1,89 @@
+{
+  "id": "gguf-udq4kxl-auto-mtp-c1-ctx131072",
+  "label": "gguf-udq4kxl-auto-mtp-c1-ctx131072",
+  "base_url": "http://127.0.0.1:8080",
+  "started_utc": "2026-08-18T00:52:00Z",
+  "server_flags": {
+    "ctx_size": 131072,
+    "concurrency_np": 1,
+    "with_mtp": true,
+    "extra_args": "",
+    "port": 8080,
+    "kv_semantics_expected": "unified (default boot: auto n_parallel=4, shared ctx pool)",
+    "quickstart": "scripts/gguf-quickstart.sh",
+    "llama_server_flags": [
+      "--ctx-size",
+      "131072",
+      "-ngl",
+      "99",
+      "--jinja",
+      "--spec-type",
+      "draft-mtp"
+    ]
+  },
+  "slot_info": {
+    "n_slots": 4,
+    "n_ctx_slot": 131072,
+    "kv_unified": "true",
+    "log_line": "n_slots = 4, n_ctx_slot = 131072, kv_unified = 'true'"
+  },
+  "load": {
+    "vram_mib": 29279,
+    "gtt_mib": 21
+  },
+  "boot": {
+    "ok": true,
+    "health_wall_s": 9
+  },
+  "client": {
+    "label": "gguf-udq4kxl-auto-mtp-c1-ctx131072",
+    "concurrency": 1,
+    "started_utc": "2026-08-18T00:52:12.598827+00:00",
+    "streams": [
+      {
+        "ttft_ms": 2060.2593068033457,
+        "tpot_ms": 24.19636366414089,
+        "completion_tokens": 256,
+        "prompt_tokens": 1412,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      }
+    ],
+    "aggregate": {
+      "tok_per_s": 31.097937685663968,
+      "wall_s": 8.232057141140103,
+      "ok_streams": 1,
+      "failed_streams": 0
+    }
+  },
+  "anchor": {
+    "ok": true,
+    "content_tail": "OK"
+  },
+  "log_excerpt": [
+    "llama-server : /root/llama.cpp/build-714gfx1100/bin/llama-server (version: 0.1.0-dev (build 10454, commit 4df29be4f))",
+    "model        : models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf (17G)",
+    "ctx-size     : 131072  (override: CTX_SIZE=<n>)",
+    "gpu layers   : 99 (all)",
+    "mmproj       : models/Qwen3.8-27B-GGUF/mmproj-F16.gguf",
+    "speculative  : draft-mtp (MTP head from the same GGUF)",
+    "extra args   : none",
+    "Serving on http://127.0.0.1:8080 ...",
+    "0.00.077.822 W srv  llama_server: -----------------",
+    "0.00.077.825 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set",
+    "0.00.077.825 W srv  llama_server: this can be a security risk (cross-origin attacks)",
+    "0.00.077.825 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655",
+    "0.00.077.825 W srv  llama_server: -----------------",
+    "0.07.227.399 I common_speculative_init_result: creating MTP draft context against the target model 'models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf'",
+    "0.07.269.539 W load_hparams: Qwen-VL models require at minimum 1024 image tokens to function correctly on grounding tasks",
+    "0.07.269.545 W load_hparams: if you encounter problems with accuracy, try adding --image-min-tokens 1024",
+    "0.07.269.545 W load_hparams: more info: https://github.com/ggml-org/llama.cpp/issues/16842",
+    "0.07.720.137 I srv    load_model: initializing, n_slots = 4, n_ctx_slot = 131072, kv_unified = 'true'",
+    "0.07.720.306 W llama_sampler_backend_support: device 'ROCm0' does not have support for op TOP_K needed for sampler 'top-k'",
+    "0.07.720.315 W llama_sampler_backend_support: device 'ROCm0' does not have support for op TOP_K needed for sampler 'top-k'"
+  ],
+  "degraded": false,
+  "degraded_reason": null
+}

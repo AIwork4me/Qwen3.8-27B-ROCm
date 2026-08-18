@@ -1,3 +1,31 @@
 {
-  "platforms": []
+  "platforms": [
+    {
+      "id": "w7900d-gfx1100-rocm721",
+      "submitter": "AIwork4me",
+      "submitted": "2026-08-18",
+      "gpu": {
+        "arch": "gfx1100",
+        "marketing_name": "AMD Radeon Pro W7900D",
+        "vram_gib": 48
+      },
+      "stack": {
+        "rocm": "7.2.1",
+        "kernel": "6.8.0-79-generic",
+        "pytorch_source": "not used for evidence cells (GGUF-path submission; see stack-manifest.md)",
+        "vllm_source": "not used for evidence cells (BF16 does not fit 48 GiB); exploratory FP8 vLLM 0.27.1+rocm723 documented as context only",
+        "llama_cpp_commit": "4df29be4f4c3673f428170fda944a5b19f743bb8"
+      },
+      "validated": {
+        "gguf": true,
+        "vllm": false
+      },
+      "receipts": {
+        "env_check": "docs/results/matrix-714/community/w7900d-gfx1100-rocm721/env-check.txt",
+        "cells": [
+          "docs/results/matrix-714/community/w7900d-gfx1100-rocm721/"
+        ]
+      }
+    }
+  ]
 }
