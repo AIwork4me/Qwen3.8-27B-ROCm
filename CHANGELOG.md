@@ -8,6 +8,37 @@ receipts [`docs/results/matrix-714/cells/`](docs/results/matrix-714/cells/),
 and the rehearsal receipt
 [`docs/results/rocm-7.14/one-pass-rehearsal.md`](docs/results/rocm-7.14/one-pass-rehearsal.md).
 
+## v0.1.1 — 2026-08-18
+
+- **Community hardware validation landed**
+  ([PR #1](https://github.com/AIwork4me/Qwen3.8-27B-ROCm/pull/1)) — AMD
+  Radeon Pro W7900D (`gfx1100`, 48 GiB discrete, ROCm 7.2.1 runtime): the
+  first protocol submission. 7/7 healthy GGUF cells via the project runner
+  (28/28 bench streams + 7/7 greedy anchors across the 7 cells
+  (1+1+16+4+1+4+1 streams)), matched-context MTP pair 31.1 vs 24.7
+  aggregate tok/s (+26.2% @ctx131072); the greedy-degradation pit NOT
+  reproduced on discrete `gfx1100` (cross-architecture data point
+  consistent with the `prop.integrated` hypothesis). Receipts:
+  [`docs/results/matrix-714/community/w7900d-gfx1100-rocm721/`](docs/results/matrix-714/community/w7900d-gfx1100-rocm721/),
+  [README hardware-matrix row](README.md#hardware-support).
+- **Upstream engagement** — differential test of llama.cpp
+  [PR #25863](https://github.com/ggml-org/llama.cpp/pull/25863) (fix for
+  [#25992](https://github.com/ggml-org/llama.cpp/issues/25992)) reported by
+  the owner in
+  [#25992](https://github.com/ggml-org/llama.cpp/issues/25992#issuecomment-5321885979)
+  (permalink comment id 5321885979, recorded in
+  [`docs/upstream/llama-cpp-hip-greedy-degradation.md` § Reported](docs/upstream/llama-cpp-hip-greedy-degradation.md#reported));
+  gfx1100 non-repro owner-action brief added
+  ([`docs/upstream/llama-cpp-25992-w7900d-nonrepro.md`](docs/upstream/llama-cpp-25992-w7900d-nonrepro.md)).
+- **Protocol** — community-profile kernel-floor relaxation (warn not fail;
+  base profile unchanged, regression-tested); policy note recorded in the
+  [PR #1 review](https://github.com/AIwork4me/Qwen3.8-27B-ROCm/pull/1).
+- **Housekeeping** — CITATION repository URLs
+  ([`CITATION.cff`](CITATION.cff)), repo topics
+  ([repository](https://github.com/AIwork4me/Qwen3.8-27B-ROCm)), upstream
+  permalink recorded
+  ([§ Reported](docs/upstream/llama-cpp-hip-greedy-degradation.md#reported)).
+
 ## v0.1.0 — 2026-08-17
 
 First public release: the reproducible RDNA reference for serving
