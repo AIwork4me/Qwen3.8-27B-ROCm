@@ -8,6 +8,22 @@ receipts [`docs/results/matrix-714/cells/`](docs/results/matrix-714/cells/),
 and the rehearsal receipt
 [`docs/results/rocm-7.14/one-pass-rehearsal.md`](docs/results/rocm-7.14/one-pass-rehearsal.md).
 
+## v0.1.2 — 2026-08-18
+
+- **Vulkan×MTP-depth comparison cells measured** (plan
+  [`docs/superpowers/plans/2026-08-18-vulkan-mtp-comparison.md`](docs/superpowers/plans/2026-08-18-vulkan-mtp-comparison.md)):
+  8 new raw cells — `vulkan` {base, mtp, mtp4} × c{1,4} @ctx131072 on the
+  same pinned llama.cpp commit `4df29be4` (build `build-714-vk`, Mesa RADV
+  GFX1151 ICD), `hip` mtp4 c1 (explicit `--spec-draft-n-max 4`), and the
+  `hip` base c4 unified-default-boot rider. Greedy anchor clean on all 8
+  cells — the greedy-degradation pit did NOT reproduce on Vulkan at any
+  depth/concurrency measured. Verdict distribution after regeneration:
+  8 recommended / 14 caution / 6 avoid. Raw receipts:
+  [`docs/results/matrix-714/cells/`](docs/results/matrix-714/cells/).
+- **Cell-id migration note** — legacy gguf ids without a backend tag are
+  `hip` (historical v0.1.0/v0.1.1 entries stay interpretable under that
+  rule).
+
 ## v0.1.1 — 2026-08-18
 
 - **Community hardware validation landed**

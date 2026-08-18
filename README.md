@@ -94,7 +94,7 @@ use is unaffected.
 ## Performance
 
 <!-- BEGIN GENERATED: performance-highlights -->
-Measured 2026-08-16/17 on the reference host (gfx1151, ROCm 7.14, 80 GiB GTT pool): **20 cells — 4 recommended / 10 caution / 6 avoid**. Verdicts: `configs/benchmark-verdicts.json`; raw receipts: `docs/results/matrix-714/cells/`; full tables: `docs/results/benchmark.md`.
+Measured 2026-08-16/17 on the reference host (gfx1151, ROCm 7.14, 80 GiB GTT pool): **28 cells — 8 recommended / 14 caution / 6 avoid**. Verdicts: `configs/benchmark-verdicts.json`; raw receipts: `docs/results/matrix-714/cells/`; full tables: `docs/results/benchmark.md`.
 
 **Recommended — interactive chat (GGUF path, UD-Q4_K_XL):**
 

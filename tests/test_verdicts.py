@@ -534,7 +534,12 @@ def test_no_legacy_unprefixed_gguf_ids_on_migrated_surfaces():
 def test_verdict_content_is_byte_stable_modulo_the_id_migration():
     """The 2026-08-18 migration changed ids ONLY: every verdict from the
     pre-migration commit must survive byte-identically (verdict, reason,
-    conditions, workaround, upstream, metrics) under its mapped id."""
+    conditions, workaround, upstream, metrics) under its mapped id.
+
+    Updated 2026-08-18 (Task 3, raw receipts): the 8 measured v0.1.2 cells
+    legitimately ADD verdicts on top of the migrated set — the byte-stable
+    guarantee applies to the pre-migration survivors, and the additions must
+    be exactly the declared v0.1.2 cells."""
     old = subprocess.run(
         ["git", "show", "f67ddc6:configs/benchmark-verdicts.json"],
         cwd=ROOT, capture_output=True, text=True, timeout=60)
@@ -542,8 +547,22 @@ def test_verdict_content_is_byte_stable_modulo_the_id_migration():
         pytest.skip("pre-migration commit f67ddc6 not in this clone")
     old_cells = {c["id"]: c for c in json.loads(old.stdout)["cells"]}
     new_cells = {c["id"]: c for c in load(VERDICTS)["cells"]}
-    assert set(new_cells) == {migrated(i) for i in old_cells}, (
-        "the verdict id set is not the migrated pre-commit id set")
+    migrated_ids = {migrated(i) for i in old_cells}
+    assert migrated_ids <= set(new_cells), (
+        "the verdict id set lost migrated pre-commit ids")
+    t3_additions = {
+        "gguf-vulkan-udq4kxl-auto-base-c1-ctx131072",
+        "gguf-vulkan-udq4kxl-auto-base-c4-ctx131072",
+        "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072",
+        "gguf-vulkan-udq4kxl-auto-mtp-c4-ctx131072",
+        "gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072",
+        "gguf-vulkan-udq4kxl-auto-mtp4-c4-ctx131072",
+        "gguf-hip-udq4kxl-auto-mtp4-c1-ctx131072",
+        "gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified",
+    }
+    assert set(new_cells) - migrated_ids == t3_additions, (
+        "beyond the migrated pre-commit set, only the measured v0.1.2 "
+        "cells may carry verdicts")
     for old_id, old_cell in sorted(old_cells.items()):
         new_id = migrated(old_id)
         migrated_cell = dict(new_cells[new_id])
@@ -556,11 +575,13 @@ def test_verdict_content_is_byte_stable_modulo_the_id_migration():
 
 
 def test_measured_matrix_cells_and_verdicts_survived_the_migration():
-    """The 20 measured cells (5 degraded) keep their statuses and degraded
-    notes under the migrated ids; verdict coverage stays exact."""
+    """The measured cells (5 degraded) keep their statuses and degraded
+    notes under the migrated ids; verdict coverage stays exact. Updated
+    2026-08-18 (Task 3): 20 migration survivors + the 8 measured v0.1.2
+    Vulkan×MTP/unified cells = 28 (the new cells are all non-degraded)."""
     m = load(MATRIX)
     measured = {c["id"] for c in m["cells"] if c["status"] == "measured"}
-    assert len(measured) == 20
+    assert len(measured) == 28
     degraded = {c["id"] for c in m["cells"] if c["status"] == "measured"
                 and c.get("degraded")}
     assert len(degraded) == 5
@@ -569,9 +590,10 @@ def test_measured_matrix_cells_and_verdicts_survived_the_migration():
 
 
 def test_benchmark_tables_render_a_backend_column_from_ids():
-    """Backend dimension: the tables that will mix hip/vulkan rows carry a
-    Backend column derived from the cell id (all values hip today — the 8
-    vulkan/mtp4/unified cells are planned, unmeasured)."""
+    """Backend dimension: the tables that mix hip/vulkan rows carry a
+    Backend column derived from the cell id (updated 2026-08-18, Task 3:
+    measured gguf rows now span both backends — the column must track the
+    id, whichever backends are measured)."""
     text = BENCH_MD.read_text()
     assert "| Cell | Backend | Verdict |" in text, (
         "benchmark.md GGUF table lacks the Backend column")
@@ -586,14 +608,16 @@ def test_benchmark_tables_render_a_backend_column_from_ids():
         backend = cid.split("-")[1]
         row = re.search(rf"\| \[`{re.escape(cid)}`\]\([^)]*\) \| (\w+) \|", text)
         assert row, f"benchmark.md has no row link for {cid}"
-        assert row.group(1) == backend == "hip", (
+        assert row.group(1) == backend, (
             f"{cid}: Backend column must derive from the id")
         assert f"| {backend} |" in text
 
 
-def test_declared_v012_cells_are_planned_not_verdicted():
-    """The 8 new v0.1.2 cells are declared planned (pre-measurement) and
-    carry no verdicts — an unmeasured cell has no evidence to verdict on."""
+def test_declared_v012_cells_are_measured_and_verdicted():
+    """Updated 2026-08-18 (Task 3): the 8 v0.1.2 cells are now MEASURED
+    (raw receipts committed) and carry ladder verdicts — and the receipts
+    must state honestly what booted: the id's backend tag, the mtp part's
+    explicit spec depth, and unified slots only on the -unified rider."""
     m = load(MATRIX)
     new_ids = {
         "gguf-vulkan-udq4kxl-auto-base-c1-ctx131072",
@@ -608,7 +632,21 @@ def test_declared_v012_cells_are_planned_not_verdicted():
     by_id = {c["id"]: c for c in m["cells"]}
     assert set(by_id) >= new_ids
     for cid in sorted(new_ids):
-        assert by_id[cid]["status"] == "planned", f"{cid} must be planned"
-        assert "Vulkan×MTP" in by_id[cid]["reason"]
+        assert by_id[cid]["status"] == "measured", f"{cid} must be measured"
+        assert not by_id[cid].get("degraded"), f"{cid} must not be degraded"
+        assert "reason" not in by_id[cid], (
+            f"{cid}: a measured non-degraded cell carries no planned-reason")
     verdicted = {c["id"] for c in load(VERDICTS)["cells"]}
-    assert not (verdicted & new_ids)
+    assert verdicted >= new_ids, "the measured v0.1.2 cells must be verdicted"
+    # Receipt honesty: server_flags must agree with the id grammar.
+    depth_by_part = {"base": None, "mtp": 1, "mtp4": 4}
+    for cid in sorted(new_ids):
+        cell = json.loads((CELLS_DIR / f"{cid}.json").read_text(encoding="utf-8"))
+        sf = cell["server_flags"]
+        part = cid.split("-")[4]
+        assert sf["backend"] == cid.split("-")[1], f"{cid}: backend mismatch"
+        assert sf["mtp_part"] == part, f"{cid}: mtp part mismatch"
+        assert sf["spec_depth"] == depth_by_part[part], (
+            f"{cid}: spec_depth {sf['spec_depth']} != grammar depth")
+        assert sf["slots"] == ("unified-rider" if cid.endswith("-unified")
+                               else "default"), f"{cid}: slots mismatch"

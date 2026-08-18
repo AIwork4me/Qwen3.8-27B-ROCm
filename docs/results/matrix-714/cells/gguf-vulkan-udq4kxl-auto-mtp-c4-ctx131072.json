@@ -1,0 +1,127 @@
+{
+  "id": "gguf-vulkan-udq4kxl-auto-mtp-c4-ctx131072",
+  "label": "gguf-vulkan-udq4kxl-auto-mtp-c4-ctx131072",
+  "base_url": "http://127.0.0.1:8080",
+  "started_utc": "2026-08-18T05:46:43Z",
+  "server_flags": {
+    "backend": "vulkan",
+    "ctx_size": 131072,
+    "concurrency_np": 4,
+    "with_mtp": true,
+    "mtp_part": "mtp",
+    "spec_depth": 1,
+    "slots": "default",
+    "extra_args": "-np 4",
+    "port": 8080,
+    "kv_semantics_expected": "split (explicit -np 4: per-slot window = 131072/4 = 32768, kv_unified=false)",
+    "quickstart": "scripts/gguf-quickstart.sh",
+    "llama_server_flags": [
+      "--ctx-size",
+      "131072",
+      "-ngl",
+      "99",
+      "--jinja",
+      "--spec-type",
+      "draft-mtp",
+      "--spec-draft-n-max",
+      "1",
+      "-np",
+      "4"
+    ]
+  },
+  "slot_info": {
+    "n_slots": 4,
+    "n_ctx_slot": 32768,
+    "kv_unified": "false",
+    "log_line": "n_slots = 4, n_ctx_slot = 32768, kv_unified = 'false'"
+  },
+  "load": {
+    "vram_mib": 29288,
+    "gtt_mib": 1029
+  },
+  "boot": {
+    "ok": true,
+    "health_wall_s": 6
+  },
+  "client": {
+    "label": "gguf-vulkan-udq4kxl-auto-mtp-c4-ctx131072",
+    "concurrency": 4,
+    "started_utc": "2026-08-18T05:46:53.228699+00:00",
+    "streams": [
+      {
+        "ttft_ms": 35749.89118298981,
+        "tpot_ms": 154.84754210365824,
+        "completion_tokens": 252,
+        "prompt_tokens": 1412,
+        "reasoning_tokens": 0,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 30758.703412953764,
+        "tpot_ms": 173.0354851371992,
+        "completion_tokens": 256,
+        "prompt_tokens": 1474,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 30758.482930948958,
+        "tpot_ms": 179.16410627053577,
+        "completion_tokens": 256,
+        "prompt_tokens": 1298,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 37058.931134059094,
+        "tpot_ms": 151.87017644673367,
+        "completion_tokens": 256,
+        "prompt_tokens": 1469,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      }
+    ],
+    "aggregate": {
+      "tok_per_s": 13.342614959656586,
+      "wall_s": 76.44678371399641,
+      "ok_streams": 4,
+      "failed_streams": 0
+    }
+  },
+  "anchor": {
+    "ok": true,
+    "content_tail": "OK"
+  },
+  "log_excerpt": [
+    "llama-server : /home/amd/Desktop/Qwen3.8-27B-ROCm/third_party/llama.cpp/build-714-vk/bin/llama-server (version: 0.1.0-dev (build 1, commit 4df29be4f))",
+    "model        : models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf (17G)",
+    "ctx-size     : 131072  (override: CTX_SIZE=<n>)",
+    "gpu layers   : 99 (all)",
+    "mmproj       : models/Qwen3.8-27B-GGUF/mmproj-F16.gguf",
+    "speculative  : draft-mtp (MTP head from the same GGUF, depth 1 via --spec-draft-n-max)",
+    "extra args   : -np 4",
+    "Serving on http://127.0.0.1:8080 ...",
+    "0.00.027.865 W srv  llama_server: -----------------",
+    "0.00.027.867 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set",
+    "0.00.027.867 W srv  llama_server: this can be a security risk (cross-origin attacks)",
+    "0.00.027.867 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655",
+    "0.00.027.867 W srv  llama_server: -----------------",
+    "0.03.676.777 I common_speculative_init_result: creating MTP draft context against the target model 'models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf'",
+    "0.03.723.851 W load_hparams: Qwen-VL models require at minimum 1024 image tokens to function correctly on grounding tasks",
+    "0.03.723.854 W load_hparams: if you encounter problems with accuracy, try adding --image-min-tokens 1024",
+    "0.03.723.855 W load_hparams: more info: https://github.com/ggml-org/llama.cpp/issues/16842",
+    "0.04.308.090 I srv    load_model: initializing, n_slots = 4, n_ctx_slot = 32768, kv_unified = 'false'",
+    "0.04.350.113 W srv  llama_server: NOTICE: server default port will be changed to :9931 in a future release",
+    "0.04.350.113 W srv  llama_server:         ref: https://github.com/ggml-org/llama.cpp/pull/26508"
+  ],
+  "degraded": false,
+  "degraded_reason": null
+}

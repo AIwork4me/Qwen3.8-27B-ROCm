@@ -177,57 +177,49 @@
     },
     {
       "id": "gguf-vulkan-udq4kxl-auto-base-c1-ctx131072",
-      "status": "planned",
-      "reason": "v0.1.2 Vulkan\u00d7MTP experiment priority (declared pre-measurement, METHODOLOGY.md \u00a78 addendum 2026-08-18)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true
     },
     {
       "id": "gguf-vulkan-udq4kxl-auto-base-c4-ctx131072",
-      "status": "planned",
-      "reason": "v0.1.2 Vulkan\u00d7MTP experiment priority (declared pre-measurement, METHODOLOGY.md \u00a78 addendum 2026-08-18)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true
     },
     {
       "id": "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072",
-      "status": "planned",
-      "reason": "v0.1.2 Vulkan\u00d7MTP experiment priority (declared pre-measurement, METHODOLOGY.md \u00a78 addendum 2026-08-18)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true
     },
     {
       "id": "gguf-vulkan-udq4kxl-auto-mtp-c4-ctx131072",
-      "status": "planned",
-      "reason": "v0.1.2 Vulkan\u00d7MTP experiment priority (declared pre-measurement, METHODOLOGY.md \u00a78 addendum 2026-08-18)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true
     },
     {
       "id": "gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072",
-      "status": "planned",
-      "reason": "v0.1.2 Vulkan\u00d7MTP experiment priority (declared pre-measurement, METHODOLOGY.md \u00a78 addendum 2026-08-18)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true
     },
     {
       "id": "gguf-vulkan-udq4kxl-auto-mtp4-c4-ctx131072",
-      "status": "planned",
-      "reason": "v0.1.2 Vulkan\u00d7MTP experiment priority (declared pre-measurement, METHODOLOGY.md \u00a78 addendum 2026-08-18)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true
     },
     {
       "id": "gguf-hip-udq4kxl-auto-mtp4-c1-ctx131072",
-      "status": "planned",
-      "reason": "v0.1.2 Vulkan\u00d7MTP experiment priority (declared pre-measurement, METHODOLOGY.md \u00a78 addendum 2026-08-18)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true
     },
     {
       "id": "gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified",
-      "status": "planned",
-      "reason": "v0.1.2 Vulkan\u00d7MTP experiment priority (declared pre-measurement, METHODOLOGY.md \u00a78 addendum 2026-08-18)",
+      "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
       "priority": true
     },

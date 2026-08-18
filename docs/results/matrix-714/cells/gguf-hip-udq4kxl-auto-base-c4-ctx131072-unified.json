@@ -1,0 +1,121 @@
+{
+  "id": "gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified",
+  "label": "gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified",
+  "base_url": "http://127.0.0.1:8080",
+  "started_utc": "2026-08-18T05:51:52Z",
+  "server_flags": {
+    "backend": "hip",
+    "ctx_size": 131072,
+    "concurrency_np": 4,
+    "with_mtp": false,
+    "mtp_part": "base",
+    "spec_depth": null,
+    "slots": "unified-rider",
+    "extra_args": "",
+    "port": 8080,
+    "kv_semantics_expected": "unified (-unified rider: default boot, no explicit n_parallel flag; auto n_parallel=4, shared ctx pool)",
+    "quickstart": "scripts/gguf-quickstart.sh",
+    "llama_server_flags": [
+      "--ctx-size",
+      "131072",
+      "-ngl",
+      "99",
+      "--jinja"
+    ]
+  },
+  "slot_info": {
+    "n_slots": 4,
+    "n_ctx_slot": 131072,
+    "kv_unified": "true",
+    "log_line": "n_slots = 4, n_ctx_slot = 131072, kv_unified = 'true'"
+  },
+  "load": {
+    "vram_mib": 1556,
+    "gtt_mib": 26556
+  },
+  "boot": {
+    "ok": true,
+    "health_wall_s": 6
+  },
+  "client": {
+    "label": "gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified",
+    "concurrency": 4,
+    "started_utc": "2026-08-18T05:52:01.487509+00:00",
+    "streams": [
+      {
+        "ttft_ms": 20837.49136305414,
+        "tpot_ms": 0.0,
+        "completion_tokens": 2,
+        "prompt_tokens": 1412,
+        "reasoning_tokens": 0,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 20835.963936988264,
+        "tpot_ms": 980.9127993260821,
+        "completion_tokens": 4,
+        "prompt_tokens": 1474,
+        "reasoning_tokens": 0,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 23779.079732950777,
+        "tpot_ms": 104.01224630027586,
+        "completion_tokens": 221,
+        "prompt_tokens": 1298,
+        "reasoning_tokens": 0,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 23423.776524956338,
+        "tpot_ms": 149.92897699786616,
+        "completion_tokens": 8,
+        "prompt_tokens": 1469,
+        "reasoning_tokens": 0,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      }
+    ],
+    "aggregate": {
+      "tok_per_s": 5.024894522211255,
+      "wall_s": 46.767150825005956,
+      "ok_streams": 4,
+      "failed_streams": 0
+    }
+  },
+  "anchor": {
+    "ok": true,
+    "content_tail": "OK"
+  },
+  "log_excerpt": [
+    "llama-server : /home/amd/Desktop/Qwen3.8-27B-ROCm/third_party/llama.cpp/build-714/bin/llama-server (version: 0.1.0-dev (build 1, commit 4df29be4f))",
+    "model        : models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf (17G)",
+    "ctx-size     : 131072  (override: CTX_SIZE=<n>)",
+    "gpu layers   : 99 (all)",
+    "mmproj       : models/Qwen3.8-27B-GGUF/mmproj-F16.gguf",
+    "speculative  : off (opt in: WITH_MTP=1)",
+    "extra args   : none",
+    "Serving on http://127.0.0.1:8080 ...",
+    "0.00.031.404 W srv  llama_server: -----------------",
+    "0.00.031.406 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set",
+    "0.00.031.406 W srv  llama_server: this can be a security risk (cross-origin attacks)",
+    "0.00.031.407 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655",
+    "0.00.031.407 W srv  llama_server: -----------------",
+    "0.01.177.028 W model has unused tensor blk.64.attn_norm.weight (size = 20480 bytes) -- ignoring",
+    "0.01.177.035 W model has unused tensor blk.64.post_attention_norm.weight (size = 20480 bytes) -- ignoring",
+    "0.01.177.039 W model has unused tensor blk.64.attn_q.weight (size = 43253760 bytes) -- ignoring",
+    "0.01.177.041 W model has unused tensor blk.64.attn_k.weight (size = 3604480 bytes) -- ignoring",
+    "0.01.177.042 W model has unused tensor blk.64.attn_v.weight (size = 4300800 bytes) -- ignoring",
+    "0.01.177.048 W model has unused tensor blk.64.attn_output.weight (size = 21626880 bytes) -- ignoring",
+    "0.01.177.050 W model has unused tensor blk.64.attn_q_norm.weight (size = 1024 bytes) -- ignoring"
+  ],
+  "degraded": false,
+  "degraded_reason": null
+}

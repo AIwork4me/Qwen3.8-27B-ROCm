@@ -366,8 +366,11 @@ def test_changelog_headline_numbers_recompute_from_verdicts() -> None:
                           .read_text(encoding="utf-8"))
     cells = {c["id"]: c for c in verdicts["cells"]}
     dist = Counter(c["verdict"] for c in cells.values())
-    assert len(cells) == 20, f"expected 20 cells, got {len(cells)}"
-    assert dist == {"recommended": 4, "caution": 10, "avoid": 6}, dist
+    # Count/distribution pins removed 2026-08-18 (Task 3): the measured
+    # v0.1.2 cells grew the set to 28 (8 recommended / 14 caution / 6
+    # avoid); the count must DERIVE from the verdicts JSON, and the
+    # CHANGELOG line below is what stays consistent with it.
+    assert set(dist) <= {"recommended", "caution", "avoid"}, dist
 
     text = CHANGELOG.read_text(encoding="utf-8")
     # The distribution line, verbatim from the generated tables.

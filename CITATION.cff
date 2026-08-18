@@ -1,7 +1,7 @@
 cff-version: 1.2.0
 message: "If you use this repository, please cite it as below."
 title: Qwen3.8-27B-ROCm
-version: 0.1.1
+version: 0.1.2
 date-released: "2026-08-18"
 authors:
   - name: AIwork4me
