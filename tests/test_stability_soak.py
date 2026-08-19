@@ -14,7 +14,9 @@ source-level contracts:
 * the receipt names the schema keys the session README compares against.
 """
 
+import json
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -140,11 +142,51 @@ def test_soak_captures_llama_server_banner_from_stderr():
 
 def test_soak_counts_health_flaps_during_the_soak():
     # The counter is incremented at every failed health check at a cycle
-    # boundary (the HEALTH_RECOVER_S wait path) and lands in totals — 0 in
-    # a normal run, >0 surfaced as an anomaly.
+    # boundary (the HEALTH_RECOVER_S wait path) and lands in totals — 0 in a
+    # normal run, >0 surfaced as an anomaly.
     src = SCRIPT.read_text()
     assert "HEALTH_FLAPS=0" in src, "the counter must start at 0"
     assert 'HEALTH_FLAPS=$((HEALTH_FLAPS + 1))' in src, (
         "a failed health check during the soak must count as a flap")
     assert "mid-soak health flap(s)" in src, (
         "a non-zero flap count must be surfaced as an anomaly")
+
+
+# --------------------- R1 telemetry (2026-08-19): clocks/power/temp + cache
+# Variance root-cause step 1, same harness as the cell runner: the soak's
+# load snapshot gains a telemetry block and a NEW post_bench snapshot is
+# taken after the soak window/anchor, before teardown. Same tolerance
+# contract (null + snippet per field; rocm-smi binary stays fatal).
+
+
+def test_soak_gains_the_same_telemetry_block():
+    src = SCRIPT.read_text()
+    for token in ("telemetry_snapshot()", "telemetry_parse_json",
+                  "--showclocks", "--showpower", "--showtemp",
+                  "sclk_mhz", "mclk_mhz", "power_w", "temp_edge_c",
+                  '["uptime", "-s"]', '["powerprofilesctl", "get"]',
+                  "power_dpm_force_performance_level",
+                  "mesa_shader_cache", '"mesa_cache"',
+                  '"telemetry"', "POST_BENCH_JSON", '"post_bench"',
+                  "command -v rocm-smi", '"errors"'):
+        assert token in src, f"soak telemetry must capture {token!r}"
+    # The soak is vulkan-pinned, so the mesa-cache readings are unconditional.
+    assert "MESA_CACHE_BEFORE_JSON" in src and "MESA_CACHE_AFTER_JSON" in src
+    # Functional: the parser (extracted, no GPU) reads the reference-host
+    # rocm-smi output shapes.
+    m = re.search(r"^telemetry_parse_json\(\) \{.*?^\}", src, re.S | re.M)
+    assert m, "telemetry_parse_json() not found in the soak source"
+    env = dict(os.environ,
+               CLOCKS_RAW="GPU[0]\t\t: sclk clock level: 1: (1409Mhz)\n"
+                          "GPU[0]\t\t: mclk clock level: 2: (1000Mhz)\n",
+               POWER_RAW="GPU[0]\t\t: Current Socket Graphics Package Power "
+                         "(W): 16.1\n",
+               TEMP_RAW="GPU[0]\t\t: Temperature (Sensor edge) (C): 46.0\n")
+    r = subprocess.run(["bash", "-c", m.group(0) + "\ntelemetry_parse_json"],
+                       capture_output=True, text=True, timeout=60, cwd=ROOT,
+                       env=env)
+    assert r.returncode == 0, r.stderr
+    got = json.loads(r.stdout)
+    assert (got["sclk_mhz"], got["mclk_mhz"]) == (1409.0, 1000.0)
+    assert got["power_w"] == 16.1 and got["temp_edge_c"] == 46.0
+    assert got["errors"] == {}

@@ -29,6 +29,7 @@ backend pairing (see its section below).
 | session 1 (= v0.1.2) | 2026-08-18 morning (cells started 05:41–05:43Z) | the 3 Vulkan c1 cells in [`../cells/`](../cells/) | `scripts/run-cell-gguf.sh`, project `CELLS_DIR` |
 | [session2-2026-08-18](session2-2026-08-18/) | 2026-08-18, receipt timestamps span 11:28:12Z–12:01:21Z | 3 re-measured cells + one 30-min sustained-load soak | runner with `CELLS_DIR=<this session dir>` (matrix untouched); `scripts/stability-soak.sh` for the soak |
 | [session3-2026-08-19](session3-2026-08-19/) | 2026-08-19, receipt timestamps span 00:56:51Z–00:59:50Z | 4 re-measured cells: hip mtp-c1 with explicit depth 1 (the depth-matched pairing side) + the 3 Vulkan c1 cells (cross-day re-run); no soak | runner with `CELLS_DIR=<this session dir>` (matrix untouched) |
+| [session4-2026-08-19](session4-2026-08-19/) | 2026-08-19, receipt timestamps span 06:32:54Z–06:41:10Z | 5 runs, serial: vulkan mtp-c1 ×3 (boot #1, boot #2 within-day cross-boot, cache-aside arm) interleaved with hip mtp-c1 ×2 (controls); first session with clock/power/temp + mesa-cache telemetry (root-cause step R1) | runner with `CELLS_DIR=<per-run subdirectory of this session dir>` (matrix untouched); the cache-aside arm is orchestrated outside the runner (see its note below) |
 
 ## Cell re-measurement: v0.1.2 vs session 2
 
@@ -154,3 +155,87 @@ vulkan 10.42 (gap +0.21, +2.11% of hip). Depth note on the hip side
 (different days, so depth is confounded with session): hip mtp-c1 implicit
 d3 (2026-08-16) 13.00 vs explicit d1 (session 3) 13.86 tok/s (+0.86,
 +6.61%). Anchors ok on all receipts involved.
+
+## Session 4 (2026-08-19): cross-boot / elapsed-time / cache-arm telemetry study
+
+Five runs, serial, one boot per run, GPU verified clean between runs (no
+`llama-server` process, GTT at the ~220 MiB idle baseline before every
+boot). This is the first session recorded with the R1 telemetry harness:
+every receipt carries `load.telemetry` (rocm-smi sclk/mclk/package
+power/edge temp from `--showclocks`/`--showpower`/`--showtemp` with the raw
+command output verbatim, plus host state) and a NEW `post_bench.telemetry`
+block (same fields, captured right after the bench/anchor, before
+teardown); the vulkan receipts additionally carry `load.telemetry.mesa_cache`
+(du -s KiB / file count / newest mtime of `~/.cache/mesa_shader_cache`,
+read before boot and after teardown). Host state identical across all five
+runs: boot time `2026-08-12 09:42:40` (`uptime -s`, i.e. the same boot as
+s1/s2/s3), power profile `balanced` (`powerprofilesctl get`), GPU
+`power_dpm_force_performance_level` `auto` (card1). One telemetry-tolerance
+case: run 5's post-bench `--showclocks` output (rc 0) carried no mclk line
+— recorded as `mclk_mhz: null` with the snippet in `telemetry.errors`; the
+run was unaffected.
+
+Run order (fixed by design, not reordered): vk boot #1 → hip control #1 →
+vk boot #2 → hip control #2 → vk cache-aside arm. Receipts (the same cell
+id is measured more than once in this session, so each run writes into its
+own subdirectory — receipts never overwrite):
+[run1-vk-boot1](session4-2026-08-19/run1-vk-boot1/gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072.json),
+[run2-hip-ctrl1](session4-2026-08-19/run2-hip-ctrl1/gguf-hip-udq4kxl-auto-mtp-c1-ctx131072.json),
+[run3-vk-boot2](session4-2026-08-19/run3-vk-boot2/gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072.json),
+[run4-hip-ctrl2](session4-2026-08-19/run4-hip-ctrl2/gguf-hip-udq4kxl-auto-mtp-c1-ctx131072.json),
+[run5-vk-cacheaside](session4-2026-08-19/run5-vk-cacheaside/gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072.json).
+
+### Per-run table
+
+c1 cells have a single stream, so the per-run median is that stream's value
+("stream tok/s" = 1000/tpot_ms, the corpus 2dp convention; "aggregate" =
+completion_tokens / wall_s). Telemetry columns show sclk/mclk (MHz) ·
+package power (W) · edge temp (°C) at the load snapshot and at the
+post-bench snapshot. Boot wall = server health-poll time.
+
+| Run | backend | boot # | stream tok/s | TTFT (s) | aggregate tok/s | anchor | boot wall (s) | load sclk/mclk · power · temp | post-bench sclk/mclk · power · temp | mesa cache before boot → after teardown |
+|---|---|---|---|---|---|---|---|---|---|---|
+| run1 | vulkan | 1 | 17.10 | 8.37 | 10.99 | ok | 4 | 1350/1000 · 13.06 · 46.0 | 1433/1000 · 31.05 · 57.0 | 7884 KiB / 867 files → 7884 KiB / 867 files (newest mtime moved to the run time) |
+| run2 | hip | 1 | 14.76 | 5.46 | 11.26 | ok | 6 | 1374/1000 · 13.03 · 49.0 | 1929/1000 · 53.05 · 58.0 | not captured (vulkan-only field) |
+| run3 | vulkan | 2 | 16.96 | 8.50 | 10.88 | ok | 3 | 1355/1000 · 13.03 · 48.0 | 1533/1000 · 32.00 · 57.0 | 7884 KiB / 867 files → 7884 KiB / 867 files (unchanged, newest mtime still run1's) |
+| run4 | hip | 2 | 14.06 | 5.46 | 10.82 | ok | 6 | 1350/1000 · 13.04 · 49.0 | 1910/1000 · 52.07 · 58.0 | not captured (vulkan-only field) |
+| run5 (cache-aside arm) | vulkan | 3 | 12.38 | 12.45 | 7.75 | ok | 6 | 1332/1000 · 12.06 · 47.0 | 1484/null · 30.04 · 54.0 | (dir absent) → 2136 KiB / 100 files, newest mtime at the run time |
+
+Load memory: run1/run3/run5 VRAM 29080/29080/29082 MiB with GTT
+1225/1223/1225 MiB (vulkan splits); run2/run4 VRAM 1185/1183 MiB with GTT
+28058/28062 MiB (hip splits). Run 4's stream finished at 253 tokens with
+`finish_reason=stop`; every other session-4 stream hit the 256-token cap
+(`finish_reason=length`). Within-run deltas: vk boot #1 vs boot #2
+(≈2 min apart, separate server processes) 17.10 vs 16.96 (−0.8%); hip
+control #1 vs #2 14.76 vs 14.06 (−4.8%); cache-aside vs the mean of the
+two warm vk runs 12.38 vs 17.03 (−27.3%), TTFT 12.45 s vs 8.37/8.50 s.
+
+### Reference values (same two cells, prior sessions)
+
+| Cell | s1 (08-18) | s2 (08-18) | s3 (08-19) |
+|---|---|---|---|
+| `gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072` | 16.00 tok/s · TTFT 8.63 s | 16.25 · 8.64 | 14.53 · 9.94 |
+| `gguf-hip-udq4kxl-auto-mtp-c1-ctx131072` (explicit d1) | — (not run; the 08-16 canonical hip cell is implicit d3: 13.00 · 5.47) | — | 13.86 · 5.43 |
+
+Session-4 runs against those references: vulkan 17.10/16.96/12.38 (runs
+1/3/5) vs s1/s2/s3 = 16.00/16.25/14.53; hip 14.76/14.06 (runs 2/4) vs the
+s3 d1 value 13.86 (TTFT 5.46 s in both session-4 hip runs vs 5.43 s in s3).
+The host was not rebooted between s1 and session 4 (same boot since
+2026-08-12, recorded in every session-4 receipt's `telemetry.env`).
+
+### Cache-aside arm — orchestration note (runner-external)
+
+The runner does not know about this arm; it was orchestrated outside it,
+between runs 4 and 5, exactly as follows: (1) the cache stats were recorded
+(7884 KiB / 867 files, matching run 3's after-teardown reading); (2) the
+directory was moved aside (`mv ~/.cache/mesa_shader_cache
+~/.cache/mesa_shader_cache.aside-20260819T064054Z`) — no
+`MESA_SHADER_CACHE_DIR` or `MESA_SHADER_CACHE_DISABLE` variables are set on
+this host (checked before the run), so Mesa/RADV resolved the cache at the
+default path, found nothing there (run 5's receipt records
+`"not a directory"` at the before-boot reading) and recreated the directory
+during the run; (3) after the run and teardown the fresh cache measured
+2136 KiB / 100 files (newest mtime at the run time) and was preserved at
+`~/.cache/mesa_shader_cache.fresh-20260819T064054Z`; (4) the original cache
+was moved back and verified: du 7884 KiB / 867 files — an exact match to
+the before-aside reading.
