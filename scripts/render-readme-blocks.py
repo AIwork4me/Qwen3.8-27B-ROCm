@@ -232,21 +232,38 @@ def render_performance_highlights(data: dict) -> str:
         "",
         "**Recommended — interactive chat (GGUF path, UD-Q4_K_XL):**",
         "",
-        "| Config | Backend | Per-stream (median) | Aggregate | TTFT | Verdict |",
-        "|---|---|---|---|---|---|",
+        "| Config | Backend | Per-stream (median) | Aggregate | TTFT | Cell verdict | Quickstart mapping |",
+        "|---|---|---|---|---|---|---|",
     ]
+    # Two verdict layers, two labeled columns (2026-08-19 audit C-I1 fix,
+    # v0.1.5): the corpus CELL verdict (mechanical, from the receipts) never
+    # collides with the QUICKSTART mapping (the recommendation layer) inside
+    # one cell of a table titled "Recommended" — benchmark.md's mapping
+    # table is the model. The quickstart values state the mapping layer.
+    quickstart_of = {
+        "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072":
+            "**NOT recommended** — available experimental opt-in "
+            "(downgraded 2026-08-19)",
+        "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072":
+            "**recommended path** — boot as `WITH_MTP=1 SPEC_DEPTH=1`",
+        "gguf-hip-udq4kxl-auto-base-c1-ctx131072": "the default boot",
+        "gguf-hip-udq4kxl-auto-base-c1-ctx32768": "via `CTX_SIZE=32768`",
+        "gguf-hip-udq4kxl-auto-base-c1-ctx262144": "via `CTX_SIZE=262144`",
+    }
     for c in gguf_reco:
         m = c["metrics"]
         label = {
             "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072":
                 "`BACKEND=vulkan` + `WITH_MTP=1` mtp-c1 @131072 — available "
-                "experimental opt-in, NOT recommended (cell verdict stands; "
-                "project ruling 2026-08-19 supersedes the 2026-08-18 "
-                f"promotion: clean d1 pairing {cp['pct_2dp']}, aggregate "
-                f"{cp['agg_pct_2dp']})",
+                "experimental opt-in, NOT recommended (project ruling "
+                "2026-08-19 supersedes the 2026-08-18 promotion: clean d1 "
+                f"pairing {cp['pct_2dp']}, aggregate {cp['agg_pct_2dp']})",
             "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072":
-                "`WITH_MTP=1` mtp-c1 @131072 — +28% per-stream (the "
-                "recommended path on the default backend)",
+                "`WITH_MTP=1` mtp-c1 @131072 — +28% per-stream (the corpus "
+                "cell ran implicit depth 3, predating the depth flag; "
+                "re-running it today pins depth 1 explicitly via "
+                f"SPEC_DEPTH=1 and measures ~{cp['hip_2dp']:.2f} — session 3 "
+                f"{cp['date']}, `matrix-714/stability/session3-{cp['date']}/`)",
             "gguf-hip-udq4kxl-auto-base-c1-ctx131072":
                 "default boot base-c1 @131072",
             "gguf-hip-udq4kxl-auto-base-c1-ctx32768": "base-c1 @32768",
@@ -259,7 +276,7 @@ def render_performance_highlights(data: dict) -> str:
             f"(TPOT {fmt(m['tpot_ms_median'])} ms) | "
             f"{fmt(m['aggregate_tok_s'])} tok/s | "
             f"{fmt(m['ttft_ms_median'] / 1000)} s | {mark(c['verdict'])} "
-            f"{c['verdict']} |")
+            f"{c['verdict']} | {quickstart_of[c['id']]} |")
     lines += [
         "",
         "**Caution — batch / throughput (vLLM BF16 @262144):** every measured "
@@ -615,7 +632,10 @@ def render_benchmark_md(data: dict) -> str:
             ("`scripts/gguf-quickstart.sh` default boot (UD-Q4_K_XL, ctx 131072)",
              "gguf-hip-udq4kxl-auto-base-c1-ctx131072"),
             ("`WITH_MTP=1` opt-in — the recommended path on the default "
-             "(hip) backend",
+             "(hip) backend; boot it as `WITH_MTP=1 SPEC_DEPTH=1` (the "
+             "corpus receipt predates the depth flag and ran implicit depth "
+             "3 — re-running the cell today pins depth 1 explicitly and "
+             "measures ~13.86, `matrix-714/stability/session3-2026-08-19/`)",
              "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072"),
             ("`BACKEND=vulkan` + `WITH_MTP=1` opt-in — available, "
              "experimental, NOT recommended (downgraded 2026-08-19)",
@@ -771,14 +791,24 @@ def render_benchmark_md(data: dict) -> str:
                "pit, so their negative deltas are pit artifacts, not MTP "
                "evidence (the pit does NOT reproduce on Vulkan, whose c8/c16 "
                "tiers are unmeasured; on Vulkan the c4 MTP regressions are "
-               "real cells, anchor-clean). v0.1.2: MTP depth 1 beats depth 4 "
-               "on both backends at c1 (vulkan 16.00 vs 15.05; hip 13.00 vs "
-               "12.76 tok/s) — depth 1 stays the recommended variant; "
-               "cross-backend at c1 the v0.1.2 corpus cells show Vulkan "
+               "real cells, anchor-clean). MTP depth 1 beats depth 4 on both "
+               "backends at c1 — depth-explicit receipts, dates labeled "
+               "(2026-08-19 basis fix): vulkan "
+               f"{fmt(vk_mtp['per_stream_tok_s_median'], 2)} vs "
+               f"{fmt(vk_mtp4['per_stream_tok_s_median'], 2)} tok/s (2026-08-18 "
+               f"corpus cells, explicit d1 vs d4); hip {cp['hip_2dp']:.2f} "
+               f"(session 3, {cp['date']}, explicit d1) vs "
+               f"{fmt(hip_mtp4['per_stream_tok_s_median'], 2)} (2026-08-18, "
+               "explicit d4) — the corpus hip mtp cell 13.00 ran implicit "
+               "depth 3 and is never the depth-1 side of a depth comparison. "
+               "Depth 1 stays the recommended variant — boot it as "
+               "`WITH_MTP=1 SPEC_DEPTH=1`; cross-backend at c1 the v0.1.2 "
+               "corpus cells show Vulkan "
                f"ahead at both depths (+{(vk_mtp['per_stream_tok_s_median'] / hip_mtp['per_stream_tok_s_median'] - 1) * 100:.1f}% "
                f"mixed-depth headline, +{same_depth1:.1f}% at fixed depth 4 "
-               "— the hip mtp receipts of 2026-08-17 ran the implicit depth "
-               "default 3, see `configs/validated-stack.json`), SUPERSEDED "
+               "— the hip mtp receipts of 2026-08-16 UTC (08-17 local) ran "
+               "the implicit depth default 3, see "
+               "`configs/validated-stack.json`), SUPERSEDED "
                f"2026-08-19 by the clean d1/d1 pairing: vulkan "
                f"{cp['vk_2dp']:.2f} vs hip {cp['hip_2dp']:.2f} tok/s "
                f"({cp['pct_2dp']}), aggregate {cp['agg_pct_2dp']} — see the "

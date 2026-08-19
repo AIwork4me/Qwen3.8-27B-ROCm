@@ -3,9 +3,12 @@
 This project is validated on one reference host: AMD Ryzen AI MAX+ PRO 395 /
 Radeon 8060S (`gfx1151`, ROCm 7.14.0, 80 GiB unified GTT pool —
 `configs/validated-stack.json`). This document is the contract for anyone
-who wants their platform listed too — the first target being the AMD Radeon
-PRO W7900 (`gfx1100`, 48 GiB discrete GDDR6), currently shown as 🚧
-Planned in the README hardware-support matrix.
+who wants their platform listed too. The first invitation — the AMD Radeon
+PRO W7900 class (`gfx1100`, 48 GiB discrete GDDR6) — has been answered:
+W7900D is 🧪 community-validated on the GGUF path since v0.1.1 (PR #1,
+2026-08-18; see the hardware-support matrix in the README), and the
+invitation stands open for any AMD gfx arch — including the vLLM path on
+`gfx1100`-class boards, which remains unmeasured.
 
 Community status is **evidence attached to this repository**, not a project
 validation. It lands in a separate namespace (`configs/community/`,

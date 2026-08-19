@@ -435,3 +435,60 @@ first-run reality in
 [getting-started Path B](getting-started.md) and measured in the one-pass
 rehearsal receipt
 ([`results/rocm-7.14/one-pass-rehearsal.md`](results/rocm-7.14/one-pass-rehearsal.md) ## Steps followed (d)).
+
+## Vulkan opt-in build: prerequisites and the Mesa-pin rebuild
+<a id="vulkan-build"></a>
+
+Not a pit — the prerequisite map for the experimental Vulkan opt-in
+(`scripts/06-build-llama-vulkan.sh`, backend `build-714-vk`; the ruling
+context is in [`adaptation.md`](adaptation.md)). Recorded here because the
+build refuses without these, and the refusal messages alone do not tell
+you the no-root path.
+
+**Prerequisites (5 system packages).** The build needs each of these and
+checks them one by one (each refusal names its package):
+
+```bash
+sudo apt-get install -y mesa-vulkan-drivers vulkan-tools libvulkan-dev glslc spirv-headers
+```
+
+- `mesa-vulkan-drivers` — the RADV ICD (runtime);
+- `vulkan-tools` — `vulkaninfo` (the build records the ICD identity);
+- `libvulkan-dev` — loader headers + import library;
+- `glslc` — shaderc's compute-shader compiler (llama.cpp does NOT vendor
+  shaderc at this pin — the CMake config `find_package(Vulkan COMPONENTS
+  glslc REQUIRED)` shells out to it);
+- `spirv-headers` — SPIRV-Headers (not pulled in by `libvulkan-dev`).
+
+**No-root fallback: `VULKAN_DEPS_PREFIX`.** Without root (or when the apt
+route is unavailable), extract the build-side `.deb`s into a user prefix
+and point the script at it:
+
+```bash
+mkdir -p ~/vkdeps && cd /tmp && apt-get download libvulkan1 libvulkan-dev \
+    glslc spirv-headers vulkan-tools libshaderc1 \
+  && for d in *.deb; do dpkg-deb -x "$d" ~/vkdeps; done
+VULKAN_DEPS_PREFIX=~/vkdeps bash scripts/06-build-llama-vulkan.sh
+```
+
+This is not theoretical: the reference host has **no system `vulkaninfo`**
+— it exists only at
+`~/.local/share/qwen38-vulkan-deps/usr/bin/vulkaninfo`, and the reference
+Vulkan build was produced through exactly this mechanism.
+
+**A Mesa/loader upgrade forces a rebuild — deliberate.** The build
+fingerprint embeds the full ICD identity, including the Mesa point
+version (`driverInfo`, e.g. Mesa 25.2.8-0ubuntu0.24.04.2, recorded in
+`configs/validated-stack.json` `llama_cpp_vulkan.icd_details`). Backend
+identity is part of the evidence this repository ships, so after a
+routine Mesa or loader point upgrade the next `06-build-llama-vulkan.sh`
+run detects the mismatch and rebuilds `build-714-vk` from the same pinned
+commit. That is by design, not a defect: a Vulkan number without its ICD
+identity is not interpretable. The HIP `build-714` is unaffected.
+
+**Workaround.** None needed beyond the rebuild (compile time is the same
+as the first Vulkan build); the HIP default path keeps serving throughout.
+
+**Upstream tracking.** None — packaging/integration fact at the pinned
+commit (`4df29be4`), documented per
+[llama.cpp's Vulkan build docs at the pin](https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md).

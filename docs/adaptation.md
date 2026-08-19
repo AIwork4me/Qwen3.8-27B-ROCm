@@ -61,6 +61,19 @@ supersede the mixed-depth headline the original promotion rested on.
   tree `third_party/llama.cpp/build-714-vk` via
   [`06-build-llama-vulkan.sh`](../scripts/06-build-llama-vulkan.sh)
   (`-DGGML_VULKAN=ON -DGGML_HIP=OFF`); the HIP `build-714` is untouched.
+  **Build prerequisites** (the script checks each and refuses with the
+  exact remedy): 5 system packages — `mesa-vulkan-drivers` (the RADV ICD),
+  `vulkan-tools` (`vulkaninfo`), `libvulkan-dev`, `glslc` (shaderc's
+  compiler; llama.cpp does NOT vendor shaderc at this pin) and
+  `spirv-headers`:
+  `sudo apt-get install -y mesa-vulkan-drivers vulkan-tools libvulkan-dev glslc spirv-headers`.
+  No-root fallback: `VULKAN_DEPS_PREFIX` pointing at a `dpkg-deb -x`
+  extraction of the build-side packages (that is how the reference host
+  did it — `~/.local/share/qwen38-vulkan-deps`; `vulkaninfo` exists ONLY
+  there, not on the system PATH). Note: the build fingerprint pins the
+  Mesa point version (the ICD `driverInfo` is part of backend identity),
+  so a Mesa/loader upgrade forces a deliberate `build-714-vk` rebuild —
+  see [troubleshooting: Vulkan build](troubleshooting.md#vulkan-build).
 - **ICD identity** — Mesa RADV, no `VK_ICD_FILENAMES` forcing needed (the
   loader picks it on this host): `AMD Radeon Graphics (RADV GFX1151)`,
   `DRIVER_ID_MESA_RADV`, Mesa `25.2.8-0ubuntu0.24.04.2`, Vulkan 1.4.318
@@ -82,8 +95,8 @@ supersede the mixed-depth headline the original promotion rested on.
   mtp4 15.05 vs hip mtp4 12.76 tok/s, +17.9%) stands as measured but is
   itself a 2026-08-18 single-day snapshot — the cross-day table below is
   the stability context for all of these.
-- **Cross-depth caveat** — the historical hip mtp receipts (2026-08-17)
-  ran the **implicit `--spec-draft-n-max` default 3** (discovered
+- **Cross-depth caveat** — the historical hip mtp receipts (started
+  2026-08-16 UTC — 08-17 local) ran the **implicit `--spec-draft-n-max` default 3** (discovered
   post-hoc; [`configs/validated-stack.json`](../configs/validated-stack.json)
   `llama_cpp_vulkan.mtp_depth.note`); every v0.1.2 cell passes its depth
   explicitly and records it in `server_flags`. So 16.00-vs-13.00 is
@@ -92,9 +105,15 @@ supersede the mixed-depth headline the original promotion rested on.
   was depth-confounded. The clean fixed-depth cross-backend numbers are
   the d1 pairing (+4.81%, aggregate −13.31%) and the d4 pairing (+17.9%,
   same day).
-- **MTP depth** — depth 4 never beats depth 1 on either backend (vulkan
-  15.05 vs 16.00; hip 12.76 vs 13.00): the recommended variant stays
-  `WITH_MTP=1` at depth 1 on both. Depth is configurable at the pin
+- **MTP depth** — depth 4 never beats depth 1 on either backend, on
+  depth-explicit receipts with dates labeled (basis fix 2026-08-19):
+  vulkan 16.00 vs 15.05 tok/s (2026-08-18 corpus cells, explicit d1 vs
+  d4); hip 13.86 (2026-08-19, explicit d1 — session 3) vs 12.76
+  (2026-08-18, explicit d4). The corpus hip mtp cell (13.00, 2026-08-16
+  UTC) ran implicit depth 3 and is never the depth-1 side of a depth
+  comparison. The recommended variant on hip is **`WITH_MTP=1
+  SPEC_DEPTH=1`** — the depth pinned explicitly; a bare `WITH_MTP=1`
+  boots the implicit upstream depth 3. Depth is configurable at the pin
   (`--spec-draft-n-max`, upstream default 3), NOT fixed by the checkpoint
   (row 5).
 - **Cross-day variance (v0.1.4, session 3 = 2026-08-19 vs sessions 1/2 =

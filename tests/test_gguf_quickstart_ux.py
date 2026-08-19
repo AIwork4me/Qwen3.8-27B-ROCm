@@ -105,6 +105,69 @@ def test_quickstart_spec_depth_passthrough():
     assert "--spec-draft-n-max" in src
 
 
+# ------------------------------- v0.1.5 (audit F1, folded minor e): --help trap
+#
+# `--help` used to BOOT the server (no argument parsing at all — audit B
+# minor 4). The v0.1.5 fix adds argument handling that prints usage and
+# exits 0 BEFORE any boot logic, and must not alter the default boot when
+# no arguments are passed (boot-logic neutrality, pinned below).
+
+def _free_port() -> str:
+    sock = socket.socket()
+    try:
+        sock.bind(("127.0.0.1", 0))
+        return str(sock.getsockname()[1])
+    finally:
+        sock.close()
+
+
+def test_help_prints_usage_and_exits_zero_before_any_boot():
+    for flag in ("--help", "-h"):
+        r = subprocess.run(["bash", str(SCRIPT), flag], capture_output=True,
+                           text=True, timeout=60, cwd=ROOT)
+        assert r.returncode == 0, f"{flag}: exit {r.returncode}"
+        out = r.stdout
+        assert out.startswith("Usage:"), f"{flag}: no usage banner"
+        # The env knobs a stranger needs, incl. the recommended invocation.
+        for knob in ("BACKEND", "WITH_MTP", "SPEC_DEPTH", "CTX_SIZE", "PORT",
+                     "GGUF_FILE", "EXTRA_ARGS", "LLAMA_SERVER"):
+            assert knob in out, f"{flag}: knob {knob} missing from usage"
+        assert "WITH_MTP=1 SPEC_DEPTH=1 bash scripts/gguf-quickstart.sh" in out, (
+            f"{flag}: the recommended invocation must be in the usage")
+        # It exited BEFORE any boot logic: no launch echo, no exec.
+        assert "llama-server :" not in out and "Serving on" not in out, (
+            f"{flag}: the help path reached boot logic")
+
+
+def test_no_args_boot_flags_are_byte_identical_pinned():
+    """Boot-logic neutrality: invoked with NO arguments (and the escape
+    hatches a CI run needs), the server receives exactly the pinned
+    validated flag list — the --help change must never alter the default
+    boot. The stub records argv; WITH_MTPROJ=0 makes the mmproj branch
+    deterministic regardless of whether a models/ tree exists."""
+    tmp = Path("/tmp") / f"qs-neut-{os.getpid()}"
+    tmp.mkdir(exist_ok=True)
+    stub = tmp / "llama-server-stub"
+    stub.write_text('#!/bin/sh\nprintf \'%s\\n\' "$@" > "$RECV"\nexit 0\n')
+    stub.chmod(0o755)
+    gguf = tmp / "scratch.gguf"
+    gguf.write_text("x")
+    recv = tmp / "argv.txt"
+    port = _free_port()
+    env = dict(os.environ, LLAMA_SERVER=str(stub), GGUF_FILE=str(gguf),
+               PORT=port, WITH_MMPROJ="0", RECV=str(recv))
+    r = subprocess.run(["bash", str(SCRIPT)], capture_output=True,
+                       text=True, timeout=60, cwd=ROOT, env=env)
+    assert r.returncode == 0, r.stdout + r.stderr
+    argv = recv.read_text().splitlines()
+    assert argv == ["-m", str(gguf), "--port", port, "-ngl", "99",
+                    "--ctx-size", "131072", "--jinja"], (
+        f"default boot flags drifted: {argv}")
+    # The v0.1.5 SPEC_DEPTH hint line is echo-only (wording), and the boot
+    # above proves it: no --spec-draft-n-max appears without WITH_MTP=1.
+    assert "--spec-draft-n-max" not in argv
+
+
 def test_quickstart_refuses_invalid_spec_depth(tmp_path):
     # The script's own SPEC_DEPTH validation, exercised end-to-end on its
     # refusal paths (2026-08-18, v0.1.3 debt fix). CI-safe: LLAMA_SERVER is

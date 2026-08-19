@@ -71,6 +71,9 @@ MEASURED_PIT_ANCHORS = (
 
 # Files created/modified by Task 2 whose every relative markdown link must
 # resolve (relative links are resolved from each file's own directory).
+# Extended v0.1.5 (audit A-I3/M3): the upstream-controls and community-
+# explorations READMEs are reader-reachable (README → results/README →
+# them) and both carried a broken relative link at v0.1.4.
 TASK2_DOCS = (
     "README.md",
     "docs/troubleshooting.md",
@@ -78,6 +81,8 @@ TASK2_DOCS = (
     "docs/adaptation.md",
     "docs/results/README.md",
     "docs/upstream/llama-cpp-hip-greedy-degradation.md",
+    "docs/results/upstream-controls/README.md",
+    "docs/results/community-explorations/w7900d-gfx1100/README.md",
 )
 
 FOUR_PART_LABELS = ("Symptom", "Reproduction", "Root cause", "Workaround", "Upstream")
@@ -728,3 +733,85 @@ def test_taskc_docs_markdown_links_resolve() -> None:
             if anchor and resolved.suffix == ".md" and anchor not in _anchors_of(resolved):
                 problems.append(f"{rel}: link '{target}' -> anchor #{anchor} missing")
     assert not problems, "broken markdown links:\n  " + "\n  ".join(problems)
+
+
+# ------------------- (i) v0.1.5 audit-F1 docs-accuracy pins
+#
+# Fixes from the three v0.1.4 audits (A docs-freshness, B reproducibility,
+# C community-UX) that live in hand-written docs; the generated-surface
+# pins are in tests/test_verdicts.py section 6b.
+
+
+def test_methodology_carries_the_depth_label_erratum() -> None:
+    """Audit A-I2 (v0.1.5): METHODOLOGY is frozen — the mislabeled depth
+    notes ('mtp = speculative depth 1 (the 2026-08-17 cells)'; 'HIP, MTP
+    depth 1') are corrected by a DATED ERRATUM, never a silent edit: the
+    canonical hip mtp-c1 receipt ran implicit depth 3; the clean
+    depth-explicit hip d1 is 13.86 (session 3, 2026-08-19, day-confounded
+    vs 13.00)."""
+    text = (ROOT / "docs/results/METHODOLOGY.md").read_text(encoding="utf-8")
+    assert "Erratum (2026-08-19, depth-label correction" in text, (
+        "the dated depth-label erratum is missing from METHODOLOGY.md")
+    assert "implicit `--spec-draft-n-max` upstream default" in text
+    assert "13.86 tok/s" in text and "+6.61%" in text
+    assert "day-confounded" in text
+    assert "2026-08-16T22:30:54Z" in text, (
+        "the erratum must trace to the receipt's own timestamp")
+
+
+def test_hardware_validation_has_no_stale_planned_w7900_claim() -> None:
+    """Audit A-I1 / C-I4 (v0.1.5): the protocol doc must not claim W7900 is
+    'currently shown as 🚧 Planned' — it is 🧪 community-validated (GGUF)
+    since v0.1.1; the open invitation is stated honestly instead."""
+    text = (ROOT / "docs/hardware-validation.md").read_text(encoding="utf-8")
+    assert "🚧" not in text and "Planned" not in text, (
+        "the stale '🚧 Planned' current-state claim survived")
+    assert "🧪" in text and "v0.1.1" in text, (
+        "the community-validated state (since v0.1.1) must be stated")
+
+
+def test_vulkan_optin_prerequisites_are_documented() -> None:
+    """Audit B-I1 (v0.1.5): the Vulkan opt-in prerequisites — the 5 apt
+    packages, the no-root VULKAN_DEPS_PREFIX fallback (reference host:
+    ~/.local/share/qwen38-vulkan-deps, where vulkaninfo lives ONLY), and
+    the Mesa-point fingerprint rebuild — must be stated on the three
+    user-facing surfaces: README opt-in, adaptation.md §Vulkan, and a
+    troubleshooting #vulkan-build section."""
+    ts = (ROOT / "docs/troubleshooting.md").read_text(encoding="utf-8")
+    assert 'id="vulkan-build"' in ts, (
+        "troubleshooting.md lacks the #vulkan-build anchor")
+    vulkan_section = ts.split('id="vulkan-build"', 1)[1]
+    for pkg in ("mesa-vulkan-drivers", "vulkan-tools", "libvulkan-dev",
+                "glslc", "spirv-headers"):
+        assert pkg in vulkan_section, f"#vulkan-build lacks package {pkg}"
+    assert "VULKAN_DEPS_PREFIX" in vulkan_section
+    assert "qwen38-vulkan-deps" in vulkan_section, (
+        "the reference-host no-root prefix must be named")
+    assert "Mesa" in vulkan_section and "rebuild" in vulkan_section, (
+        "the Mesa-pin rebuild behavior must be stated")
+    for surface in (ROOT / "README.md",
+                    ROOT / "docs" / "adaptation.md"):
+        text = surface.read_text(encoding="utf-8")
+        assert "mesa-vulkan-drivers" in text and "VULKAN_DEPS_PREFIX" in text, (
+            f"{surface.name}: Vulkan opt-in prerequisites missing")
+
+
+def test_measured_memory_floor_is_stated_in_prerequisites() -> None:
+    """Audit C-I2 (v0.1.5): README prerequisites and getting-started state
+    the measured GTT floor for the recommended path, receipt-backed
+    (load.gtt_mib: 26,548 MiB default boot / 29,270 MiB WITH_MTP boot at
+    ctx 131072), with the 32 GiB-RAM signal."""
+    cells = ROOT / "docs/results/matrix-714/cells"
+    base = json.loads((cells / "gguf-hip-udq4kxl-auto-base-c1-ctx131072.json")
+                      .read_text(encoding="utf-8"))["load"]["gtt_mib"]
+    mtp = json.loads((cells / "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072.json")
+                     .read_text(encoding="utf-8"))["load"]["gtt_mib"]
+    assert (base, mtp) == (26548, 29270), (
+        f"receipt GTT drift: base={base} mtp={mtp} — update the docs numbers")
+    for name, rel in (("README.md", "README.md"),
+                      ("getting-started.md", "docs/getting-started.md")):
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        assert "26,548" in text and "29,270" in text, (
+            f"{name}: measured GTT floor numbers missing")
+        assert "32 GiB-RAM" in text and "BIOS/allocation" in text, (
+            f"{name}: the 32 GiB-RAM pressure signal is missing")

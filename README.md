@@ -25,8 +25,12 @@ hardware matrix below); more platforms are evidence-gated.
 
 Prerequisites: a `gfx1151`-class AMD GPU (reference host: Ryzen AI MAX+
 PRO 395 / 8060S), ROCm 7.14.0 (installer script provided), ~20 GiB disk
-for the GGUF path (+~52 GiB for the vLLM BF16 path), git / curl / python3
-— details in [Getting started](docs/getting-started.md).
+for the GGUF path (+~52 GiB for the vLLM BF16 path), git / curl / python3,
+and ~26.5 GiB of GPU-visible memory (GTT) for the default boot at ctx
+131072 — measured 26,548 MiB at load, and 29,270 MiB for the recommended
+`WITH_MTP=1` boot (cell receipts `docs/results/matrix-714/cells/`). On
+32 GiB-RAM hosts the GTT pool depends on BIOS/allocation — expect
+pressure. Details in [Getting started](docs/getting-started.md).
 
 ## Quick start (interactive chat: the GGUF path)
 
@@ -42,10 +46,15 @@ bash scripts/00-check-env.sh              # ROCm 7.14 at ~/rocm-7.14.0 or /opt/r
 bash scripts/install-rocm-7.14.sh         # only if the check says so (1.6 GiB archive + 9 GiB extracted floor)
 bash scripts/05-build-llama.sh            # pinned HIP build @ 4df29be4 for gfx1151 (compile ~7 min)
 SET=gguf bash scripts/02-fetch-model.sh   # ~18 GiB, SHA256-verified against the manifest
-WITH_MTP=1 bash scripts/gguf-quickstart.sh  # 13.0 tok/s per stream — the recommended path, on :8080
+WITH_MTP=1 SPEC_DEPTH=1 bash scripts/gguf-quickstart.sh  # recommended: MTP depth 1 — 13.86 tok/s per stream (2026-08-19 clean d1 pairing), on :8080
+# a bare `WITH_MTP=1` (no SPEC_DEPTH) boots the implicit upstream depth 3 —
+# the 13.0 tok/s corpus cell (`--help` on the script lists every knob)
 # optional experimental backend opt-in (NOT recommended — downgraded
 # 2026-08-19; the clean depth-1 pairing is +4.81% vs hip and the aggregate
-# basis flips to -13.31%; see benchmark verdicts):
+# basis flips to -13.31%; see benchmark verdicts). The build needs 5 apt
+# packages (mesa-vulkan-drivers vulkan-tools libvulkan-dev glslc
+# spirv-headers) or the no-root VULKAN_DEPS_PREFIX fallback — see
+# [troubleshooting: Vulkan build](docs/troubleshooting.md#vulkan-build):
 #   bash scripts/06-build-llama-vulkan.sh
 #   BACKEND=vulkan WITH_MTP=1 bash scripts/gguf-quickstart.sh
 ```
@@ -65,14 +74,15 @@ stops the server.
 | Boot | Per-stream speed |
 |---|---|
 | `bash scripts/gguf-quickstart.sh` (default: hip, UD-Q4_K_XL, ctx 131072) | 10.1 tok/s |
-| `WITH_MTP=1 bash scripts/gguf-quickstart.sh` | 13.0 tok/s (+28% per-stream) — the recommended path |
+| `WITH_MTP=1 SPEC_DEPTH=1 bash scripts/gguf-quickstart.sh` (recommended — MTP depth 1) | 13.86 tok/s (2026-08-19 clean d1 pairing; [stability session 3](docs/results/matrix-714/stability/README.md)) |
+| `WITH_MTP=1 bash scripts/gguf-quickstart.sh` (implicit depth 3, the upstream default) | 13.0 tok/s (+28% per-stream) — the corpus cell |
 | `BACKEND=vulkan WITH_MTP=1 bash scripts/gguf-quickstart.sh` (opt-in) | 16.0 tok/s (2026-08-18 cell) / 14.53 on the 2026-08-19 clean pairing (+4.81% vs hip, aggregate −13.31%) — available experimental opt-in, not recommended (project ruling 2026-08-19 supersedes 2026-08-18) |
 
 Which serving path?
 
 | You want | Use | Why |
 |---|---|---|
-| Interactive chat | `WITH_MTP=1 bash scripts/gguf-quickstart.sh` (port 8080) — hip is both the default and the recommended path (`BACKEND=vulkan` exists as an experimental opt-in, not recommended) | every measured vLLM cell is below the 10 tok/s interactive floor |
+| Interactive chat | `WITH_MTP=1 SPEC_DEPTH=1 bash scripts/gguf-quickstart.sh` (port 8080) — hip is both the default and the recommended path (`BACKEND=vulkan` exists as an experimental opt-in, not recommended) | every measured vLLM cell is below the 10 tok/s interactive floor |
 | 262144-token context, vision, or aggregate batch throughput (to 38.6 tok/s) | `bash scripts/03-serve-vllm.sh` (port 8000) | the greedy-degradation-free path, but not interactive on this host |
 | Multi-user GGUF loads | Don't | greedy-degradation pit on hip — see [Known good / known bad](#known-good--known-bad) |
 
@@ -107,13 +117,13 @@ Measured 2026-08-16 and 2026-08-18 on the reference host (gfx1151, ROCm 7.14, 80
 
 **Recommended — interactive chat (GGUF path, UD-Q4_K_XL):**
 
-| Config | Backend | Per-stream (median) | Aggregate | TTFT | Verdict |
-|---|---|---|---|---|---|
-| `BACKEND=vulkan` + `WITH_MTP=1` mtp-c1 @131072 — available experimental opt-in, NOT recommended (cell verdict stands; project ruling 2026-08-19 supersedes the 2026-08-18 promotion: clean d1 pairing +4.81%, aggregate -13.31%) | vulkan | 16.0 tok/s (TPOT 62.5 ms) | 10.4 tok/s | 8.6 s | ✅ recommended |
-| `WITH_MTP=1` mtp-c1 @131072 — +28% per-stream (the recommended path on the default backend) | hip | 13.0 tok/s (TPOT 76.9 ms) | 10.2 tok/s | 5.5 s | ✅ recommended |
-| default boot base-c1 @131072 | hip | 10.1 tok/s (TPOT 98.6 ms) | 8.4 tok/s | 5.1 s | ✅ recommended |
-| base-c1 @32768 | hip | 10.0 tok/s (TPOT 99.6 ms) | 8.3 tok/s | 5.3 s | ✅ recommended |
-| base-c1 @262144 (GTT +8.0 GiB) | hip | 10.1 tok/s (TPOT 98.8 ms) | 8.4 tok/s | 5.3 s | ✅ recommended |
+| Config | Backend | Per-stream (median) | Aggregate | TTFT | Cell verdict | Quickstart mapping |
+|---|---|---|---|---|---|---|
+| `BACKEND=vulkan` + `WITH_MTP=1` mtp-c1 @131072 — available experimental opt-in, NOT recommended (project ruling 2026-08-19 supersedes the 2026-08-18 promotion: clean d1 pairing +4.81%, aggregate -13.31%) | vulkan | 16.0 tok/s (TPOT 62.5 ms) | 10.4 tok/s | 8.6 s | ✅ recommended | **NOT recommended** — available experimental opt-in (downgraded 2026-08-19) |
+| `WITH_MTP=1` mtp-c1 @131072 — +28% per-stream (the corpus cell ran implicit depth 3, predating the depth flag; re-running it today pins depth 1 explicitly via SPEC_DEPTH=1 and measures ~13.86 — session 3 2026-08-19, `matrix-714/stability/session3-2026-08-19/`) | hip | 13.0 tok/s (TPOT 76.9 ms) | 10.2 tok/s | 5.5 s | ✅ recommended | **recommended path** — boot as `WITH_MTP=1 SPEC_DEPTH=1` |
+| default boot base-c1 @131072 | hip | 10.1 tok/s (TPOT 98.6 ms) | 8.4 tok/s | 5.1 s | ✅ recommended | the default boot |
+| base-c1 @32768 | hip | 10.0 tok/s (TPOT 99.6 ms) | 8.3 tok/s | 5.3 s | ✅ recommended | via `CTX_SIZE=32768` |
+| base-c1 @262144 (GTT +8.0 GiB) | hip | 10.1 tok/s (TPOT 98.8 ms) | 8.4 tok/s | 5.3 s | ✅ recommended | via `CTX_SIZE=262144` |
 
 **Caution — batch / throughput (vLLM BF16 @262144):** every measured vLLM cell is below the 10 tok/s interactive floor — project ruling (2026-08-17); use this path for what it wins:
 
@@ -186,7 +196,7 @@ Full tables with links to the raw receipts: [docs/results/benchmark.md](docs/res
 
 ## Status & roadmap
 
-Current release: **v0.1.4** — [CHANGELOG](CHANGELOG.md) ·
+Current release: **v0.1.5** — [CHANGELOG](CHANGELOG.md) ·
 [Releases](https://github.com/AIwork4me/Qwen3.8-27B-ROCm/releases).
 
 Roadmap — evidence-gated intentions, not promises; each item lands when its
@@ -219,7 +229,11 @@ receipts do:
 - **The remaining planned matrix cells** — 20 of the matrix's 56 declared
   cells are still `planned` (8 more are dropped unsupported tiers);
   `docs/results/matrix-714/matrix.json` is the ledger.
-- **More community platforms** — every 🚧 invitation stands; see
+- **More community platforms** — the invitation is open for any AMD gfx
+  arch via the [validation protocol](docs/hardware-validation.md); the
+  matrix lists only evidenced platforms (the W7900/`gfx1100` 🚧 placeholder
+  was superseded by the community W7900D 🧪 row in v0.1.1 — the open ask
+  there is the vLLM path, first bullet). See
   [Hardware support](#hardware-support).
 
 ## Contributing

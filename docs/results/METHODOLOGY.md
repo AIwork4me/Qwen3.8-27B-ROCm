@@ -76,6 +76,27 @@ harness, with the greedy anchor on every new cell (does the §6 pit
 reproduce on Vulkan?). The same llama.cpp pin `4df29be4` is used for both
 backends (separate build dir `build-714-vk`; HIP build-714 untouched).
 
+**Erratum (2026-08-19, depth-label correction — v0.1.4 review):** two
+labels in this section predate the depth-flag discovery and are corrected
+here with a dated erratum, never silently. (1) The addendum above says
+"`mtp` = speculative depth 1 (the 2026-08-17 cells)" — that names the id
+grammar's *intent*, not what the historical hip receipts ran: the canonical
+hip mtp-c1 receipt (13.00 tok/s, `started_utc` 2026-08-16T22:30:54Z; "08-17"
+in the addendum is the local UTC+8 date) carries no depth flag in its
+`server_flags` and ran the **implicit `--spec-draft-n-max` upstream default
+3** (recorded post-hoc in `configs/validated-stack.json`
+`llama_cpp_vulkan.mtp_depth.note`). (2) The Motivation paragraph above says
+"this project's 13.0 tok/s interactive cell (HIP, MTP depth 1, …)" — read
+"HIP, MTP **implicit depth 3**". The clean depth-explicit hip d1
+measurement is **13.86 tok/s** (stability session 3, 2026-08-19,
+[`matrix-714/stability/session3-2026-08-19/`](matrix-714/stability/session3-2026-08-19/));
+13.86 vs the 13.00 corpus receipt = +6.61% is **day-confounded** (different
+days) — labeled, never read as a depth claim. Every v0.1.2+ cell passes its
+depth explicitly (`SPEC_DEPTH` → `--spec-draft-n-max`) and records it in
+`server_flags`; re-running a pre-depth-flag hip mtp cell today pins depth 1
+explicitly (~13.86). No verdict, metric, or cell record changes — this
+erratum corrects this document's own labels only.
+
 - **S1 — single-stream interactive (N=1).** One user, one chat completion,
   streaming. The judge is perceived latency: TTFT and per-stream TPOT. This
   is the quickstart's presentation; the 10 tok/s floor (§3) applies fully.

@@ -6,7 +6,7 @@ validated stack ran; every default points at a `recommended`-verdict cell
 
 | Path | Use it for | Default |
 |---|---|---|
-| **GGUF (llama.cpp HIP)** | interactive chat | UD-Q4_K_XL, ctx 131072 — 10.1 tok/s per stream (13.0 with MTP) |
+| **GGUF (llama.cpp HIP)** | interactive chat | UD-Q4_K_XL, ctx 131072 — 10.1 tok/s per stream (13.0 with MTP at the implicit depth 3; 13.86 at the recommended depth 1) |
 | **vLLM (source build)** | 262144 context, vision, aggregate batch throughput (to 38.6 tok/s) | BF16, `--max-model-len 262144` |
 
 Measured evidence for every number: [`results/benchmark.md`](results/benchmark.md);
@@ -32,6 +32,13 @@ evidence, never a project claim.
   build (the build script prints the distro package for whichever command
   is missing). The vLLM path self-installs its build tools (`cmake`, `ninja`)
   into the venv — no host install needed.
+- **GPU-visible memory (GTT), measured floor:** the default GGUF boot at
+  ctx 131072 loads **26,548 MiB (~26.5 GiB)** and the recommended
+  `WITH_MTP=1` boot loads **29,270 MiB (~28.6 GiB)** — per-stream numbers
+  traced to the cell receipts in
+  [`results/matrix-714/cells/`](results/matrix-714/cells/) (`load.gtt_mib`).
+  On 32 GiB-RAM hosts the GTT pool depends on BIOS/allocation — expect
+  pressure at the default ctx (lower it with `CTX_SIZE=<n>`).
 - **uv** (the vLLM path): https://docs.astral.sh/uv/ — `uv` manages the venv
   the serve scripts run through.
 
@@ -86,10 +93,14 @@ throttled GitHub links that download — not the ~7 min compile — dominates:
 measured ≈14 min at ≈45 KiB/s during the one-pass rehearsal on this host's
 network.
 
-Optional +28% per-stream throughput (13.0 vs 10.1 tok/s, single stream):
+Recommended path — the MTP opt-in (+28% per-stream throughput, 13.0 vs
+10.1 tok/s single stream on the corpus cell, which ran the implicit
+upstream depth 3; the 2026-08-19 clean depth-1 pairing measures 13.86 —
+[`results/matrix-714/stability/`](results/matrix-714/stability/)):
 
 ```bash
-WITH_MTP=1 bash scripts/gguf-quickstart.sh  # adds --spec-type draft-mtp (MTP head from the same GGUF)
+WITH_MTP=1 SPEC_DEPTH=1 bash scripts/gguf-quickstart.sh  # recommended: --spec-type draft-mtp + depth pinned to 1 (--spec-draft-n-max 1)
+WITH_MTP=1 bash scripts/gguf-quickstart.sh               # same MTP head at the implicit upstream depth 3 — the 13.0 tok/s corpus cell
 ```
 
 Verify (the exact curls the quickstart prints — keep `max_tokens` ≥ 512; this
@@ -156,9 +167,11 @@ Notes that matter:
 
 ## Guidance: MTP, vision, context, concurrency
 
-**MTP.** On: `WITH_MTP=1` (GGUF, single stream, +28.2%) or
-`bash scripts/03-serve-vllm.sh --mtp` (vLLM, beneficial through c8). Off: at
-16-stream batching MTP *regresses* −19.4% aggregate — serve base instead
+**MTP.** On (the recommended path): `WITH_MTP=1 SPEC_DEPTH=1` (GGUF,
+single stream, +28.2% on the corpus cell — depth 1 is the recommended
+depth; a bare `WITH_MTP=1` boots the implicit upstream depth 3) or
+`bash scripts/03-serve-vllm.sh --mtp` (vLLM, beneficial through c8). Off:
+at 16-stream batching MTP *regresses* −19.4% aggregate — serve base instead
 ([troubleshooting: MTP at concurrency](troubleshooting.md#mtp-concurrency)).
 
 **Vision.** Both paths serve single-small-image input end-to-end (validated
@@ -186,7 +199,8 @@ Details: [GTT growth](troubleshooting.md#gtt-growth),
 [vLLM KV ceiling](troubleshooting.md#kv-ceiling),
 [retrieval caveat](troubleshooting.md#deep-context-retrieval).
 
-**Concurrency.** Single-user interactive: GGUF `WITH_MTP=1`. Multi-stream:
+**Concurrency.** Single-user interactive: GGUF `WITH_MTP=1 SPEC_DEPTH=1`
+(the recommended path). Multi-stream:
 vLLM (the GGUF path's greedy decoding degrades after sustained multistream
 load — restart or switch: [troubleshooting: greedy
 degradation](troubleshooting.md#greedy-degradation)). Every measured
