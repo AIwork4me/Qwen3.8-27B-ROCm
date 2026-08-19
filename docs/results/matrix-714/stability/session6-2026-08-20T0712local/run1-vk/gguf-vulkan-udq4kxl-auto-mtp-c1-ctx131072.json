@@ -1,0 +1,173 @@
+{
+  "id": "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072",
+  "label": "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072",
+  "base_url": "http://127.0.0.1:8080",
+  "started_utc": "2026-08-19T23:12:02Z",
+  "server_flags": {
+    "backend": "vulkan",
+    "ctx_size": 131072,
+    "concurrency_np": 1,
+    "with_mtp": true,
+    "mtp_part": "mtp",
+    "spec_depth": 1,
+    "slots": "default",
+    "extra_args": "",
+    "port": 8080,
+    "kv_semantics_expected": "unified (default boot: auto n_parallel=4, shared ctx pool)",
+    "quickstart": "scripts/gguf-quickstart.sh",
+    "llama_server_flags": [
+      "--ctx-size",
+      "131072",
+      "-ngl",
+      "99",
+      "--jinja",
+      "--spec-type",
+      "draft-mtp",
+      "--spec-draft-n-max",
+      "1"
+    ]
+  },
+  "slot_info": {
+    "n_slots": 4,
+    "n_ctx_slot": 131072,
+    "kv_unified": "true",
+    "log_line": "n_slots = 4, n_ctx_slot = 131072, kv_unified = 'true'"
+  },
+  "load": {
+    "vram_mib": 29454,
+    "gtt_mib": 1226,
+    "telemetry": {
+      "sclk_mhz": 1353.0,
+      "mclk_mhz": 1000.0,
+      "power_w": 15.095,
+      "temp_edge_c": 46.0,
+      "errors": {},
+      "raw": {
+        "showclocks": {
+          "rc": 0,
+          "stdout": "\n\n============================ ROCm System Management Interface ============================\n=============================== Current clock frequencies ================================\nGPU[0]\t\t: mclk clock level: 2: (1000Mhz)\nGPU[0]\t\t: sclk clock level: 1: (1353Mhz)\n==========================================================================================\n================================== End of ROCm SMI Log ===================================",
+          "stderr": ""
+        },
+        "showpower": {
+          "rc": 0,
+          "stdout": "\n\n============================ ROCm System Management Interface ============================\n=================================== Power Consumption ====================================\nGPU[0]\t\t: Current Socket Graphics Package Power (W): 15.095\n==========================================================================================\n================================== End of ROCm SMI Log ===================================",
+          "stderr": ""
+        },
+        "showtemp": {
+          "rc": 0,
+          "stdout": "\n\n============================ ROCm System Management Interface ============================\n====================================== Temperature =======================================\nGPU[0]\t\t: Temperature (Sensor edge) (C): 46.0\n==========================================================================================\n================================== End of ROCm SMI Log ===================================",
+          "stderr": ""
+        }
+      },
+      "env": {
+        "boot_time": "2026-08-12 09:42:41",
+        "power_profile": "balanced",
+        "power_dpm_force_performance_level": "auto",
+        "power_dpm_source": "/sys/class/drm/card1/device/power_dpm_force_performance_level"
+      },
+      "mesa_cache": {
+        "before_boot": {
+          "path": "/home/amd/.cache/mesa_shader_cache",
+          "du_kib": 7884,
+          "files": 867,
+          "newest_mtime_utc": "2026-08-19T06:32:54Z",
+          "error": null
+        },
+        "after_teardown": {
+          "path": "/home/amd/.cache/mesa_shader_cache",
+          "du_kib": 7884,
+          "files": 867,
+          "newest_mtime_utc": "2026-08-19T06:32:54Z",
+          "error": null
+        }
+      }
+    }
+  },
+  "boot": {
+    "ok": true,
+    "health_wall_s": 6
+  },
+  "client": {
+    "label": "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072",
+    "concurrency": 1,
+    "started_utc": "2026-08-19T23:12:12.273750+00:00",
+    "streams": [
+      {
+        "ttft_ms": 8541.399291949347,
+        "tpot_ms": 60.94506707489856,
+        "completion_tokens": 256,
+        "prompt_tokens": 1412,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      }
+    ],
+    "aggregate": {
+      "tok_per_s": 10.629863925233895,
+      "wall_s": 24.08309285994619,
+      "ok_streams": 1,
+      "failed_streams": 0
+    }
+  },
+  "anchor": {
+    "ok": true,
+    "content_tail": "OK"
+  },
+  "post_bench": {
+    "telemetry": {
+      "sclk_mhz": 1544.0,
+      "mclk_mhz": 1000.0,
+      "power_w": 33.028,
+      "temp_edge_c": 56.0,
+      "errors": {},
+      "raw": {
+        "showclocks": {
+          "rc": 0,
+          "stdout": "\n\n============================ ROCm System Management Interface ============================\n=============================== Current clock frequencies ================================\nGPU[0]\t\t: mclk clock level: 2: (1000Mhz)\nGPU[0]\t\t: sclk clock level: 1: (1544Mhz)\n==========================================================================================\n================================== End of ROCm SMI Log ===================================",
+          "stderr": ""
+        },
+        "showpower": {
+          "rc": 0,
+          "stdout": "\n\n============================ ROCm System Management Interface ============================\n=================================== Power Consumption ====================================\nGPU[0]\t\t: Current Socket Graphics Package Power (W): 33.028\n==========================================================================================\n================================== End of ROCm SMI Log ===================================",
+          "stderr": ""
+        },
+        "showtemp": {
+          "rc": 0,
+          "stdout": "\n\n============================ ROCm System Management Interface ============================\n====================================== Temperature =======================================\nGPU[0]\t\t: Temperature (Sensor edge) (C): 56.0\n==========================================================================================\n================================== End of ROCm SMI Log ===================================",
+          "stderr": ""
+        }
+      },
+      "env": {
+        "boot_time": "2026-08-12 09:42:41",
+        "power_profile": "balanced",
+        "power_dpm_force_performance_level": "auto",
+        "power_dpm_source": "/sys/class/drm/card1/device/power_dpm_force_performance_level"
+      }
+    }
+  },
+  "log_excerpt": [
+    "llama-server : /home/amd/Desktop/Qwen3.8-27B-ROCm/third_party/llama.cpp/build-714-vk/bin/llama-server (version: 0.1.0-dev (build 1, commit 4df29be4f))",
+    "model        : models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf (17G)",
+    "ctx-size     : 131072  (override: CTX_SIZE=<n>)",
+    "gpu layers   : 99 (all)",
+    "mmproj       : models/Qwen3.8-27B-GGUF/mmproj-F16.gguf",
+    "speculative  : draft-mtp (MTP head from the same GGUF, depth 1 via --spec-draft-n-max)",
+    "extra args   : none",
+    "Serving on http://127.0.0.1:8080 ...",
+    "backend      : vulkan (AVAILABLE experimental opt-in \u2014 NOT recommended; project ruling 2026-08-19 supersedes the 2026-08-18 promotion: the clean depth-1 same-day pairing is 14.53 vs 13.86 tok/s = +4.81% single-stream, aggregate basis -13.31%; cross-day re-runs dropped every vulkan cell \u2014 see benchmark verdicts and docs/results/matrix-714/stability/)",
+    "0.00.027.491 W srv  llama_server: -----------------",
+    "0.00.027.493 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set",
+    "0.00.027.493 W srv  llama_server: this can be a security risk (cross-origin attacks)",
+    "0.00.027.493 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655",
+    "0.00.027.493 W srv  llama_server: -----------------",
+    "0.03.568.258 I common_speculative_init_result: creating MTP draft context against the target model 'models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf'",
+    "0.03.617.147 W load_hparams: Qwen-VL models require at minimum 1024 image tokens to function correctly on grounding tasks",
+    "0.03.617.150 W load_hparams: if you encounter problems with accuracy, try adding --image-min-tokens 1024",
+    "0.03.617.150 W load_hparams: more info: https://github.com/ggml-org/llama.cpp/issues/16842",
+    "0.04.214.962 I srv    load_model: initializing, n_slots = 4, n_ctx_slot = 131072, kv_unified = 'true'",
+    "0.04.260.539 W srv  llama_server: NOTICE: server default port will be changed to :9931 in a future release"
+  ],
+  "degraded": false,
+  "degraded_reason": null
+}
