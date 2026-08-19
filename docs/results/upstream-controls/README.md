@@ -22,7 +22,7 @@ it? Every verdict below is backed by the verbatim greedy-anchor
 
 Minimal repro derived from [`../METHODOLOGY.md` §6](../METHODOLOGY.md) and
 the canonical degraded cell
-[`../matrix-714/cells/gguf-udq4kxl-auto-base-c8-ctx131072.json`](../matrix-714/cells/gguf-udq4kxl-auto-base-c8-ctx131072.json):
+[`../matrix-714/cells/gguf-hip-udq4kxl-auto-base-c8-ctx131072.json`](../matrix-714/cells/gguf-hip-udq4kxl-auto-base-c8-ctx131072.json):
 
 1. boot `scripts/gguf-quickstart.sh` with `CTX_SIZE=131072 WITH_MTP=0
    EXTRA_ARGS="-np 8"` (E3 adds `WITH_MMPROJ=0`; E1–E3 point

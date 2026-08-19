@@ -8,6 +8,98 @@ receipts [`docs/results/matrix-714/cells/`](docs/results/matrix-714/cells/),
 and the rehearsal receipt
 [`docs/results/rocm-7.14/one-pass-rehearsal.md`](docs/results/rocm-7.14/one-pass-rehearsal.md).
 
+## v0.1.5 — 2026-08-19
+
+Docs-accuracy & reproducibility release: fixes from three independent
+read-only audits of v0.1.4 (docs freshness, reproducibility walkthrough,
+community value/UX). **No data changes**: the 28 cells, `matrix.json`,
+`configs/benchmark-verdicts.json` (byte-identical), every verdict, and the
+8/14/6 distribution are untouched; the corpus receipts are untouched. The
+quickstart's default boot logic is byte-identical (a new `--help` exits
+before any boot logic; wording-only echo changes).
+
+### Cluster 1 — depth-1 truth made consistent and expressible
+
+- **METHODOLOGY dated erratum (2026-08-19)**: the frozen contract's
+  "mtp = speculative depth 1 (the 2026-08-17 cells)" id-grammar note and
+  the Motivation paragraph's "HIP, MTP depth 1" label are corrected by
+  erratum — the canonical hip mtp-c1 receipt (13.00 tok/s, started
+  2026-08-16T22:30:54Z) ran the implicit `--spec-draft-n-max` default 3;
+  the clean depth-explicit hip d1 measurement is 13.86 tok/s (session 3,
+  2026-08-19; +6.61% vs 13.00 is day-confounded, labeled).
+- **The recommended depth is now expressible from the docs**: README
+  quickstart + boot table and
+  [`docs/getting-started.md`](docs/getting-started.md) document
+  `WITH_MTP=1 SPEC_DEPTH=1` as the recommended invocation; a bare
+  `WITH_MTP=1` is labeled implicit-depth-3 (the 13.0 corpus cell). The
+  quickstart echo gains a one-line `SPEC_DEPTH=1` hint; the generated
+  benchmark mapping row and the README recommended-table row carry the
+  re-run drift note (re-running the corpus hip mtp cell today pins
+  depth 1 explicitly and measures ~13.86 —
+  [`docs/results/matrix-714/stability/session3-2026-08-19/`](docs/results/matrix-714/stability/session3-2026-08-19/)).
+- **"Depth 1 beats depth 4" now cites correctly-labeled numbers**
+  (generated template + adaptation.md): vulkan 16.00 vs 15.05 tok/s
+  (2026-08-18 corpus cells, explicit d1 vs d4); hip 13.86 (2026-08-19,
+  explicit d1) vs 12.76 (2026-08-18, explicit d4) — the implicit-d3
+  13.00 receipt is never again the depth-1 side. Date labels for the
+  historical hip receipt unified to "2026-08-16 UTC (08-17 local)".
+
+### Cluster 2 — Vulkan opt-in prerequisites documented
+
+README opt-in, [`docs/adaptation.md`](docs/adaptation.md) §Vulkan, and a
+NEW [`docs/troubleshooting.md`](docs/troubleshooting.md) `#vulkan-build`
+section now state: the 5 apt packages (`mesa-vulkan-drivers`,
+`vulkan-tools`, `libvulkan-dev`, `glslc`, `spirv-headers`); the no-root
+`VULKAN_DEPS_PREFIX` fallback (used on the reference host:
+`~/.local/share/qwen38-vulkan-deps` — `vulkaninfo` exists ONLY there);
+and that the build fingerprint pins the Mesa point version, so a
+Mesa/loader upgrade forces a deliberate `build-714-vk` rebuild (backend
+identity is evidence).
+
+### Cluster 3 — README recommended-table verdict collision resolved
+
+The generated "Recommended — interactive chat" table now renders two
+labeled layers: a **Cell verdict** column (the mechanical, corpus-backed
+verdict) and a separate **Quickstart mapping** column — the vulkan row no
+longer shows "✅ recommended" unqualified next to a NOT-recommended
+mapping inside one cell (benchmark.md's mapping table is the model). Both
+layers stay visible; the dated-supersession story is unchanged.
+
+### Cluster 4 — stale 🚧 claims reconciled
+
+[`docs/hardware-validation.md`](docs/hardware-validation.md) no longer
+says W7900 is "🚧 Planned" (it is 🧪 community-validated — GGUF — since
+v0.1.1); the README roadmap's "every 🚧 invitation stands" line (the
+matrix renders zero 🚧 rows since the W7900D community row landed) now
+names the actual open invitations: any AMD gfx arch via the protocol,
+with the gfx1100 vLLM path as the open ask.
+
+### Cluster 5 — broken links fixed
+
+[`docs/results/upstream-controls/README.md`](docs/results/upstream-controls/README.md)
+→ the canonical degraded-cell receipt renamed to the `-hip-` grammar in
+v0.1.2; [`docs/results/community-explorations/w7900d-gfx1100/README.md`](docs/results/community-explorations/w7900d-gfx1100/README.md)
+→ one-directory-short community-cells link.
+
+### Cluster 6 — measured memory prerequisite stated
+
+README prerequisites and getting-started now state the measured minimum
+for the recommended path: ~26.5 GiB GTT at default ctx 131072 (26,548 MiB
+at load; 29,270 MiB for the `WITH_MTP=1` boot — cell receipts
+`load.gtt_mib`), with a one-line signal for 32 GiB-RAM owners (the GTT
+pool depends on BIOS/allocation; expect pressure).
+
+### Folded minors
+
+`gguf-quickstart.sh --help` now prints usage (env knobs, recommended
+invocation) and exits 0 BEFORE any boot logic — previously `--help`
+booted the server; getting-started's MTP bullet aligned with the
+"recommended path (`WITH_MTP=1 SPEC_DEPTH=1`)" framing; the results-index
+verdict-provenance line adds the file-level 2026-08-19 review;
+`CITATION.cff` 0.1.5. Tests updated/added accordingly (quickstart
+`--help` non-boot + no-args boot-neutrality pins; recommended-table
+two-layer columns; SPEC_DEPTH documentation pins).
+
 ## v0.1.4 — 2026-08-19
 
 Evidence-integration release: the session-3 receipts (clean depth-1 backend

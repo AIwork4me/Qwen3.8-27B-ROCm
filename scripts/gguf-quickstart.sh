@@ -50,6 +50,56 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+# --- Argument handling (v0.1.5): --help must print usage and exit BEFORE any
+# boot logic — a stranger's --help reflex must never boot the server. No args
+# (or any other argument) falls through to the default boot, byte-identical.
+case "${1:-}" in
+    -h|--help)
+        cat <<'USAGE'
+Usage: bash scripts/gguf-quickstart.sh [-h|--help]
+
+Serves the validated UD-Q4_K_XL GGUF with the pinned, fingerprinted
+llama.cpp build on http://127.0.0.1:<PORT>/v1. Recommended invocation
+(hip, MTP speculative decoding at the recommended depth 1):
+
+  WITH_MTP=1 SPEC_DEPTH=1 bash scripts/gguf-quickstart.sh
+
+Environment knobs (all optional; defaults come from the validated stack /
+artifact manifest, never a guess):
+
+  BACKEND=<hip|vulkan>   llama.cpp build to serve. DEFAULT hip (build-714) —
+                         hip WITH_MTP=1 is BOTH the default and the
+                         recommended path. vulkan = build-714-vk, an
+                         AVAILABLE experimental opt-in, NOT recommended
+                         (project ruling 2026-08-19 supersedes the
+                         2026-08-18 promotion; build via
+                         scripts/06-build-llama-vulkan.sh).
+  WITH_MTP=1             opt in to MTP speculative decoding
+                         (--spec-type draft-mtp; MTP head from the same GGUF)
+  SPEC_DEPTH=<n>         with WITH_MTP=1: MTP draft depth, passed as
+                         --spec-draft-n-max n. Upstream default 3 (what a
+                         bare WITH_MTP=1 boots); SPEC_DEPTH=1 pins the
+                         recommended depth (the clean d1 pairing of
+                         2026-08-19: hip 13.86 tok/s).
+  CTX_SIZE=<n>           context size (default 131072 from the validated
+                         stack)
+  PORT=<n>               port (default 8080)
+  GGUF_FILE=<name|path>  serve another quant from the validated set (or any
+                         GGUF path)
+  WITH_MMPROJ=0          skip the vision projector even when present
+  VERIFY_GGUF=1          full SHA256 re-verification before serving (~1 min)
+  EXTRA_ARGS='...'       extra llama-server flags appended verbatim
+                         (word-split; e.g. '-np 4' for split-slot
+                         concurrency, METHODOLOGY.md §6)
+  LLAMA_SERVER=<path>    override the server binary (top-level escape hatch)
+
+With no arguments the script boots the default configuration exactly as
+before (this help changed wording only, never boot logic).
+USAGE
+        exit 0
+        ;;
+esac
+
 PORT="${PORT:-8080}"
 
 # --- Port preflight: gate before anything expensive (muse F-11 pattern) ------
@@ -249,6 +299,7 @@ if [ "$BACKEND" = "vulkan" ]; then
     echo "backend      : $BACKEND (AVAILABLE experimental opt-in — NOT recommended; project ruling 2026-08-19 supersedes the 2026-08-18 promotion: the clean depth-1 same-day pairing is 14.53 vs 13.86 tok/s = +4.81% single-stream, aggregate basis -13.31%; cross-day re-runs dropped every vulkan cell — see benchmark verdicts and docs/results/matrix-714/stability/)"
 else
     echo "backend      : $BACKEND (default AND recommended path — run WITH_MTP=1 for the recommended interactive config, 13.0 tok/s per stream)"
+    echo "hint         : SPEC_DEPTH=1 pins the recommended MTP depth 1 (clean d1 13.86 tok/s, 2026-08-19; a bare WITH_MTP=1 boots the implicit upstream depth 3 — the 13.0 tok/s corpus cell)"
     echo "note (opt-in): BACKEND=vulkan exists as an experimental opt-in, not a recommendation (downgraded 2026-08-19; clean d1 pairing +4.81% vs hip, aggregate -13.31% — evidence: benchmark verdicts, docs/results/matrix-714/stability/)"
 fi
 echo "model        : $MODEL_PATH ($(du -h "$MODEL_PATH" | cut -f1))"

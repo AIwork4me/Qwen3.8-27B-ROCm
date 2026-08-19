@@ -916,6 +916,94 @@ def test_ruling_mtp_depth1_beats_depth4_on_both_backends():
     assert "mtp4" not in QUICKSTART.read_text()
 
 
+# --------------------- 6b. v0.1.5 audit-F1 docs-accuracy pins
+#
+# Three independent audits of v0.1.4 (A docs-freshness, B reproducibility,
+# C community-UX) found the depth-1 story not fully EXPRESSIBLE or
+# consistently LABELED on user-facing surfaces. These pins keep the fixes
+# fixed; none of them changes data — the corpus and verdicts are untouched.
+
+def test_recommended_d1_invocation_is_expressible_from_docs():
+    """Audit B-I2 / C-I3 (v0.1.5): the recommended depth-1 variant must be
+    reachable from the docs, not only from script source — README quickstart
+    and getting-started document `WITH_MTP=1 SPEC_DEPTH=1` as the
+    recommended invocation, the bare `WITH_MTP=1` stays labeled
+    implicit-depth-3 (the 13.0 corpus cell), and the quickstart echo
+    carries the one-line SPEC_DEPTH=1 hint."""
+    readme = README.read_text()
+    assert "WITH_MTP=1 SPEC_DEPTH=1 bash scripts/gguf-quickstart.sh" in readme, (
+        "README quickstart lacks the recommended d1 invocation")
+    assert "implicit depth 3" in readme, (
+        "the bare WITH_MTP=1 boot must be labeled implicit-depth-3")
+    assert "13.86" in readme, (
+        "the clean d1 number behind the recommendation must be stated")
+    gs = (ROOT / "docs" / "getting-started.md").read_text()
+    assert "WITH_MTP=1 SPEC_DEPTH=1 bash scripts/gguf-quickstart.sh" in gs
+    assert "implicit upstream depth 3" in gs, (
+        "getting-started must label the bare WITH_MTP boot")
+    src = QUICKSTART.read_text()
+    assert "SPEC_DEPTH=1 pins the recommended" in src, (
+        "the quickstart echo must carry the one-line SPEC_DEPTH=1 hint")
+    # Re-run drift note (audit B minor 3): the mapping tables state that a
+    # re-run today pins depth 1 explicitly (~13.86, session 3).
+    bench = BENCH_MD.read_text()
+    assert "pins depth 1 explicitly" in bench and "13.86" in bench, (
+        "benchmark.md mapping row lost the re-run drift note")
+    assert "stability/session3-2026-08-19" in readme, (
+        "README quickstart row must stay traceable to stability/session3")
+
+
+def test_readme_recommended_table_two_verdict_layers_no_collision():
+    """Audit C-I1 (v0.1.5): the generated 'Recommended' table must never
+    show '✅ recommended' unqualified next to a NOT-recommended mapping in
+    the same row — the CELL verdict (mechanical, corpus-backed) and the
+    QUICKSTART mapping (recommendation layer) are separate, labeled
+    columns (benchmark.md's mapping table is the model)."""
+    block = _readme_block("performance-highlights")
+    assert "| Cell verdict | Quickstart mapping |" in block, (
+        "the Recommended table lacks the two labeled verdict columns")
+    vk_row = next(ln for ln in block.splitlines()
+                  if ln.startswith("| `BACKEND=vulkan`"))
+    assert "✅ recommended" in vk_row, "cell verdict must stay visible"
+    assert "**NOT recommended**" in vk_row, (
+        "the vulkan row's mapping column must state NOT recommended")
+    # The columns are ordered: cell verdict BEFORE quickstart mapping, so a
+    # scanner reads the mechanical verdict first, the mapping second.
+    assert vk_row.index("✅ recommended") < vk_row.index("**NOT recommended**")
+    hip_row = next(ln for ln in block.splitlines()
+                   if ln.startswith("| `WITH_MTP=1` mtp-c1"))
+    assert "**recommended path**" in hip_row and "SPEC_DEPTH=1" in hip_row, (
+        "the hip mtp row must map to the recommended SPEC_DEPTH=1 form")
+
+
+def test_depth1_vs_depth4_citations_use_labeled_clean_numbers():
+    """Audit A-M6 / C-I3 (v0.1.5): the 'depth 1 beats depth 4' comparison
+    must never cite the implicit-depth-3 corpus receipt (13.00) as the
+    hip depth-1 side — the hip side is the depth-explicit 13.86 (session 3,
+    2026-08-19) vs 12.76 (2026-08-18, explicit d4), dates labeled; same
+    discipline hand-edited into docs/adaptation.md."""
+    text = BENCH_MD.read_text()
+    # The sentence terminates at '...of a depth comparison.' — numbers like
+    # 16.00 contain periods, so the terminator is textual, not '.'.
+    m = re.search(r"MTP depth 1 beats depth 4.*?depth comparison\.", text, re.S)
+    assert m, "benchmark.md lost the depth comparison sentence"
+    s = m.group(0)
+    for number in ("16.00", "15.05", "13.86", "12.76"):
+        assert number in s, f"{number} missing from the depth comparison"
+    assert "implicit depth 3" in s, (
+        "the corpus-cell depth disclosure is missing")
+    assert "2026-08-18" in s and "2026-08-19" in s, (
+        "the depth-comparison dates must be labeled")
+    adaptation = (ROOT / "docs" / "adaptation.md").read_text()
+    assert "hip 12.76 vs 13.00" not in adaptation and \
+        "hip 13.00 vs 12.76" not in adaptation, (
+            "adaptation.md still cites 13.00 (implicit d3) as the hip d1 side")
+    assert "13.86" in adaptation and "SPEC_DEPTH=1" in adaptation
+    # The historical receipt's date label is consistent (UTC + local):
+    assert "2026-08-16 UTC" in text and "2026-08-16 UTC" in adaptation, (
+        "the hip corpus receipt must be dated 2026-08-16 UTC consistently")
+
+
 def test_ruling_unified_rider_finding_recorded():
     by_id = {c["id"]: c for c in load(VERDICTS)["cells"]}
     rider = by_id["gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified"]

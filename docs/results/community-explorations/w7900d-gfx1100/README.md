@@ -7,7 +7,7 @@ before the community submission landed. Per
 come from a **local harness** (`bench_driver.py`, `probe-fp8-unlock.sh`) and
 are therefore **context, never evidence** for the project index. The
 evidence-grade cells for this platform live exclusively in
-[matrix-714/community/w7900d-gfx1100-rocm721/](../matrix-714/community/w7900d-gfx1100-rocm721/)
+[matrix-714/community/w7900d-gfx1100-rocm721/](../../matrix-714/community/w7900d-gfx1100-rocm721/)
 (this repo's own runners, PR #1, merged 2026-08-18).
 
 ## What is here
