@@ -54,6 +54,19 @@
 #
 # CI note: --dry-run resolves and prints the plan without launching anything;
 # the test suite only exercises --dry-run and the refusal paths.
+#
+# Telemetry (R1, 2026-08-19 variance root-cause — ADDITIVE only, same harness
+# as scripts/run-cell-gguf.sh): the `load` snapshot gains a `telemetry` block
+# and a NEW `post_bench` snapshot is taken right after the soak window +
+# anchor, before teardown. rocm-smi sclk/mclk/package power/edge temp from
+# --showclocks/--showpower/--showtemp (raw output verbatim in
+# telemetry.raw), host-state one-liners in telemetry.env (uptime -s,
+# powerprofilesctl get, GPU power_dpm_force_performance_level), and — this
+# soak is vulkan-pinned, so unconditionally — telemetry.mesa_cache (du -s
+# KiB + file count + newest mtime of the mesa shader cache dir, read BEFORE
+# boot and again AFTER teardown). Fail-loud BUT telemetry-tolerant: a missing
+# or unreadable FIELD is null + the stderr snippet in telemetry.errors —
+# telemetry never aborts a soak; a missing rocm-smi BINARY stays fatal.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -164,6 +177,7 @@ print_plan() {
     echo "soak          : SOAK_MINUTES=$SOAK_MINUTES repeated bench cycles, then ONE greedy anchor"
     echo "health poll   : curl $BASE_URL/health (boot timeout ${HEALTH_TIMEOUT_S}s, mid-soak grace ${HEALTH_RECOVER_S}s)"
     echo "mem snapshot  : rocm-smi --showmeminfo vram + gtt after load (MiB, /1024)"
+    echo "telemetry    : rocm-smi --showclocks/--showpower/--showtemp + uptime -s/powerprofilesctl/dpm at load AND post-bench (mesa_shader_cache stats: vulkan so always)"
     echo "bench         : ${BENCH_CMD[*]}"
     echo "anchor        : ${ANCHOR_CMD[*]}  [gate: anchor_ok in the JSON, not exit code]"
     echo "receipt       : $RECEIPT (SOAK_DIR; never overwrites a project cell receipt)"
@@ -183,7 +197,11 @@ fi
     exit 3
 }
 [ -f "$PROMPTS" ]    || { echo "ERROR: prompt set $PROMPTS missing" >&2; exit 3; }
-command -v rocm-smi >/dev/null 2>&1 || { echo "ERROR: rocm-smi not found (host-only soak)" >&2; exit 3; }
+command -v rocm-smi >/dev/null 2>&1 || {
+    echo "ERROR: rocm-smi not found (host-only soak)" >&2
+    echo "       the reference host has it (PATH or ~/rocm-7.14.0/bin); install ROCm SMI first." >&2
+    exit 3
+}
 [ -d "$SOAK_DIR" ] || mkdir -p "$SOAK_DIR" || { echo "ERROR: cannot create SOAK_DIR $SOAK_DIR" >&2; exit 3; }
 if [ -e "$RECEIPT" ]; then
     echo "ERROR: receipt $RECEIPT already exists (receipts are never overwritten — new facts, new receipts)." >&2
@@ -232,6 +250,163 @@ mib() { # mib <bytes> -> binary MiB (blank -> blank)
     [ -n "${1:-}" ] && echo $(( $1 / 1048576 )) || echo ""
 }
 
+# ------------------------------------------------- R1 telemetry functions
+# (2026-08-19 variance root-cause; same harness as scripts/run-cell-gguf.sh —
+# the derivation-note constraint forbids refactoring the runner into a
+# shared helper, so the SAME code shape is kept here deliberately. All three
+# are TELEMETRY-TOLERANT: a missing/unreadable field lands as null with the
+# stderr snippet — never a non-zero exit that could abort the soak.)
+
+telemetry_parse_json() { # rocm-smi raw outputs (env CLOCKS_/POWER_/TEMP_
+    # RAW|ERR) -> parsed telemetry fields + errors, as JSON on stdout.
+    # Pure function of the env vars so CI can exercise the parsing against
+    # fixture output (the reference-host rocm-smi shapes) without a GPU.
+    CLOCKS_RAW="${CLOCKS_RAW:-}" CLOCKS_ERR="${CLOCKS_ERR:-}" \
+    POWER_RAW="${POWER_RAW:-}" POWER_ERR="${POWER_ERR:-}" \
+    TEMP_RAW="${TEMP_RAW:-}" TEMP_ERR="${TEMP_ERR:-}" python3 <<'PY'
+import json, os, re
+SOURCES = {  # field -> (rocm-smi flag, env stem holding that flag's output)
+    "sclk_mhz":    ("showclocks", "CLOCKS"),
+    "mclk_mhz":    ("showclocks", "CLOCKS"),
+    "power_w":     ("showpower", "POWER"),
+    "temp_edge_c": ("showtemp", "TEMP"),
+    }  # NOTE: no column-0 "}" inside these function bodies — the CI tests
+PATTERNS = {  # the gfx1151 rocm-smi output shapes (verbatim receipts rule)
+    "sclk_mhz":    r"sclk clock level:\s*\d+:\s*\(([0-9.]+)\s*Mhz",
+    "mclk_mhz":    r"mclk clock level:\s*\d+:\s*\(([0-9.]+)\s*Mhz",
+    "power_w":     r"Current Socket Graphics Package Power \(W\):\s*([0-9.]+)",
+    "temp_edge_c": r"Temperature \(Sensor edge\) \(C\):\s*([0-9.]+)",
+    }  # extract whole bash functions by that boundary for fixture parsing
+out, errors = {}, {}
+for field, (flag, stem) in SOURCES.items():
+    raw = os.environ.get(stem + "_RAW", "")
+    err = os.environ.get(stem + "_ERR", "").strip()
+    m = re.search(PATTERNS[field], raw) if raw.strip() else None
+    if m:
+        try:
+            out[field] = float(m.group(1))
+            continue
+        except ValueError:
+            pass  # fall through to the null + snippet record
+    out[field] = None
+    if err:
+        why = err
+    elif not raw.strip():
+        why = "no rocm-smi output captured"
+    else:
+        why = f"pattern not found in --{flag} output"
+    errors[field] = f"--{flag}: {why[:200]}"
+out["errors"] = errors
+print(json.dumps(out))
+PY
+}
+
+telemetry_snapshot() { # -> one telemetry block (fields + raw verbatim + env)
+    # Runs the SAME rocm-smi commands the controller probed, keeps each
+    # command's full output verbatim (rc/stdout/stderr) and adds the
+    # host-state one-liners. Never fails the run (fields degrade to null).
+    local tf="/tmp/soak-telemetry-$$.err"
+    local c_out="" c_err="" c_rc=0 p_out="" p_err="" p_rc=0 t_out="" t_err="" t_rc=0
+    c_out="$(rocm-smi --showclocks 2>"$tf")" || c_rc=$?
+    c_err="$(cat "$tf" 2>/dev/null || true)"
+    p_out="$(rocm-smi --showpower 2>"$tf")" || p_rc=$?
+    p_err="$(cat "$tf" 2>/dev/null || true)"
+    t_out="$(rocm-smi --showtemp 2>"$tf")" || t_rc=$?
+    t_err="$(cat "$tf" 2>/dev/null || true)"
+    rm -f "$tf"
+    local parsed
+    parsed="$(CLOCKS_RAW="$c_out" CLOCKS_ERR="$c_err" POWER_RAW="$p_out" POWER_ERR="$p_err" \
+              TEMP_RAW="$t_out" TEMP_ERR="$t_err" telemetry_parse_json)" || parsed='{}'
+    PARSED="$parsed" \
+    CLOCKS_RAW="$c_out" CLOCKS_ERR="$c_err" CLOCKS_RC="$c_rc" \
+    POWER_RAW="$p_out" POWER_ERR="$p_err" POWER_RC="$p_rc" \
+    TEMP_RAW="$t_out" TEMP_ERR="$t_err" TEMP_RC="$t_rc" \
+    python3 <<'PY'
+import glob, json, os, subprocess
+tel = {}
+try:
+    tel = json.loads(os.environ.get("PARSED") or "{}")
+except Exception:
+    tel = {}
+raw, envb, errs = {}, {}, {}
+errs.update(tel.get("errors") or {})
+for key, stem in (("showclocks", "CLOCKS"), ("showpower", "POWER"), ("showtemp", "TEMP")):
+    raw[key] = {"rc": int(os.environ.get(stem + "_RC") or 0),
+                "stdout": os.environ.get(stem + "_RAW", ""),
+                "stderr": os.environ.get(stem + "_ERR", "")}
+
+def run(cmd):  # host-state one-liner -> (value-or-None, error-or-None)
+    try:
+        p = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
+    except Exception as e:
+        return None, f"{type(e).__name__}: {e}"
+    if p.returncode != 0:
+        return None, f"rc={p.returncode}: {(p.stderr or '').strip()[:200]}"
+    return (p.stdout.strip() or None), None
+
+envb["boot_time"], _e = run(["uptime", "-s"])
+if _e: errs["boot_time"] = _e
+envb["power_profile"], _e = run(["powerprofilesctl", "get"])
+if _e: errs["power_profile"] = _e
+dpm = dpm_src = None
+dpm_err = "no /sys/class/drm/card*/device/power_dpm_force_performance_level present"
+for p in sorted(glob.glob("/sys/class/drm/card*/device/power_dpm_force_performance_level")):
+    try:
+        v = open(p).read().strip()
+    except OSError as e:
+        dpm_err = str(e)
+        continue
+    if v:
+        dpm, dpm_src, dpm_err = v, p, None
+        break
+envb["power_dpm_force_performance_level"] = dpm
+envb["power_dpm_source"] = dpm_src
+if dpm_err:
+    errs["power_dpm_force_performance_level"] = dpm_err
+tel.update({"raw": raw, "env": envb, "errors": errs})
+print(json.dumps(tel))
+PY
+}
+
+mesa_cache_stats_json() { # -> {path, du_kib, files, newest_mtime_utc, error}
+    # du -s (KiB) + file count + newest mtime of the mesa shader cache dir
+    # (the RADV default path); tolerant — nulls + an error on any miss.
+    MESA_CACHE_PATH="${MESA_CACHE_PATH:-}" python3 <<'PY'
+import datetime, json, os, subprocess
+d = os.environ.get("MESA_CACHE_PATH") or os.path.join(
+    os.environ.get("XDG_CACHE_HOME") or os.path.join(os.path.expanduser("~"), ".cache"),
+    "mesa_shader_cache")
+out = {"path": d, "du_kib": None, "files": None, "newest_mtime_utc": None, "error": None}
+def fail(msg):
+    out["error"] = (out["error"] + "; " if out["error"] else "") + str(msg)[:200]
+if not os.path.isdir(d):
+    fail(f"not a directory: {d}")
+    print(json.dumps(out)); raise SystemExit
+try:
+    du = subprocess.run(["du", "-sk", d], capture_output=True, text=True, timeout=300)
+    if du.returncode == 0 and du.stdout.split():
+        out["du_kib"] = int(du.stdout.split()[0])
+    else:
+        fail((du.stderr or f"du rc={du.returncode}").strip() or f"du rc={du.returncode}")
+except Exception as e:
+    fail(f"du: {type(e).__name__}: {e}")
+try:
+    f = subprocess.run(["find", d, "-type", "f", "-printf", "%T@\n"],
+                       capture_output=True, text=True, timeout=300)
+    if f.returncode == 0:
+        stamps = sorted(float(x) for x in f.stdout.split())
+        out["files"] = len(stamps)
+        if stamps:
+            out["newest_mtime_utc"] = datetime.datetime.fromtimestamp(
+                stamps[-1], datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    else:
+        fail((f.stderr or f"find rc={f.returncode}").strip() or f"find rc={f.returncode}")
+except Exception as e:
+    fail(f"find: {type(e).__name__}: {e}")
+print(json.dumps(out))
+PY
+}
+
 print_plan
 echo
 
@@ -270,6 +445,11 @@ DEGRADED=0
 DEGRADED_REASON=""
 HEALTH_FLAPS=0
 
+# Mesa shader cache reading #1 (R1 telemetry; this soak is vulkan-pinned so
+# unconditional): BEFORE the server boots; reading #2 comes after teardown.
+MESA_CACHE_BEFORE_JSON="$(mesa_cache_stats_json)" || MESA_CACHE_BEFORE_JSON='null'
+echo "mesa cache  : (before boot) $MESA_CACHE_BEFORE_JSON"
+
 echo "== booting $QUICKSTART (backend $BACKEND, ctx $CTX, mtp $WITH_MTP, depth $SPEC_DEPTH, extra '${EXTRA_ARGS:-none}') =="
 STARTED_S=$SECONDS
 PORT="$PORT" BACKEND="$BACKEND" CTX_SIZE="$CTX" WITH_MTP="$WITH_MTP" \
@@ -289,8 +469,9 @@ done
 BOOT_WALL=$((SECONDS - STARTED_S))
 
 SLOT_INFO_JSON='null'
-LOAD_JSON='{"vram_mib": null, "gtt_mib": null}'
+LOAD_JSON='{"vram_mib": null, "gtt_mib": null, "telemetry": null}'
 MODEL_JSON='null'
+POST_BENCH_JSON='null'
 CYCLES_RAN=0
 ABORTED=0
 ABORT_REASON=""
@@ -323,12 +504,17 @@ PY
     [ "$SLOT_INFO_JSON" != "null" ] || echo "WARN: no slot semantics line found in $LOG" >&2
 
     VRAM_B="$(mem_used_bytes vram)"; GTT_B="$(mem_used_bytes gtt)"
-    LOAD_JSON="$(VRAM_B="${VRAM_B:-}" GTT_B="${GTT_B:-}" python3 <<'PY'
+    LOAD_TELEMETRY_JSON="$(telemetry_snapshot)" || LOAD_TELEMETRY_JSON='{"error": "telemetry snapshot failed"}'
+    LOAD_JSON="$(VRAM_B="${VRAM_B:-}" GTT_B="${GTT_B:-}" TELEMETRY_JSON="$LOAD_TELEMETRY_JSON" python3 <<'PY'
 import json, os
 v = os.environ.get("VRAM_B", ""); g = os.environ.get("GTT_B", "")
 def mib(s):
     return int(s) // 1048576 if s else None
-print(json.dumps({"vram_mib": mib(v), "gtt_mib": mib(g)}))
+try:
+    tel = json.loads(os.environ["TELEMETRY_JSON"])
+except Exception:
+    tel = None
+print(json.dumps({"vram_mib": mib(v), "gtt_mib": mib(g), "telemetry": tel}))
 PY
 )"
     echo "load memory : $LOAD_JSON"
@@ -456,12 +642,39 @@ PY
             [ -n "$DEGRADED_REASON" ] || DEGRADED_REASON="anchor check failed (greedy byte-identity)"
         fi
     fi
+
+    # R1 telemetry: post_bench snapshot right after the soak window + anchor,
+    # BEFORE teardown — clocks/power/temp at the moment the load just ended.
+    POST_BENCH_JSON="$(TELEMETRY_JSON="$(telemetry_snapshot)" python3 <<'PY'
+import json, os
+try:
+    tel = json.loads(os.environ["TELEMETRY_JSON"])
+except Exception:
+    tel = None
+print(json.dumps({"telemetry": tel}))
+PY
+)" || POST_BENCH_JSON='null'
+    echo "post-bench  : telemetry $(POST_BENCH_JSON="$POST_BENCH_JSON" python3 <<'PY'
+import json, os
+try:
+    t = (json.loads(os.environ["POST_BENCH_JSON"]).get("telemetry") or {})
+except Exception:
+    t = {}
+print(f"sclk={t.get('sclk_mhz')}MHz mclk={t.get('mclk_mhz')}MHz "
+      f"power={t.get('power_w')}W temp={t.get('temp_edge_c')}C")
+PY
+)"
 fi
 
 # ------------------------------------------------ teardown + GPU-clean check
 cleanup_server
 wait_gtt_drain
 trap - EXIT
+
+# Mesa shader cache reading #2 (R1 telemetry): AFTER teardown, so the diff vs
+# reading #1 is what THIS soak's shaders added.
+MESA_CACHE_AFTER_JSON="$(mesa_cache_stats_json)" || MESA_CACHE_AFTER_JSON='null'
+echo "mesa cache  : (after teardown) $MESA_CACHE_AFTER_JSON"
 
 GPU_CLEAN=true
 GT_EXIT_B="$(mem_used_bytes gtt)"
@@ -490,6 +703,8 @@ HEALTH_FLAPS="$HEALTH_FLAPS" \
 SOAK_MINUTES="$SOAK_MINUTES" SOAK_WALL_S="${SOAK_WALL_S:-0}" ABORTED="$ABORTED" \
 ABORT_REASON="$ABORT_REASON" GPU_CLEAN="$GPU_CLEAN" SCRIPT_GIT_REV="$SCRIPT_GIT_REV" \
 WORKTREE_DIRTY="$WORKTREE_DIRTY" LLAMA_BIN="$LLAMA_BIN" EXTRA_FLAGS="${CELL_FLAGS[*]}" \
+POST_BENCH_JSON="$POST_BENCH_JSON" MESA_CACHE_BEFORE_JSON="$MESA_CACHE_BEFORE_JSON" \
+MESA_CACHE_AFTER_JSON="$MESA_CACHE_AFTER_JSON" \
 RECEIPT="$RECEIPT" python3 <<'PY'
 import json, os, statistics, sys
 env = os.environ
@@ -558,12 +773,26 @@ soak = {
     "boot": {"ok": env["BOOT_OK"] == "1", "health_wall_s": int(env["BOOT_WALL"])},
     "cycles": cycles,
     "anchor": {"ok": env["ANCHOR_OK"] == "true", "content_tail": env["ANCHOR_TAIL"]},
+    "post_bench": (json.loads(env["POST_BENCH_JSON"])
+                   if env["POST_BENCH_JSON"] != "null" else None),
     "totals": totals,
     "anomalies": anomalies,
     "exit_gpu_clean": env["GPU_CLEAN"] == "true",
     "degraded": env["DEGRADED"] == "1",
     "degraded_reason": env["DEGRADED_REASON"] or None,
 }
+# R1 telemetry merge (vulkan-pinned soak: unconditional): the two mesa-cache
+# readings land inside load.telemetry.mesa_cache (before boot / after
+# teardown). A missing reading stays null — the merge must never fail the
+# receipt write.
+if isinstance(soak["load"], dict) and isinstance(soak["load"].get("telemetry"), dict):
+    def _mc(key):
+        try:
+            return json.loads(env[key]) if env[key] != "null" else None
+        except Exception:
+            return None
+    soak["load"]["telemetry"]["mesa_cache"] = {"before_boot": _mc("MESA_CACHE_BEFORE_JSON"),
+                                               "after_teardown": _mc("MESA_CACHE_AFTER_JSON")}
 with open(env["RECEIPT"], "w") as f:
     json.dump(soak, f, indent=2)
     f.write("\n")

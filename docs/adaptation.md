@@ -46,7 +46,7 @@ The model-facing wiring is platform-agnostic and needed no patches:
 | 7 | Kernel floor | N/A on servers | Strix Halo UMA needs kernel ≥ 6.16.9 (muse-rocm heritage finding; enforced by the env check) | host-class | [`configs/validated-stack.json`](../configs/validated-stack.json), [troubleshooting](troubleshooting.md#uma-bug) |
 | 8 | Output packaging | DeepSeek-style `reasoning_content` everywhere | llama.cpp emits `message.reasoning_content`; the vLLM `qwen3` parser at `4d2a68d` emits `message.reasoning` (generation identical) | pin-local | [`results/rocm-7.14/gguf-validation.md`](results/rocm-7.14/gguf-validation.md), [`results/rocm-7.14/vllm-validation.md`](results/rocm-7.14/vllm-validation.md), [troubleshooting](troubleshooting.md#reasoning-field) |
 
-## Vulkan backend × MTP depth (v0.1.2, measured 2026-08-18; re-based v0.1.4)
+## Vulkan backend × MTP depth (v0.1.2, measured 2026-08-18; re-based v0.1.4, cross-day variance root-caused v0.1.6)
 
 The second llama.cpp backend measured on the same host, model, prompts, and
 harness (8 cells; plan
@@ -55,7 +55,10 @@ tables [`results/benchmark.md`](results/benchmark.md)). All facts below are
 **pin-local**. The v0.1.4 re-base (2026-08-19): the session-3 clean
 depth-1 pairing and the cross-day re-runs
 ([`results/matrix-714/stability/`](results/matrix-714/stability/))
-supersede the mixed-depth headline the original promotion rested on.
+supersede the mixed-depth headline the original promotion rested on. The
+v0.1.6 root-cause step (same day): session 4's controlled runs explain
+the cross-day variance as Mesa shader-cache state dependence (the
+cross-day bullet below).
 
 - **Build** — the same llama.cpp pin as the HIP build (`4df29be4`), separate
   tree `third_party/llama.cpp/build-714-vk` via
@@ -117,8 +120,11 @@ supersede the mixed-depth headline the original promotion rested on.
   (`--spec-draft-n-max`, upstream default 3), NOT fixed by the checkpoint
   (row 5).
 - **Cross-day variance (v0.1.4, session 3 = 2026-08-19 vs sessions 1/2 =
-  2026-08-18)** — the same three vulkan c1 cells re-run on the next UTC
-  day dropped on every cell, while hip was same-session stable:
+  2026-08-18) — ROOT-CAUSED v0.1.6 to Mesa shader-cache state dependence
+  (dated supersession of the v0.1.4 "cause not recorded" statement,
+  which stays below for history)** — the same three vulkan c1 cells
+  re-run on the next UTC day dropped on every cell, while hip was
+  same-session stable:
 
   | Cell (stream tok/s) | s1 08-18 | s2 08-18 | s3 08-19 | s3 vs s1/s2 | max spread |
   |---|---|---|---|---|---|
@@ -129,26 +135,73 @@ supersede the mixed-depth headline the original promotion rested on.
   Same session, the hip side: mtp-c1 explicit d1 13.86 tok/s vs the
   canonical implicit-d3 cell 13.00 (+6.61%) — **day-confounded**
   (different days), so it is labeled, never read as a depth claim; hip
-  TTFT 5.43 s vs 5.47 s historical. **The host-level cause of the vulkan
-  cross-day drop is NOT recorded**: the receipts carry VRAM/GTT only —
-  no clock/thermal telemetry was captured (known harness debt; future
-  stability runs should record clocks/thermals).
+  TTFT 5.43 s vs 5.47 s historical. The v0.1.4 statement was: *the
+  host-level cause of the vulkan cross-day drop is NOT recorded — the
+  receipts carry VRAM/GTT only, no clock/thermal telemetry (known
+  harness debt)*. Session 4 (2026-08-19, R1 telemetry harness: 5
+  controlled runs — two warm vulkan boots, two hip controls, one
+  cache-aside arm; receipts
+  [`results/matrix-714/stability/session4-2026-08-19/`](results/matrix-714/stability/session4-2026-08-19/))
+  **supersedes it**: the root-cause CLASS is **Mesa shader-cache state
+  dependence** — with the cache moved aside (identical
+  config/flags/pin/host state) vulkan mtp-c1 drops to 12.38 tok/s /
+  TTFT 12.45 s (reproducing and exceeding the s3 slow signature) and
+  rebuilds a fresh cache mid-run (2136 KiB / 100 files), while the warm
+  cache stays stable at 7884 KiB / 867 files across runs (one run
+  touched nothing):
+
+  | Mesa cache state | mtp-c1 stream tok/s | TTFT | measured where |
+  |---|---|---|---|
+  | cold (cache moved aside) | 12.38 | 12.45 s | session 4, cache-aside arm |
+  | partial-cold (consistent) | 14.53 | 9.94 s | session 3 — the cross-day drop |
+  | warm | 16.96–17.10 (mean 17.03) | 8.37–8.50 s | session 4, boots 1/2 |
+  | warm | 16.00–16.25 | 8.36–8.83 s | sessions 1/2 (2026-08-18) |
+
+  Cold→warm swing **+38%** (cold is −27.3% vs the warm mean). s3's 14.53
+  sits between cold and warm → a **partial-cold cache state is
+  consistent**; the s3 **TRIGGER is UNKNOWN** (no Mesa upgrade, no
+  reboot — host up since 2026-08-12 per every session-4 receipt's
+  `telemetry.env`, no cache-clear found — stated honestly). Telemetry
+  rules out thermal/power: post-bench envelopes are vk 1433–1533 MHz /
+  30–32 W / 54–57 °C and hip 1910–1929 MHz / 52–53 W / 58 °C — each
+  backend in its own normal envelope, no anomaly (vk cross-boot
+  −0.79%, hip controls 14.76/14.06 tok/s = −4.7% cross-boot,
+  near-deterministic). Warm same-day **boot-paired** pairings vs the hip
+  controls: 17.10 vs 14.76 = **+15.9%**, 16.96 vs 14.06 = **+20.6%**
+  (label: warm-cache, boot-paired, 2026-08-19 — ceiling context from a
+  single warm session). RELABEL: the v0.1.4 clean d1 pairing **+4.81%
+  is the conservative floor case** (vk measured in a partial-cold
+  state) — its arithmetic and the no-flip conclusion stand unchanged.
+
+  **Warmup guidance (practical, non-recommending):** if vulkan feels
+  slow, first-run cache warmup is the first suspect — re-run before
+  concluding; the first boot after a cache clear runs ~12.4 tok/s /
+  ~12.5 s TTFT until warm.
 - **Greedy pit status** — the §6 HIP greedy-degradation pit does **NOT
   reproduce on Vulkan**: 6/6 vulkan corpus cells anchor-clean
   (base/mtp/mtp4 × c1/c4), and across the stability sessions the
-  cell-run anchors are 10/10 (s1/s2/s3; 11/11 with the soak anchor).
+  cell-run anchors are 15/15 (s1–s4; 16/16 with the soak anchor).
   The pit remains a hip-family (gfx1151/HIP) finding at this pin;
   Vulkan c8/c16 are unmeasured.
 - **Quickstart status (project ruling 2026-08-19 SUPERSEDES the
-  2026-08-18 promotion; v0.1.4)** — `BACKEND=vulkan` is an **available
-  experimental opt-in, NOT recommended**: the 08-18 promotion rested on
-  the mixed-depth headline, and the clean d1 pairing (+4.81%
-  single-stream, aggregate −13.31%) plus the cross-day variance above
-  do not support a recommendation. **hip `WITH_MTP=1` is BOTH the
-  default and the recommended path** (13.0 tok/s). No-flip closed on the
-  clean arithmetic: +4.81% << the >25% pre-registered flip threshold.
-  Recorded per cell in [`configs/benchmark-verdicts.json`](../configs/benchmark-verdicts.json)
-  (the vulkan mtp-c1 ruling note carries the dated supersession; the
+  2026-08-18 promotion; v0.1.4) — UNCHANGED by the v0.1.6 root-cause
+  finding** — `BACKEND=vulkan` is an **available experimental opt-in,
+  NOT recommended**: the 08-18 promotion rested on the mixed-depth
+  headline, and the clean d1 pairing (+4.81% single-stream, aggregate
+  −13.31%; relabeled v0.1.6 the conservative floor case — vk measured
+  partial-cold) plus the cache-state variance above do not support a
+  recommendation. **hip `WITH_MTP=1 SPEC_DEPTH=1` is BOTH the default
+  and the recommended path** (13.0 tok/s on the corpus cell; 13.86
+  depth-explicit). No-flip closed on the clean arithmetic: +4.81% <<
+  the >25% pre-registered flip threshold. Rationale recorded with the
+  v0.1.6 ruling: the warm +15.9%/+20.6% pairings come from a single
+  warm session, the partial-cold trigger is unknown (users cannot be
+  guaranteed to stay warm), and the warm/cold swing is a user-facing
+  UX risk — so the mapping layer does not move; the "re-recommend
+  vulkan?" question is explicitly OPEN for the human owner (README
+  roadmap). Recorded per cell in
+  [`configs/benchmark-verdicts.json`](../configs/benchmark-verdicts.json)
+  (the vulkan mtp-c1 ruling note carries both dated supersessions; the
   cell's mechanical verdict is unchanged — what changed is the mapping
   layer).
 - **Stability (v0.1.3, measured 2026-08-18)** — a second, independent
@@ -165,10 +218,14 @@ supersede the mixed-depth headline the original promotion rested on.
   v0.1.4:** the same-day picture was stable, but the next-day session-3
   re-runs (the cross-day table above) dropped every vulkan cell — the
   same-day-stability conclusion did not carry across days, which is part
-  of why the 2026-08-19 ruling downgraded the opt-in. **Remaining limits,
+  of why the 2026-08-19 ruling downgraded the opt-in. **Revised again
+  v0.1.6:** session 4 added the clock/thermal telemetry and root-caused
+  the cross-day drop to Mesa shader-cache state (see the cross-day
+  bullet) — the same-day stability reading is now understood as
+  warm-cache stability. **Remaining limits,
   still true:** single host (gfx1151), single ICD (RADV, Mesa 25.2.8),
-  boot-per-cell — the soak covers sustained load only, and no
-  clock/thermal telemetry was captured (see the cross-day bullet).
+  boot-per-cell — the soak covers sustained load only (and the pit
+  finding is unaffected: anchors 15/15 across s1–s4).
 - **Unified rider (hip)** — `gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified`
   (the stock 4-slot unified default boot under 4 concurrent users): 6.7
   tok/s healthy-stream median / 5.0 aggregate (3-of-4 streams stopped

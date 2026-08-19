@@ -540,9 +540,112 @@ def test_no_flip_closed_on_the_clean_pairing_arithmetic_v014():
     assert ev["ttft"]["vk_s3_range"] == (9.94, 12.21)
     assert ev["ttft"]["vk_s12_range"] == (8.36, 8.83)
     assert ev["ttft"]["hip_s3_2dp"] == 5.43 and ev["ttft"]["hip_corpus_2dp"] == 5.47
-    # The cross-session anchor tally (the pit non-reproduction stands).
-    assert ev["anchors"] == {"cell_runs_ok": 10, "cell_runs_total": 10,
-                             "with_soak_ok": 11, "with_soak_total": 11}
+    # The cross-session anchor tally (the pit non-reproduction stands);
+    # extended v0.1.6 to include the five session-4 runs.
+    assert ev["anchors"] == {"cell_runs_ok": 15, "cell_runs_total": 15,
+                             "with_soak_ok": 16, "with_soak_total": 16}
+
+
+# --------------------- 6c. v0.1.6 R2 — the cache-state root-cause arithmetic
+#
+# Session 4 (2026-08-19, R1 telemetry harness) root-causes the v0.1.4
+# cross-day variance: Mesa shader-cache state dependence. Every pinned
+# number below recomputes from the session-4 receipts through
+# stability_evidence() — cold/warm bounds, the +38% swing, the floor-case
+# consistency (s3 between cold and warm), the warm boot-paired ceiling
+# pairings, and the near-deterministic hip controls.
+
+def test_cache_state_arithmetic_v016():
+    ev = gv.stability_evidence()
+    s4 = ev["session4"]
+    assert s4["date"] == "2026-08-19"
+    # Warm vulkan boots and their cross-boot delta (exact basis, 2dp).
+    assert s4["vk_boot1_2dp"] == 17.10 and s4["vk_boot2_2dp"] == 16.96
+    assert s4["vk_crossboot_pct_2dp"] == "-0.79%"
+    assert s4["warm_mean_2dp"] == 17.03
+    assert s4["warm_ttft_range"] == (8.37, 8.50)
+    # Hip controls: near-deterministic within ±5%.
+    assert s4["hip_ctrl1_2dp"] == 14.76 and s4["hip_ctrl2_2dp"] == 14.06
+    assert s4["hip_crossboot_pct_1dp"] == "-4.7%"
+    # Cold (cache-aside arm) vs warm: the bounds and the swing.
+    assert s4["aside_2dp"] == 12.38 and s4["aside_ttft_s_2dp"] == 12.45
+    assert s4["aside_vs_warm_pct_1dp"] == "-27.3%"
+    assert s4["swing_pct_0dp"] == "+38%"
+    swing = (s4["warm_mean"] / s4["aside"] - 1) * 100
+    assert round(swing) == 38, (
+        f"cold->warm swing must round to +38% (exact {swing:+.2f}%)")
+    # FLOOR-CASE consistency: s3's 14.53 sits between cold and warm.
+    s3vk = ev["session3"]["cells"][
+        "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]["s3_2dp"]
+    assert s4["aside_2dp"] < s3vk < s4["warm_mean_2dp"], (
+        "s3 must sit between cold and warm for the partial-cold reading")
+    # The cache receipts behind the state labels.
+    assert s4["cache"] == {"warm_du_kib": 7884, "warm_files": 867,
+                           "aside_built_du_kib": 2136,
+                           "aside_built_files": 100}
+    # CEILING context: warm-cache, boot-paired, same-day pairings.
+    wp = s4["warm_pairings"]
+    assert wp["label"] == "warm-cache, boot-paired"
+    assert wp["date"] == "2026-08-19"
+    assert wp["boot1_pct_1dp"] == "+15.9%" and wp["boot2_pct_1dp"] == "+20.6%"
+    assert round((wp["boot1"][0] / wp["boot1"][1] - 1) * 100, 1) == 15.9
+    assert round((wp["boot2"][0] / wp["boot2"][1] - 1) * 100, 1) == 20.6
+    # The warm pairings are ceiling context, NOT a flip trigger: both are
+    # below the >25% pre-registered threshold, and they come from a single
+    # warm session.
+    assert 15.9 < 25.0 and 20.6 < 25.0
+    # Telemetry envelopes: no thermal/power anomaly (each backend in its
+    # own normal envelope); hip temp prints once, never '58–58'.
+    t = s4["telemetry"]
+    assert t["vk_post_sclk_range"] == (1433.0, 1533.0)
+    assert t["vk_post_power_range"] == (30.043, 32.001)
+    assert t["vk_post_temp_range"] == (54.0, 57.0)
+    assert t["hip_post_sclk_range"] == (1910.0, 1929.0)
+    assert t["hip_post_power_range"] == (52.066, 53.048)
+    assert t["hip_post_temp_range"] == (58.0, 58.0)
+    # Host state: one common boot since 2026-08-12 across all five runs —
+    # the "no reboot" leg of the trigger-unknown statement.
+    assert s4["host_boot_time"] == "2026-08-12 09:42:40"
+    assert s4["anchors_ok"] == 5 and s4["anchors_total"] == 5
+    assert all(v["anchor_ok"] for v in s4["runs"].values())
+    # The ruling note quotes these bounds; the mapping does NOT move.
+    r = {c["id"]: c for c in load(VERDICTS)["cells"]}[
+        "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]["reason"]
+    for fragment in ("12.38", "17.10/16.96", "+38%", "-27.3%",
+                     "+15.9%", "+20.6%", "RECOMMENDATION UNCHANGED"):
+        assert fragment in r, f"ruling note lost the R2 fragment {fragment!r}"
+
+
+def test_cache_state_story_on_user_facing_surfaces_v016():
+    """Ruling 3 + 4: the warmup guidance line is in the quickstart echo and
+    adaptation; the OPEN re-recommendation question is in the README
+    roadmap with the warm/cold numbers; the recommendation language is
+    unchanged everywhere (vulkan NOT recommended, hip recommended)."""
+    src = QUICKSTART.read_text()
+    assert "warmup note" in src and "re-run before concluding" in src, (
+        "the quickstart vulkan echo must carry the one-line warmup guidance")
+    assert "cold Mesa shader cache" in src
+    assert "~12.4 tok/s" in src and "~12.5 s TTFT" in src
+    assert "status above is unchanged" in src
+    # Boot logic untouched by the echo change.
+    assert 'BACKEND="${BACKEND:-hip}"' in src
+    adaptation = (ROOT / "docs" / "adaptation.md").read_text()
+    assert "Mesa shader-cache state" in adaptation
+    assert "root-caused v0.1.6" in adaptation.lower()
+    for number in ("12.38", "14.53", "16.96–17.10", "16.00–16.25", "+38%"):
+        assert number in adaptation, (
+            f"adaptation.md warm/cold table lost {number}")
+    assert "TRIGGER is UNKNOWN" in adaptation
+    assert "first-run cache warmup is the first suspect" in adaptation
+    assert "conservative floor case" in adaptation.lower()
+    readme = README.read_text()
+    assert "Re-recommend `BACKEND=vulkan`?" in readme, (
+        "the OPEN re-recommendation question is missing from the roadmap")
+    assert "OPEN decision for the repository" in readme
+    # No recommendation drift on any surface: vulkan stays NOT recommended
+    # (benchmark.md words it "NO recommendation").
+    assert "NOT recommended" in readme
+    assert "NO recommendation" in BENCH_MD.read_text()
 
 
 def test_no_quickstart_referenced_config_is_avoid():
@@ -815,7 +918,11 @@ def test_ruling_supersession_2026_08_19_recorded_and_quickstart_matches():
     by ruling 2026-08-19 (clean-pairing basis) — both dates visible in the
     generated note; the mapping: vulkan = available experimental opt-in,
     hip WITH_MTP=1 = default AND recommended path; the pit non-reproduction
-    finding stands; the cross-day cause is honestly 'not recorded'."""
+    finding stands. v0.1.6 (R2, same day): the cross-day cause statement
+    ("NOT recorded") is itself SUPERSEDED — the variance is explained as
+    Mesa shader-cache state dependence with warm/cold bounds, and the
+    recommendation stays unchanged (see
+    test_cache_state_arithmetic_v016)."""
     by_id = {c["id"]: c for c in load(VERDICTS)["cells"]}
     vk = by_id["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]
     # Both dates visible in the supersession note (never a silent rewrite).
@@ -828,16 +935,26 @@ def test_ruling_supersession_2026_08_19_recorded_and_quickstart_matches():
     assert "depth-confounded" in r
     # The cross-day variance and the honest telemetry gap.
     assert "11.81%" in r and "30.70%" in r and "6.07%" in r
+    # v0.1.6 R2: the cause statement is superseded dated, history visible —
+    # the old sentence stays, and the cache-state story replaces it as the
+    # finding of record.
     assert "NOT recorded" in r and "no clock/thermal telemetry" in r
+    assert "SUPERSEDED the same day by the R2 note below" in r
+    assert "R2 ROOT-CAUSE (2026-08-19, v0.1.6)" in r
+    assert "Mesa shader-cache state dependence" in r
+    assert "TRIGGER remains UNIDENTIFIED" in r
+    assert "CONSERVATIVE FLOOR CASE" in r and "warm-cache, boot-paired" in r
+    assert "RECOMMENDATION UNCHANGED" in r
+    assert "OPEN for the human owner" in r
     # The mapping downgrade + the mechanical-verdict carve-out.
     assert "AVAILABLE experimental opt-in" in r
     assert "hip WITH_MTP=1 is BOTH the default backend AND the recommended path" in r
     assert "MECHANICAL verdict (recommended) is unchanged" in r
     # No-flip closed on the clean arithmetic.
     assert "+4.81% << the >25% pre-registered flip threshold" in r
-    # The unaffected pit finding, restated.
+    # The unaffected pit finding, restated (now 15/15 across s1-s4).
     assert "does NOT reproduce on vulkan" in r
-    assert "10/10" in r and "11/11" in r
+    assert "15/15" in r and "16/16" in r
     # The mechanical verdicts stand (8/14/6 distribution unchanged).
     assert vk["verdict"] == "recommended"
     # The quickstart binds the same story: default hip, downgraded opt-in.

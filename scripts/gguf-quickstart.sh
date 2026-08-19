@@ -27,8 +27,13 @@
 #                             = +4.81% single-stream, aggregate basis
 #                             hip 10.74 vs vulkan 9.31 tok/s = -13.31%;
 #                             cross-day re-runs dropped every vulkan cell, up
-#                             to -23.49% — cause not recorded, no clock/
-#                             thermal telemetry in the receipts; build via
+#                             to -23.49% — root-caused 2026-08-19 (v0.1.6) to
+#                             Mesa shader-cache state: cold 12.38 / warm
+#                             16.96-17.10 tok/s (+38% swing; the s3
+#                             partial-cold trigger is unknown), warm-cache
+#                             boot-paired ceiling +15.9%/+20.6% from a single
+#                             warm session — recommendation unchanged; see
+#                             the warmup note in the echo below; build via
 #                             scripts/06-build-llama-vulkan.sh; evidence:
 #                             docs/results/matrix-714/stability/ and the
 #                             benchmark verdicts). Experimental — single host
@@ -297,6 +302,7 @@ fi
 echo "llama-server : $SERVER ($("$SERVER" --version 2>&1 | head -n1))"
 if [ "$BACKEND" = "vulkan" ]; then
     echo "backend      : $BACKEND (AVAILABLE experimental opt-in — NOT recommended; project ruling 2026-08-19 supersedes the 2026-08-18 promotion: the clean depth-1 same-day pairing is 14.53 vs 13.86 tok/s = +4.81% single-stream, aggregate basis -13.31%; cross-day re-runs dropped every vulkan cell — see benchmark verdicts and docs/results/matrix-714/stability/)"
+    echo "warmup note : if this vulkan run feels slow, a cold Mesa shader cache is the first suspect (~12.4 tok/s / ~12.5 s TTFT cold vs ~17.0 tok/s warm, +38% swing — v0.1.6 root cause) — re-run before concluding; the experimental-opt-in status above is unchanged"
 else
     echo "backend      : $BACKEND (default AND recommended path — run WITH_MTP=1 for the recommended interactive config, 13.0 tok/s per stream)"
     echo "hint         : SPEC_DEPTH=1 pins the recommended MTP depth 1 (clean d1 13.86 tok/s, 2026-08-19; a bare WITH_MTP=1 boots the implicit upstream depth 3 — the 13.0 tok/s corpus cell)"

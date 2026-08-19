@@ -8,6 +8,7 @@ test keeps the committed receipts honest once host execution flips statuses.
 
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -524,3 +525,143 @@ def test_long_context_smoke_receipt_records_invocation_argv():
     rec = mod.result_skeleton(argv)
     assert rec["argv"] == argv, "argv must be recorded verbatim"
     assert isinstance(rec["tiers"], list) and rec["needle"] in rec["description"]
+
+
+# --------------------- R1 telemetry (2026-08-19): clocks/power/temp + cache
+# Variance root-cause step 1: the cross-day Vulkan drop (s3 vs s1/s2) had no
+# host-level telemetry in the receipts, so the cause was honestly "not
+# recorded". The runners now snapshot sclk/mclk/power/temp (the SAME rocm-smi
+# commands the controller probed) plus host-state one-liners at load AND
+# post-bench, and (vulkan only) mesa_shader_cache stats before boot and after
+# teardown. Contract: fail-loud on a missing rocm-smi BINARY, tolerant (null +
+# snippet) on every missing/unreadable FIELD — telemetry must never abort a
+# measurement run.
+
+# Verbatim rocm-smi fixtures from the reference gfx1151 host (the exact
+# command shapes telemetry_parse_json must survive).
+ROCM_SMI_SHOWCLOCKS_FIXTURE = (
+    "============================ ROCm System Management Interface "
+    "============================\n"
+    "=============================== Current clock frequencies "
+    "===============================\n"
+    "GPU[0]\t\t: mclk clock level: 2: (1000Mhz)\n"
+    "GPU[0]\t\t: sclk clock level: 1: (1395Mhz)\n"
+    "===================================================================="
+    "======================\n"
+    "================================== End of ROCm SMI Log "
+    "===================================\n")
+ROCM_SMI_SHOWPOWER_FIXTURE = (
+    "============================ ROCm System Management Interface "
+    "============================\n"
+    "=================================== Power Consumption "
+    "===================================\n"
+    "GPU[0]\t\t: Current Socket Graphics Package Power (W): 20.045\n"
+    "===================================================================="
+    "======================\n"
+    "================================== End of ROCm SMI Log "
+    "===================================\n")
+ROCM_SMI_SHOWTEMP_FIXTURE = (
+    "============================ ROCm System Management Interface "
+    "============================\n"
+    "====================================== Temperature "
+    "=======================================\n"
+    "GPU[0]\t\t: Temperature (Sensor edge) (C): 49.0\n"
+    "===================================================================="
+    "======================\n"
+    "================================== End of ROCm SMI Log "
+    "===================================\n")
+
+
+def _bash_function(src, name):
+    """Extract a top-level bash function body (closing brace at column 0)
+    from a script's source, so the parser can be exercised in CI without
+    a GPU: the block is replayed in a fresh `bash -c` with fixture env."""
+    m = re.search(rf"^{name}\(\) {{.*?^}}", src, re.S | re.M)
+    assert m, f"{name}() not found in the script source"
+    return m.group(0)
+
+
+def _run_telemetry_parse(env_raw):
+    src = SCRIPT.read_text()
+    block = _bash_function(src, "telemetry_parse_json")
+    env = dict(os.environ, **env_raw)
+    r = subprocess.run(["bash", "-c", block + "\ntelemetry_parse_json"],
+                       capture_output=True, text=True, timeout=60, cwd=ROOT,
+                       env=env)
+    assert r.returncode == 0, r.stderr
+    return json.loads(r.stdout)
+
+
+def test_runner_telemetry_block_contract():
+    src = SCRIPT.read_text()
+    # The snapshot function parses the SAME rocm-smi commands the controller
+    # probed and names every field the session README table needs.
+    assert "telemetry_snapshot()" in src
+    for token in ("--showclocks", "--showpower", "--showtemp",
+                  "sclk_mhz", "mclk_mhz", "power_w", "temp_edge_c"):
+        assert token in src, f"telemetry must capture {token!r}"
+    # Host-state one-liners + raw-verbatim discipline + mesa-cache stats
+    # (vulkan runs: before boot AND after teardown readings).
+    assert '["uptime", "-s"]' in src
+    assert '["powerprofilesctl", "get"]' in src
+    assert "power_dpm_force_performance_level" in src
+    assert '"raw"' in src and "mesa_shader_cache" in src and '"mesa_cache"' in src
+    # Tolerant fields (null + snippet), fatal binary: both contracts present.
+    assert '"errors"' in src
+    assert "command -v rocm-smi" in src
+    # The mesa-cache arm is vulkan-only.
+    assert '[ "$BACKEND" = "vulkan" ]' in src
+
+
+def test_runner_telemetry_parses_rocm_smi_fixture_output():
+    got = _run_telemetry_parse({
+        "CLOCKS_RAW": ROCM_SMI_SHOWCLOCKS_FIXTURE,
+        "POWER_RAW": ROCM_SMI_SHOWPOWER_FIXTURE,
+        "TEMP_RAW": ROCM_SMI_SHOWTEMP_FIXTURE,
+    })
+    assert got["sclk_mhz"] == 1395.0
+    assert got["mclk_mhz"] == 1000.0
+    assert got["power_w"] == 20.045
+    assert got["temp_edge_c"] == 49.0
+    assert got["errors"] == {}
+
+
+def test_runner_telemetry_missing_fields_are_null_with_snippet():
+    # Empty / unparsable / error-carrying raw output: null + the stderr
+    # snippet recorded — telemetry never aborts the measurement run.
+    got = _run_telemetry_parse({
+        "CLOCKS_RAW": "",
+        "CLOCKS_ERR": "",
+        "POWER_RAW": "======== ROCm SMI Log ========\n(no power line)\n",
+        "POWER_ERR": "",
+        "TEMP_RAW": "",
+        "TEMP_ERR": "ERROR: GPU busy, try again",
+    })
+    assert got["sclk_mhz"] is None and got["mclk_mhz"] is None
+    assert got["power_w"] is None and got["temp_edge_c"] is None
+    assert got["errors"]["sclk_mhz"] == "--showclocks: no rocm-smi output captured"
+    assert got["errors"]["power_w"].startswith("--showpower:")
+    assert "GPU busy" in got["errors"]["temp_edge_c"], (
+        "the stderr snippet must land next to the null field")
+
+
+def test_runner_post_bench_snapshot_and_load_telemetry_in_receipt():
+    # Source contract: the receipt gains telemetry inside the load snapshot
+    # AND a post_bench snapshot taken after the bench/anchor, before teardown.
+    src = SCRIPT.read_text()
+    assert '"telemetry"' in src, "load snapshot assembly must embed telemetry"
+    assert "POST_BENCH_JSON" in src and '"post_bench"' in src
+    # Ordering: the post_bench capture must precede teardown (cleanup_server),
+    # the receipt assembly must follow it, and the after-teardown mesa-cache
+    # reading must precede the assembly (it merges into load.telemetry).
+    post_bench_at = src.index('POST_BENCH_JSON="$(TELEMETRY_JSON="$(telemetry_snapshot)')
+    cleanup_at = src.index("cleanup_server\nwait_gtt_drain\ntrap - EXIT")
+    mesa_after_at = src.index("mesa_cache_stats_json", src.index("MESA_CACHE_AFTER_JSON"))
+    assert post_bench_at < cleanup_at, "post_bench must be captured before teardown"
+    assert cleanup_at < mesa_after_at < src.index('CELL_TMP='), (
+        "the after-teardown cache reading must land between teardown and the "
+        "receipt assembly")
+    # Dry-run still resolves and now names the telemetry snapshots.
+    r = run_runner(["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072", "--dry-run"])
+    assert r.returncode == 0, r.stderr
+    assert "telemetry" in r.stdout.lower()
