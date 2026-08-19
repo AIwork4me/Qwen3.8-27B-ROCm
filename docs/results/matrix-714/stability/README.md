@@ -123,6 +123,12 @@ day). Tok/s medians at the corpus 2dp convention; spread is exact-basis
 | `gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072` | 15.05 | 15.25 | 11.67 | 30.70% |
 | `gguf-vulkan-udq4kxl-auto-base-c1-ctx131072` | 10.65 | 10.91 | 10.29 | 6.07% |
 
+Footnote (s1 mtp4 cell, pre-existing, noted for S5 by the S4 verifier):
+its single stream finished at 238 tokens with `finish_reason=stop`, where
+every other re-measured c1 stream hit the 256-token cap
+(`finish_reason=length`) — a one-stream finish-reason outlier in the
+v0.1.2 corpus receipt, not a session-3 artifact.
+
 Cross-session facts from the receipts (numbers only): the same-day pair
 s1→s2 moved +1.3%…+2.5% (table above); s3 sits below both prior sessions
 on all three cells — vs s1/s2 respectively: mtp −9.21%/−10.56%, mtp4

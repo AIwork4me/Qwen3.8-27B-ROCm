@@ -32,6 +32,15 @@ paragraph and the known-good vulkan bullet quote the two-session + soak
 evidence via gen-verdicts.stability_evidence() (session-2 deltas, soak
 cycles/settle) — the "single-session runtime" caveat is gone from every
 generated surface, and the no-flip arithmetic is printed with it.
+
+2026-08-19 evidence integration S5 (v0.1.4): the ruling paragraph, the
+known-good vulkan bullet, and the performance-highlights label carry the
+DATED SUPERSESSION — ruling 2026-08-18 (promotion, mixed-depth basis)
+superseded by ruling 2026-08-19 (clean d1 pairing +4.81%, aggregate
+-13.31%, cross-day variance) — and the downgraded mapping (vulkan:
+available experimental opt-in, not recommended; hip WITH_MTP=1 = default
+AND recommended path). All numbers interpolate from the same
+stability_evidence() loader (now session-3 aware), one source of truth.
 """
 
 from __future__ import annotations
@@ -203,6 +212,8 @@ def reasoning_moot_mark(cells: dict) -> str:
 def render_performance_highlights(data: dict) -> str:
     v = data["vmap"]
     d = dist(data)
+    ev = GEN_VERDICTS.stability_evidence()
+    cp = ev["clean_pairing"]
     gguf_reco = [v[i] for i in (
         "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072",
         "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072",
@@ -228,12 +239,14 @@ def render_performance_highlights(data: dict) -> str:
         m = c["metrics"]
         label = {
             "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072":
-                "`BACKEND=vulkan` + `WITH_MTP=1` mtp-c1 @131072 — "
-                "recommended opt-in, best single-stream (project ruling "
-                "2026-08-18)",
+                "`BACKEND=vulkan` + `WITH_MTP=1` mtp-c1 @131072 — available "
+                "experimental opt-in, NOT recommended (cell verdict stands; "
+                "project ruling 2026-08-19 supersedes the 2026-08-18 "
+                f"promotion: clean d1 pairing {cp['pct_2dp']}, aggregate "
+                f"{cp['agg_pct_2dp']})",
             "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072":
-                "`WITH_MTP=1` mtp-c1 @131072 — +28% per-stream (the default "
-                "recommendation)",
+                "`WITH_MTP=1` mtp-c1 @131072 — +28% per-stream (the "
+                "recommended path on the default backend)",
             "gguf-hip-udq4kxl-auto-base-c1-ctx131072":
                 "default boot base-c1 @131072",
             "gguf-hip-udq4kxl-auto-base-c1-ctx32768": "base-c1 @32768",
@@ -271,7 +284,6 @@ def render_performance_highlights(data: dict) -> str:
             f"{fmt(m['aggregate_tok_s'])} tok/s | {mark('caution')} caution — "
             f"{note} |")
     best_batch = v["vllm-bf16-auto-base-c16-ctx262144"]["metrics"]
-    vk_mtp = v["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]["metrics"]
     hip_mtp = v["gguf-hip-udq4kxl-auto-mtp-c1-ctx131072"]["metrics"]
     lines += [
         "",
@@ -284,11 +296,13 @@ def render_performance_highlights(data: dict) -> str:
         f"avoid cells — greedy decoding degrades after sustained multistream "
         f"load (see Known good / known bad; the pit does NOT reproduce on "
         f"Vulkan, whose c8/c16 tiers are unmeasured). Interactive chat → GGUF "
-        f"`WITH_MTP=1` ({fmt(hip_mtp['per_stream_tok_s_median'])} tok/s per "
-        f"stream; best single-stream measured: `BACKEND=vulkan WITH_MTP=1`, "
-        f"{fmt(vk_mtp['per_stream_tok_s_median'])} tok/s — opt-in, +"
-        f"{(vk_mtp['per_stream_tok_s_median'] / hip_mtp['per_stream_tok_s_median'] - 1) * 100:.0f}% "
-        f"mixed-depth headline, cross-depth caveat in the verdict).",
+        f"`WITH_MTP=1` on the default hip backend "
+        f"({fmt(hip_mtp['per_stream_tok_s_median'])} tok/s per stream — the "
+        f"recommended path). `BACKEND=vulkan` remains an available "
+        f"experimental opt-in, NOT a recommendation (project ruling "
+        f"2026-08-19 supersedes the 2026-08-18 promotion: the clean d1 "
+        f"pairing is {cp['vk_2dp']:.2f} vs {cp['hip_2dp']:.2f} tok/s, "
+        f"{cp['pct_2dp']}, aggregate {cp['agg_pct_2dp']} — see the verdicts).",
     ]
     return "\n".join(lines)
 
@@ -405,29 +419,43 @@ def render_known_good_bad(data: dict) -> str:
     vk_clean = [cid for cid in vk_ids if v[cid]["metrics"]["anchor_ok"]]
     vk_mtp = v["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]["metrics"]
     ev = GEN_VERDICTS.stability_evidence()
+    cp = ev["clean_pairing"]
+    cd = ev["crossday"]
+    an = ev["anchors"]
     lines = [
         "**Known good** (verdict receipts in `configs/benchmark-verdicts.json`):",
         "",
         "- ✅ **GGUF interactive at c1** — hip: all three ctx tiers "
         "recommended, default boot (10.1 tok/s per stream) and `WITH_MTP=1` "
-        "(13.0 tok/s, +28% per-stream); vulkan (opt-in): base 10.7 and mtp "
-        f"{fmt(vk_mtp['per_stream_tok_s_median'])} tok/s — the best "
-        "single-stream cells measured on this host.",
+        "(13.0 tok/s, +28% per-stream) — the recommended path; vulkan "
+        "(experimental opt-in): base 10.7 and mtp "
+        f"{fmt(vk_mtp['per_stream_tok_s_median'])} tok/s in the 2026-08-18 "
+        "cells (see the Vulkan bullet for the downgraded mapping).",
         "- ✅ **vLLM path anchor-clean in all 8 cells** — including anchors "
         "run immediately after 16-stream benches: the GGUF greedy-degradation "
         "pit does NOT reproduce here; the honest choice for 262144 context, "
         "vision, and batch throughput (38.6 tok/s aggregate @base-c16).",
-        "- ✅ **Vulkan backend (v0.1.2, opt-in)** — anchor-clean in all "
-        f"{len(vk_clean)} measured vulkan cells (the hip greedy pit does NOT "
-        "reproduce on this backend); `BACKEND=vulkan WITH_MTP=1` reaches "
-        f"{fmt(vk_mtp['per_stream_tok_s_median'])} tok/s per stream — the "
-        "recommended opt-in for best single-stream speed (project ruling "
-        "2026-08-18; the quickstart default stays hip). Stability: "
-        "reproduced by two independent measurement sessions (2026-08-18) "
-        f"+ a 30-min soak ({ev['soak']['cycles']} cycles, "
-        f"{ev['soak']['settle_pct']:+.1f}% settle; "
-        f"`{ev['pointer']}`), one host / one ICD (RADV 25.2.8) remain the "
-        "limits.",
+        "- ✅ **Vulkan backend (v0.1.2 cells; opt-in downgraded v0.1.4)** — "
+        f"anchor-clean in all {len(vk_clean)} measured vulkan cells (the hip "
+        "greedy pit does NOT reproduce on this backend; cell-run anchors now "
+        f"{an['cell_runs_ok']}/{an['cell_runs_total']} across s1/s2/s3). "
+        "`BACKEND=vulkan WITH_MTP=1` is an AVAILABLE experimental opt-in, "
+        "NOT a recommendation — project ruling 2026-08-19 SUPERSEDES the "
+        "2026-08-18 promotion (mixed-depth basis): the clean d1 pairing "
+        f"({cp['date']}) is {cp['vk_2dp']:.2f} vs {cp['hip_2dp']:.2f} tok/s "
+        f"= {cp['pct_2dp']} single-stream, aggregate flips to "
+        f"{cp['agg_pct_2dp']} (vulkan TTFT "
+        f"{ev['ttft']['vk_s3_range'][0]:.2f}–{ev['ttft']['vk_s3_range'][1]:.2f} "
+        f"s vs {ev['ttft']['vk_s12_range'][0]:.2f}–"
+        f"{ev['ttft']['vk_s12_range'][1]:.2f} s on "
+        "08-18), and cross-day re-runs dropped every vulkan cell (spreads "
+        f"{cd['gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072']['spread_pct']:.2f}%/"
+        f"{cd['gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072']['spread_pct']:.2f}%/"
+        f"{cd['gguf-vulkan-udq4kxl-auto-base-c1-ctx131072']['spread_pct']:.2f}% "
+        "mtp/mtp4/base; cause not recorded — no clock/thermal telemetry). "
+        "hip `WITH_MTP=1` is BOTH the default and the recommended path. "
+        f"Evidence: `{ev['pointer']}`; one host / one ICD (RADV 25.2.8) "
+        "remain the limits.",
         "- ✅ **Boot reliability** — every declared-priority cell booted (GGUF "
         "4–6 s warm; vLLM 171/226 s); zero failed streams across all "
         f"{len(cells)} cells.",
@@ -586,8 +614,11 @@ def render_benchmark_md(data: dict) -> str:
     for label, cid in (
             ("`scripts/gguf-quickstart.sh` default boot (UD-Q4_K_XL, ctx 131072)",
              "gguf-hip-udq4kxl-auto-base-c1-ctx131072"),
-            ("`WITH_MTP=1` opt-in", "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072"),
-            ("`BACKEND=vulkan` + `WITH_MTP=1` opt-in (recommended, 2026-08-18)",
+            ("`WITH_MTP=1` opt-in — the recommended path on the default "
+             "(hip) backend",
+             "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072"),
+            ("`BACKEND=vulkan` + `WITH_MTP=1` opt-in — available, "
+             "experimental, NOT recommended (downgraded 2026-08-19)",
              "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"),
             ("`scripts/03-serve-vllm.sh` (`serve-args.conf`, 262144)",
              "vllm-bf16-auto-base-c1-ctx262144"),
@@ -609,12 +640,10 @@ def render_benchmark_md(data: dict) -> str:
     vk_mtp4 = v["gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072"]["metrics"]
     hip_mtp4 = v["gguf-hip-udq4kxl-auto-mtp4-c1-ctx131072"]["metrics"]
     ev = GEN_VERDICTS.stability_evidence()
-    s2_m1 = ev["cells"]["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]["s2_2dp"]
-    s2_m4 = ev["cells"]["gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072"]["s2_2dp"]
-    delta_range = [
-        (c["s2"] / c["s1"] - 1) * 100 for c in ev["cells"].values()]
-    headline2 = (s2_m1 / hip_mtp["per_stream_tok_s_median"] - 1) * 100
-    same_depth2 = (s2_m4 / hip_mtp4["per_stream_tok_s_median"] - 1) * 100
+    cp = ev["clean_pairing"]
+    cd = ev["crossday"]
+    an = ev["anchors"]
+    tf = ev["ttft"]
     # Session-1 (v0.1.2 corpus) same-depth depth-4 pairing, interpolated
     # from the same verdict metrics the ruling note quotes (2026-08-18
     # v0.1.3 debt fix: the old hand literal "+18.0%" mis-rounded the exact
@@ -622,42 +651,58 @@ def render_benchmark_md(data: dict) -> str:
     same_depth1 = ((vk_mtp4["per_stream_tok_s_median"]
                     / hip_mtp4["per_stream_tok_s_median"] - 1) * 100)
     out.append(
-        "Controller ruling (2026-08-18, binding, v0.1.2 plan outcome (a); "
-        "stability wording upgraded 2026-08-18, v0.1.3):\n"
-        "`BACKEND=vulkan` is promoted in the gguf-quickstart echo as the "
-        "recommended OPT-IN for best single-stream tok/s — vulkan mtp-c1 "
-        f"{fmt(vk_mtp['per_stream_tok_s_median'], 2)} vs hip "
+        "Controller ruling (2026-08-19, binding, v0.1.4) SUPERSEDES the "
+        "controller ruling (2026-08-18, v0.1.2/v0.1.3), both on record so "
+        "history stays interpretable: the 08-18 promotion of "
+        "`BACKEND=vulkan` as the recommended quickstart opt-in rested on a "
+        "MIXED-DEPTH headline — vulkan d1 "
+        f"{fmt(vk_mtp['per_stream_tok_s_median'], 2)} vs hip implicit-d3 "
         f"{fmt(hip_mtp['per_stream_tok_s_median'], 2)} tok/s "
-        f"(+{(vk_mtp['per_stream_tok_s_median'] / hip_mtp['per_stream_tok_s_median'] - 1) * 100:.1f}% "
-        "mixed-depth headline; the clean same-depth depth-4 pairing is "
-        f"{fmt(vk_mtp4['per_stream_tok_s_median'], 2)} vs "
-        f"{fmt(hip_mtp4['per_stream_tok_s_median'], 2)} tok/s, "
-        f"+{same_depth1:.1f}%), anchors clean 6/6 — while the "
-        "quickstart DEFAULT stays `hip`. Stability evidence "
-        f"(`{ev['pointer']}`): two independent measurement sessions "
-        "(2026-08-18, hours apart, independent server boots) + 30-min "
-        f"sustained soak ({ev['soak']['cycles']} cycles, "
-        f"{ev['soak']['settle_pct']:+.1f}% settle) — session-2 reproduced "
-        f"every c1 cell within {min(delta_range):+.1f}%…"
-        f"{max(delta_range):+.1f}% per-stream, anchors 7/7 across "
-        "all runs; remaining limits: one host (gfx1151), one ICD "
-        "(RADV 25.2.8), same-day sessions, boot-per-cell, and the soak "
-        "covers sustained load only. NO default flip, read the arithmetic "
-        "(recorded so the session-2 headline is never misread as a "
-        "trigger): the pre-registered flip rule requires >25% AND "
-        "stability — the session-2 headline "
-        f"{s2_m1:.2f} vs {fmt(hip_mtp['per_stream_tok_s_median'], 2)} tok/s "
-        f"is exactly {headline2:+.1f}% (NOT >25%) and stays mixed-depth; "
-        "the clean same-depth d4 pairing is "
-        f"{s2_m4:.2f} vs {fmt(hip_mtp4['per_stream_tok_s_median'], 2)} "
-        f"tok/s, {same_depth2:+.1f}%. MTP depth 1 stays the "
-        "recommended variant on both backends (depth 4 never beats it); "
-        "cross-depth caveat: the hip 13.0 receipt ran the implicit "
-        "`--spec-draft-n-max` default 3 while every v0.1.2 cell passes "
-        "depth explicitly "
-        "(`configs/validated-stack.json` `llama_cpp_vulkan.mtp_depth.note`). "
-        "The unified-default-boot c4@131072 rider is measured-with-caveat "
-        "(degrades interactivity vs split boot; no config change).\n")
+        f"(+{(vk_mtp['per_stream_tok_s_median'] / hip_mtp['per_stream_tok_s_median'] - 1) * 100:.1f}%; "
+        "the hip receipt ran the implicit `--spec-draft-n-max` default 3, "
+        "`configs/validated-stack.json` `llama_cpp_vulkan.mtp_depth.note`) "
+        "— the hip side of that pairing was depth-confounded. The clean "
+        f"same-day d1/d1 pairing (session 3, {cp['date']}: both backends "
+        "explicit depth 1, same pin/model/prompts/harness) measures vulkan "
+        f"{cp['vk_2dp']:.2f} vs hip {cp['hip_2dp']:.2f} tok/s = "
+        f"{cp['pct_2dp']} single-stream (gap +{cp['gap_2dp']:.2f}), and the "
+        f"AGGREGATE basis flips: hip {cp['hip_agg_2dp']:.2f} vs vulkan "
+        f"{cp['vk_agg_2dp']:.2f} tok/s ({cp['agg_pct_2dp']}, TTFT-driven — "
+        f"vulkan TTFT {tf['vk_s3_range'][0]:.2f}–{tf['vk_s3_range'][1]:.2f} s "
+        f"vs {tf['vk_s12_range'][0]:.2f}–{tf['vk_s12_range'][1]:.2f} s on "
+        f"08-18; hip {tf['hip_s3_2dp']:.2f} s vs {tf['hip_corpus_2dp']:.2f} s "
+        "on its corpus receipt). Cross-day re-runs (s3 vs s1/s2, same "
+        "cells) dropped on every vulkan cell — mtp "
+        f"{cd['gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072']['vs_s1_pct']}/"
+        f"{cd['gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072']['vs_s2_pct']} "
+        f"(max spread {cd['gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072']['spread_pct']:.2f}%), "
+        f"mtp4 {cd['gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072']['vs_s1_pct']}/"
+        f"{cd['gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072']['vs_s2_pct']} "
+        f"(spread {cd['gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072']['spread_pct']:.2f}%), "
+        f"base {cd['gguf-vulkan-udq4kxl-auto-base-c1-ctx131072']['vs_s1_pct']}/"
+        f"{cd['gguf-vulkan-udq4kxl-auto-base-c1-ctx131072']['vs_s2_pct']} "
+        f"(spread {cd['gguf-vulkan-udq4kxl-auto-base-c1-ctx131072']['spread_pct']:.2f}%) "
+        "— while hip is same-session stable (d1 "
+        f"{cp['hip_2dp']:.2f} vs implicit-d3 "
+        f"{ev['session3']['hip_mtp1']['corpus_2dp']:.2f} tok/s = "
+        f"{ev['session3']['hip_mtp1']['corpus_delta_pct']} is "
+        "day-confounded, labeled); the host-level cause is NOT recorded "
+        "(receipts carry VRAM/GTT only — no clock/thermal telemetry; known "
+        "harness debt). Ruling: the quickstart maps `BACKEND=vulkan` as an "
+        "AVAILABLE experimental opt-in — mechanism and experimental framing "
+        "unchanged, NO recommendation; hip `WITH_MTP=1` is BOTH the default "
+        "and the recommended path. Corpus cells and the 8/14/6 verdict "
+        "distribution are UNCHANGED — mechanical verdicts from their own "
+        "receipts stand (vulkan mtp-c1 remains a `recommended` CELL); what "
+        "changed is the quickstart recommendation-MAPPING layer. No-flip "
+        f"closed on the clean arithmetic: {cp['pct_2dp']} << the >25% "
+        "pre-registered flip threshold. Unaffected: the greedy pit still "
+        "does NOT reproduce on vulkan (cell-run anchors "
+        f"{an['cell_runs_ok']}/{an['cell_runs_total']} across s1/s2/s3, "
+        f"{an['with_soak_ok']}/{an['with_soak_total']} with the soak "
+        "anchor); depth 1 beats depth 4 on both backends; the "
+        "unified-default-boot c4@131072 rider stays measured-with-caveat "
+        "(no config change).\n")
 
     out.append("\n## GGUF path (llama.cpp `4df29be4`, UD-Q4_K_XL; Backend "
                "column from the cell id)\n")
@@ -729,11 +774,15 @@ def render_benchmark_md(data: dict) -> str:
                "real cells, anchor-clean). v0.1.2: MTP depth 1 beats depth 4 "
                "on both backends at c1 (vulkan 16.00 vs 15.05; hip 13.00 vs "
                "12.76 tok/s) — depth 1 stays the recommended variant; "
-               f"cross-backend at c1 Vulkan leads HIP at both depths (+23.1% "
-               f"mixed-depth headline, +{same_depth1:.1f}% at fixed depth 4 — "
-               f"the hip mtp "
-               "receipts of 2026-08-17 ran the implicit depth default 3, "
-               "see `configs/validated-stack.json`).\n")
+               "cross-backend at c1 the v0.1.2 corpus cells show Vulkan "
+               f"ahead at both depths (+{(vk_mtp['per_stream_tok_s_median'] / hip_mtp['per_stream_tok_s_median'] - 1) * 100:.1f}% "
+               f"mixed-depth headline, +{same_depth1:.1f}% at fixed depth 4 "
+               "— the hip mtp receipts of 2026-08-17 ran the implicit depth "
+               "default 3, see `configs/validated-stack.json`), SUPERSEDED "
+               f"2026-08-19 by the clean d1/d1 pairing: vulkan "
+               f"{cp['vk_2dp']:.2f} vs hip {cp['hip_2dp']:.2f} tok/s "
+               f"({cp['pct_2dp']}), aggregate {cp['agg_pct_2dp']} — see the "
+               "ruling above.\n")
 
     out.append("## Context capacity & retrieval smoke\n")
     out.append(render_context_capacity(data))
@@ -764,7 +813,15 @@ def render_benchmark_md(data: dict) -> str:
         "measured-with-caveat. Two prose-template defects (a mislabeled "
         "'c1:' basis with a fixed 'Better than base' direction in the "
         "c4-caution MTP sentence; the hip-family pit clause leaking into "
-        "vulkan conditions) were corrected in the same release.\n")
+        "vulkan conditions) were corrected in the same release.\n"
+        "- Controller ruling 2026-08-19 (v0.1.4, SUPERSEDES the 2026-08-18 "
+        "quickstart mapping): the clean d1/d1 pairing re-bases the "
+        "cross-backend story (+4.81% single-stream, aggregate −13.31%, "
+        "cross-day variance) — `BACKEND=vulkan` downgraded to an available "
+        "experimental opt-in; hip `WITH_MTP=1` is both the default and the "
+        "recommended path. Zero verdict/metric changes: the 8/14/6 "
+        "distribution and every cell verdict stand (the mapping layer "
+        "changed, the mechanical layer did not).\n")
     out.append(reasoning_moot_mark(data["cells"]) + "\n")
     out.append("\n## Raw receipts\n")
     out.append("Every cell links from the tables above; the declaration "

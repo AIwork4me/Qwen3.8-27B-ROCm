@@ -68,19 +68,30 @@ def test_quickstart_backend_vulkan_opt_in():
     assert "hip|vulkan" in src
 
 
-def test_quickstart_backend_vulkan_opt_in_is_promoted_2026_08_18():
-    # CONTROLLER RULING (2026-08-18, plan outcome (a)): the echo promotes
-    # BACKEND=vulkan as the RECOMMENDED OPT-IN for best single-stream tok/s
-    # (16.0 vs 13.0 tok/s with WITH_MTP=1), keeping the experimental/see-
-    # verdicts note; the DEFAULT stays hip (pinned above). The mapping
-    # behind the promotion is enforced in tests/test_verdicts.py.
+def test_quickstart_backend_vulkan_opt_in_is_downgraded_2026_08_19():
+    # CONTROLLER RULING (2026-08-19, v0.1.4, SUPERSEDES the 2026-08-18
+    # promotion): the clean depth-1 same-day pairing (vulkan 14.53 vs hip
+    # 13.86 tok/s = +4.81%; aggregate -13.31%) plus cross-day variance
+    # removed the recommendation basis — the echo now presents BACKEND=vulkan
+    # as an AVAILABLE experimental opt-in, NOT a recommendation, while hip
+    # WITH_MTP=1 is called out as both the default and the recommended
+    # path. The mapping behind the downgrade is enforced in
+    # tests/test_verdicts.py.
     src = SCRIPT.read_text()
-    assert "RECOMMENDED OPT-IN" in src
-    assert "project ruling 2026-08-18" in src
-    assert "BACKEND=vulkan WITH_MTP=1" in src
-    assert "16.0" in src and "13.0" in src
-    # Conservative framing is kept: the promotion never rewrites the default
-    # or hides the caveats.
+    assert "AVAILABLE experimental opt-in" in src
+    assert "NOT recommended" in src
+    assert "project ruling 2026-08-19 supersedes" in src
+    assert "the 2026-08-18 promotion" in src
+    assert "+4.81%" in src and "-13.31%" in src
+    assert "14.53" in src and "13.86" in src
+    # The promotion wording is gone everywhere.
+    assert "RECOMMENDED OPT-IN" not in src
+    assert "recommended OPT-IN" not in src
+    # The hip default-branch echo names the recommended path.
+    assert "default AND recommended path" in src
+    assert "13.0 tok/s" in src
+    # Conservative framing is kept: the downgrade never rewrites the
+    # default or hides the caveats.
     assert "experimental" in src.lower()
     assert 'BACKEND="${BACKEND:-hip}"' in src
 

@@ -8,6 +8,103 @@ receipts [`docs/results/matrix-714/cells/`](docs/results/matrix-714/cells/),
 and the rehearsal receipt
 [`docs/results/rocm-7.14/one-pass-rehearsal.md`](docs/results/rocm-7.14/one-pass-rehearsal.md).
 
+## v0.1.4 — 2026-08-19
+
+Evidence-integration release: the session-3 receipts (clean depth-1 backend
+pairing + cross-day re-runs; receipts
+[`docs/results/matrix-714/stability/session3-2026-08-19/`](docs/results/matrix-714/stability/session3-2026-08-19/))
+**supersede the published recommendation basis** of 2026-08-18. The
+`BACKEND=vulkan` quickstart guidance is downgraded from "RECOMMENDED
+OPT-IN" to an **available experimental opt-in** (dated supersession, not a
+silent rewrite — both rulings on record); **hip `WITH_MTP=1` is both the
+default and the recommended path**. **No corpus data changed**: the 28
+cells, `matrix.json`, every cell verdict, and the 8/14/6 distribution are
+unchanged — mechanical verdicts from their own receipts stand; what
+changed is the quickstart recommendation-mapping layer (the controller
+ruling layer), the generated docs wording, and the tests that pin them.
+
+### The clean-pairing finding (the v0.1.2 headline asterisk, resolved)
+
+- **The 2026-08-18 promotion rested on a depth-confounded pairing.** Its
+  headline (+23.1%: vulkan d1 16.00 vs hip 13.00 tok/s) compared
+  explicit-depth-1 vulkan against the **implicit depth-3** hip receipt —
+  the cross-depth caveat was recorded but the recommendation stood on the
+  mixed-depth number.
+- **The clean same-day d1/d1 pairing (2026-08-19, both backends explicit
+  `--spec-draft-n-max 1`, same pin/model/prompts/harness)**: vulkan 14.53
+  vs hip 13.86 tok/s = **+4.81%** single-stream median (gap +0.67) —
+  one-fifth of the mixed-depth headline.
+- **The aggregate basis flips**: hip 10.74 vs vulkan 9.31 tok/s =
+  **−13.31%** (TTFT-driven — vulkan TTFT 9.94–12.21 s that session vs
+  8.36–8.83 s across the 2026-08-18 sessions; hip TTFT 5.43 s vs 5.47 s
+  on its 2026-08-16 receipt).
+
+### The cross-day variance finding
+
+The three vulkan c1 cells re-run on the next UTC day dropped on every
+cell — mtp-c1 16.00/16.25→14.53 (−9.21%/−10.56%, max spread 11.81%),
+mtp4-c1 15.05/15.25→11.67 (−22.49%/−23.49%, spread 30.70%), base-c1
+10.65/10.91→10.29 (−3.35%/−5.72%, spread 6.07%) — while hip was
+same-session stable (its d1 13.86 vs implicit-d3 13.00 = +6.61% is
+**day-confounded** and labeled as such, never a depth claim). **The
+host-level cause is NOT recorded**: the receipts carry VRAM/GTT only, no
+clock/thermal telemetry — stated honestly, and noted as known harness
+debt (future stability runs should capture clocks/thermals).
+
+### Recommendation downgrade, dated supersession recorded
+
+- **Mapping (ruling 2026-08-19, SUPERSEDES ruling 2026-08-18 — both
+  dates visible in the generated note)**:
+  [`scripts/gguf-quickstart.sh`](scripts/gguf-quickstart.sh) echo +
+  header now present `BACKEND=vulkan` as an **available experimental
+  opt-in, NOT recommended** (mechanism and "experimental, see
+  verdicts/stability" framing kept); hip `WITH_MTP=1` is called out as
+  both the default and the recommended path. Default boot logic is
+  byte-identical — wording only.
+- **No-flip closed decisively on the clean arithmetic**: +4.81% << the
+  >25% pre-registered flip threshold (the mixed-depth +23.1% and the
+  exactly-+25.0% session-2 headline the v0.1.3 note guarded are both
+  superseded by the clean pairing; the arithmetic is recorded in the
+  verdicts and pinned in the tests).
+- **Unchanged and still stated**: the greedy-degradation pit still does
+  NOT reproduce on vulkan — cell-run anchors 10/10 across s1/s2/s3
+  (11/11 with the soak anchor); depth 1 beats depth 4 on both backends
+  (no mtp4 recommendation anywhere).
+
+### Surfaces regenerated / updated (no data change)
+
+- [`scripts/gen-verdicts.py`](scripts/gen-verdicts.py): the
+  stability-evidence loader extends to the session-3 receipts (same
+  fail-loud convention) and the vulkan mtp-c1 ruling note is now the
+  dated-supersession note (v0.1.4); the vulkan base-c1 note drops its
+  "recommended opt-in" phrasing. Top-level `reviewed_by`/`checked_at` =
+  `controller-2026-08-19` (the ruling of record for this file state);
+  the 8 v0.1.2 cells keep their per-cell `controller-2026-08-18`
+  mechanical-review records. Verdicts regenerated: 2 cell reasons
+  changed, 28 cells, **8 recommended / 14 caution / 6 avoid — the same
+  distribution**.
+- [`scripts/render-readme-blocks.py`](scripts/render-readme-blocks.py):
+  the ruling paragraph (benchmark.md), the performance-highlights label +
+  honesty clause, and the known-good Vulkan bullet carry the downgraded
+  story with the clean-pairing numbers (all interpolated from the same
+  session-3-aware loader). README hand-written quickstart/roadmap updated
+  to match.
+- [`docs/adaptation.md`](docs/adaptation.md): Vulkan section re-based —
+  clean pairing numbers, the 3-cell × spread cross-day table, the TTFT
+  observation, the aggregate flip, the downgraded recommendation, and the
+  honest "cause not recorded (no clock/thermal telemetry)" note (known
+  harness debt).
+- [`docs/results/matrix-714/stability/README.md`](docs/results/matrix-714/stability/README.md):
+  one-line footnote on the s1 mtp4 cell (its stream finished at 238
+  tokens / `finish_reason=stop` vs 256/`length` elsewhere — pre-existing,
+  noted by the S4 verifier).
+- [`CITATION.cff`](CITATION.cff): version 0.1.4.
+- Tests: the quickstart echo pins, the ruling-note pins, and the
+  recommendation-mapping test assert the downgraded mapping (hip =
+  recommended path; vulkan = available experimental, not recommended),
+  the no-flip clean arithmetic (+4.81% << 25%), and the supersession
+  dates (2026-08-19 supersedes 2026-08-18).
+
 ## v0.1.3 — 2026-08-18
 
 Stability-confirmation release for the v0.1.2 Vulkan opt-in ruling: a

@@ -42,10 +42,12 @@ bash scripts/00-check-env.sh              # ROCm 7.14 at ~/rocm-7.14.0 or /opt/r
 bash scripts/install-rocm-7.14.sh         # only if the check says so (1.6 GiB archive + 9 GiB extracted floor)
 bash scripts/05-build-llama.sh            # pinned HIP build @ 4df29be4 for gfx1151 (compile ~7 min)
 SET=gguf bash scripts/02-fetch-model.sh   # ~18 GiB, SHA256-verified against the manifest
-WITH_MTP=1 bash scripts/gguf-quickstart.sh  # 13.0 tok/s per stream — server on :8080
-# best single-stream opt-in (project ruling 2026-08-18, experimental):
+WITH_MTP=1 bash scripts/gguf-quickstart.sh  # 13.0 tok/s per stream — the recommended path, on :8080
+# optional experimental backend opt-in (NOT recommended — downgraded
+# 2026-08-19; the clean depth-1 pairing is +4.81% vs hip and the aggregate
+# basis flips to -13.31%; see benchmark verdicts):
 #   bash scripts/06-build-llama-vulkan.sh
-#   BACKEND=vulkan WITH_MTP=1 bash scripts/gguf-quickstart.sh  # 16.0 tok/s
+#   BACKEND=vulkan WITH_MTP=1 bash scripts/gguf-quickstart.sh
 ```
 
 In a second terminal, verify (keep `max_tokens` ≥ 512: this model thinks
@@ -63,14 +65,14 @@ stops the server.
 | Boot | Per-stream speed |
 |---|---|
 | `bash scripts/gguf-quickstart.sh` (default: hip, UD-Q4_K_XL, ctx 131072) | 10.1 tok/s |
-| `WITH_MTP=1 bash scripts/gguf-quickstart.sh` | 13.0 tok/s (+28% per-stream) |
-| `BACKEND=vulkan WITH_MTP=1 bash scripts/gguf-quickstart.sh` (opt-in) | 16.0 tok/s — best single-stream measured (project ruling 2026-08-18; experimental, see verdicts) |
+| `WITH_MTP=1 bash scripts/gguf-quickstart.sh` | 13.0 tok/s (+28% per-stream) — the recommended path |
+| `BACKEND=vulkan WITH_MTP=1 bash scripts/gguf-quickstart.sh` (opt-in) | 16.0 tok/s (2026-08-18 cell) / 14.53 on the 2026-08-19 clean pairing (+4.81% vs hip, aggregate −13.31%) — available experimental opt-in, not recommended (project ruling 2026-08-19 supersedes 2026-08-18) |
 
 Which serving path?
 
 | You want | Use | Why |
 |---|---|---|
-| Interactive chat | `WITH_MTP=1 bash scripts/gguf-quickstart.sh` (port 8080); for best single-stream tok/s add `BACKEND=vulkan` (opt-in) | every measured vLLM cell is below the 10 tok/s interactive floor |
+| Interactive chat | `WITH_MTP=1 bash scripts/gguf-quickstart.sh` (port 8080) — hip is both the default and the recommended path (`BACKEND=vulkan` exists as an experimental opt-in, not recommended) | every measured vLLM cell is below the 10 tok/s interactive floor |
 | 262144-token context, vision, or aggregate batch throughput (to 38.6 tok/s) | `bash scripts/03-serve-vllm.sh` (port 8000) | the greedy-degradation-free path, but not interactive on this host |
 | Multi-user GGUF loads | Don't | greedy-degradation pit on hip — see [Known good / known bad](#known-good--known-bad) |
 
@@ -107,8 +109,8 @@ Measured 2026-08-16 and 2026-08-18 on the reference host (gfx1151, ROCm 7.14, 80
 
 | Config | Backend | Per-stream (median) | Aggregate | TTFT | Verdict |
 |---|---|---|---|---|---|
-| `BACKEND=vulkan` + `WITH_MTP=1` mtp-c1 @131072 — recommended opt-in, best single-stream (project ruling 2026-08-18) | vulkan | 16.0 tok/s (TPOT 62.5 ms) | 10.4 tok/s | 8.6 s | ✅ recommended |
-| `WITH_MTP=1` mtp-c1 @131072 — +28% per-stream (the default recommendation) | hip | 13.0 tok/s (TPOT 76.9 ms) | 10.2 tok/s | 5.5 s | ✅ recommended |
+| `BACKEND=vulkan` + `WITH_MTP=1` mtp-c1 @131072 — available experimental opt-in, NOT recommended (cell verdict stands; project ruling 2026-08-19 supersedes the 2026-08-18 promotion: clean d1 pairing +4.81%, aggregate -13.31%) | vulkan | 16.0 tok/s (TPOT 62.5 ms) | 10.4 tok/s | 8.6 s | ✅ recommended |
+| `WITH_MTP=1` mtp-c1 @131072 — +28% per-stream (the recommended path on the default backend) | hip | 13.0 tok/s (TPOT 76.9 ms) | 10.2 tok/s | 5.5 s | ✅ recommended |
 | default boot base-c1 @131072 | hip | 10.1 tok/s (TPOT 98.6 ms) | 8.4 tok/s | 5.1 s | ✅ recommended |
 | base-c1 @32768 | hip | 10.0 tok/s (TPOT 99.6 ms) | 8.3 tok/s | 5.3 s | ✅ recommended |
 | base-c1 @262144 (GTT +8.0 GiB) | hip | 10.1 tok/s (TPOT 98.8 ms) | 8.4 tok/s | 5.3 s | ✅ recommended |
@@ -121,7 +123,7 @@ Measured 2026-08-16 and 2026-08-18 on the reference host (gfx1151, ROCm 7.14, 80
 | mtp-c8-ctx262144 | 4.2 (min 3.47) tok/s | 24.7 tok/s | ⚠️ caution — MTP beneficial through c8 |
 | mtp-c1-ctx262144 | 6.5 tok/s | 5.8 tok/s | ⚠️ caution — +52.6% per-stream vs base (+45.5% aggregate, basis labeled in the verdict) |
 
-**Honesty clause (aggregate never headlines over UX):** the best aggregate on this host — vLLM base-c16, 38.6 tok/s — runs each stream at 3.0 tok/s median (min 2.58): batch presentation only. GGUF-hip c8/c16 aggregates (to 27.5 tok/s) are ❌ avoid cells — greedy decoding degrades after sustained multistream load (see Known good / known bad; the pit does NOT reproduce on Vulkan, whose c8/c16 tiers are unmeasured). Interactive chat → GGUF `WITH_MTP=1` (13.0 tok/s per stream; best single-stream measured: `BACKEND=vulkan WITH_MTP=1`, 16.0 tok/s — opt-in, +23% mixed-depth headline, cross-depth caveat in the verdict).
+**Honesty clause (aggregate never headlines over UX):** the best aggregate on this host — vLLM base-c16, 38.6 tok/s — runs each stream at 3.0 tok/s median (min 2.58): batch presentation only. GGUF-hip c8/c16 aggregates (to 27.5 tok/s) are ❌ avoid cells — greedy decoding degrades after sustained multistream load (see Known good / known bad; the pit does NOT reproduce on Vulkan, whose c8/c16 tiers are unmeasured). Interactive chat → GGUF `WITH_MTP=1` on the default hip backend (13.0 tok/s per stream — the recommended path). `BACKEND=vulkan` remains an available experimental opt-in, NOT a recommendation (project ruling 2026-08-19 supersedes the 2026-08-18 promotion: the clean d1 pairing is 14.53 vs 13.86 tok/s, +4.81%, aggregate -13.31% — see the verdicts).
 <!-- END GENERATED: performance-highlights -->
 
 ## Context capacity
@@ -146,9 +148,9 @@ Boot ladder (S3) + deep-prompt retrieval smoke — GGUF path, needle sentence at
 <!-- BEGIN GENERATED: known-good-bad -->
 **Known good** (verdict receipts in `configs/benchmark-verdicts.json`):
 
-- ✅ **GGUF interactive at c1** — hip: all three ctx tiers recommended, default boot (10.1 tok/s per stream) and `WITH_MTP=1` (13.0 tok/s, +28% per-stream); vulkan (opt-in): base 10.7 and mtp 16.0 tok/s — the best single-stream cells measured on this host.
+- ✅ **GGUF interactive at c1** — hip: all three ctx tiers recommended, default boot (10.1 tok/s per stream) and `WITH_MTP=1` (13.0 tok/s, +28% per-stream) — the recommended path; vulkan (experimental opt-in): base 10.7 and mtp 16.0 tok/s in the 2026-08-18 cells (see the Vulkan bullet for the downgraded mapping).
 - ✅ **vLLM path anchor-clean in all 8 cells** — including anchors run immediately after 16-stream benches: the GGUF greedy-degradation pit does NOT reproduce here; the honest choice for 262144 context, vision, and batch throughput (38.6 tok/s aggregate @base-c16).
-- ✅ **Vulkan backend (v0.1.2, opt-in)** — anchor-clean in all 6 measured vulkan cells (the hip greedy pit does NOT reproduce on this backend); `BACKEND=vulkan WITH_MTP=1` reaches 16.0 tok/s per stream — the recommended opt-in for best single-stream speed (project ruling 2026-08-18; the quickstart default stays hip). Stability: reproduced by two independent measurement sessions (2026-08-18) + a 30-min soak (108 cycles, -2.6% settle; `docs/results/matrix-714/stability/`), one host / one ICD (RADV 25.2.8) remain the limits.
+- ✅ **Vulkan backend (v0.1.2 cells; opt-in downgraded v0.1.4)** — anchor-clean in all 6 measured vulkan cells (the hip greedy pit does NOT reproduce on this backend; cell-run anchors now 10/10 across s1/s2/s3). `BACKEND=vulkan WITH_MTP=1` is an AVAILABLE experimental opt-in, NOT a recommendation — project ruling 2026-08-19 SUPERSEDES the 2026-08-18 promotion (mixed-depth basis): the clean d1 pairing (2026-08-19) is 14.53 vs 13.86 tok/s = +4.81% single-stream, aggregate flips to -13.31% (vulkan TTFT 9.94–12.21 s vs 8.36–8.83 s on 08-18), and cross-day re-runs dropped every vulkan cell (spreads 11.81%/30.70%/6.07% mtp/mtp4/base; cause not recorded — no clock/thermal telemetry). hip `WITH_MTP=1` is BOTH the default and the recommended path. Evidence: `docs/results/matrix-714/stability/`; one host / one ICD (RADV 25.2.8) remain the limits.
 - ✅ **Boot reliability** — every declared-priority cell booted (GGUF 4–6 s warm; vLLM 171/226 s); zero failed streams across all 28 cells.
 
 **Known bad / pits:**
@@ -184,7 +186,7 @@ Full tables with links to the raw receipts: [docs/results/benchmark.md](docs/res
 
 ## Status & roadmap
 
-Current release: **v0.1.3** — [CHANGELOG](CHANGELOG.md) ·
+Current release: **v0.1.4** — [CHANGELOG](CHANGELOG.md) ·
 [Releases](https://github.com/AIwork4me/Qwen3.8-27B-ROCm/releases).
 
 Roadmap — evidence-gated intentions, not promises; each item lands when its
@@ -194,20 +196,22 @@ receipts do:
   reference vLLM stack is gfx1151-only (the TheRock nightly index has no
   gfx1100 builds), so submissions bring and document their own stack — the
   [protocol](docs/hardware-validation.md) is ready for it.
-- **Vulkan-vs-HIP + MTP depth — answered (v0.1.2)** — AMD's Day-0 anchor
-  for this model class is 24.5 tok/s (llama.cpp/Vulkan with MTP=4 on a
-  128 GB Ryzen AI Max+ 395 host, where MTP-off was faster at 39.9 tok/s;
-  spike receipt: [docs/results/spike/vllm.md](docs/results/spike/vllm.md))
-  vs our 13.0 tok/s per stream (HIP, MTP=1, on the 80 GiB pool). Measured
-  on this host ([adaptation map](docs/adaptation.md), [benchmark
-  tables](docs/results/benchmark.md)): Vulkan+MTP depth-1 reaches 16.0
-  tok/s (+23% over hip, mixed-depth caveat recorded in the verdicts) and
-  depth-4 never beats depth-1 on either backend (vulkan 15.05, hip 12.76)
-  — backend and depth each contribute, and neither closes the gap to
-  24.5 on an 80 GiB host. `BACKEND=vulkan` is now the recommended
-  quickstart opt-in (default stays hip), confirmed by two independent
-  measurement sessions + a 30-min soak
-  ([stability receipts](docs/results/matrix-714/stability/), v0.1.3).
+- **Vulkan-vs-HIP + MTP depth — answered (v0.1.2), re-based (v0.1.4)** —
+  AMD's Day-0 anchor for this model class is 24.5 tok/s (llama.cpp/Vulkan
+  with MTP=4 on a 128 GB Ryzen AI Max+ 395 host, where MTP-off was faster
+  at 39.9 tok/s; spike receipt:
+  [docs/results/spike/vllm.md](docs/results/spike/vllm.md)) vs our
+  13.0 tok/s per stream (HIP, MTP=1, on the 80 GiB pool). The v0.1.2
+  headline (Vulkan+MTP depth-1 at 16.0 tok/s, +23% over hip) was
+  mixed-depth; the 2026-08-19 clean depth-1 pairing re-bases it — vulkan
+  14.53 vs hip 13.86 tok/s (+4.81%), aggregate basis flipped (−13.31%) —
+  so `BACKEND=vulkan` is an available experimental opt-in, not a
+  recommendation (hip `WITH_MTP=1` is both the default and the
+  recommended path); depth-4 never beats depth-1 on either backend
+  (vulkan 15.05, hip 12.76). Neither backend nor depth closes the gap to
+  24.5 on an 80 GiB host ([adaptation map](docs/adaptation.md), [benchmark
+  tables](docs/results/benchmark.md), [stability
+  receipts](docs/results/matrix-714/stability/)).
 - **The bracketing gap — filled (v0.1.2)** — the unified-default c4@131072
   cell is measured (rider): 6.7 tok/s healthy-stream median vs 7.5
   split-mode — unified default boot degrades interactivity; no config

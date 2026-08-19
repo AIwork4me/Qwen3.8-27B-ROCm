@@ -46,13 +46,16 @@ The model-facing wiring is platform-agnostic and needed no patches:
 | 7 | Kernel floor | N/A on servers | Strix Halo UMA needs kernel ≥ 6.16.9 (muse-rocm heritage finding; enforced by the env check) | host-class | [`configs/validated-stack.json`](../configs/validated-stack.json), [troubleshooting](troubleshooting.md#uma-bug) |
 | 8 | Output packaging | DeepSeek-style `reasoning_content` everywhere | llama.cpp emits `message.reasoning_content`; the vLLM `qwen3` parser at `4d2a68d` emits `message.reasoning` (generation identical) | pin-local | [`results/rocm-7.14/gguf-validation.md`](results/rocm-7.14/gguf-validation.md), [`results/rocm-7.14/vllm-validation.md`](results/rocm-7.14/vllm-validation.md), [troubleshooting](troubleshooting.md#reasoning-field) |
 
-## Vulkan backend × MTP depth (v0.1.2, measured 2026-08-18)
+## Vulkan backend × MTP depth (v0.1.2, measured 2026-08-18; re-based v0.1.4)
 
 The second llama.cpp backend measured on the same host, model, prompts, and
 harness (8 cells; plan
 [`superpowers/plans/2026-08-18-vulkan-mtp-comparison.md`](superpowers/plans/2026-08-18-vulkan-mtp-comparison.md),
 tables [`results/benchmark.md`](results/benchmark.md)). All facts below are
-**pin-local**.
+**pin-local**. The v0.1.4 re-base (2026-08-19): the session-3 clean
+depth-1 pairing and the cross-day re-runs
+([`results/matrix-714/stability/`](results/matrix-714/stability/))
+supersede the mixed-depth headline the original promotion rested on.
 
 - **Build** — the same llama.cpp pin as the HIP build (`4df29be4`), separate
   tree `third_party/llama.cpp/build-714-vk` via
@@ -67,55 +70,86 @@ tables [`results/benchmark.md`](results/benchmark.md)). All facts below are
   evidence; the whole ruling rests on ONE ICD.
 - **Perf deltas (c1, ctx 131072, single-stream median)** — base: vulkan
   10.65 vs hip 10.14 tok/s (+5%: the backend alone is a small lever, not
-  the AMD 24.5 anchor gap). MTP depth 1: vulkan 16.00 vs hip 13.00 tok/s
-  — **+23% headline, MIXED-DEPTH** (see the caveat). The clean
-  **same-depth** pairing is depth 4: vulkan mtp4 15.05 vs hip mtp4 12.76
-  tok/s — **+18%** (both explicit `--spec-draft-n-max 4`, measured the
-  same day).
+  the AMD 24.5 anchor gap). MTP depth 1, v0.1.2 cells: vulkan 16.00 vs
+  hip 13.00 tok/s — the **+23% MIXED-DEPTH headline** (see the caveat),
+  superseded 2026-08-19 by the **clean d1/d1 pairing** (session 3, both
+  backends explicit `--spec-draft-n-max 1`, same day/pin/prompts/harness):
+  vulkan 14.53 vs hip 13.86 tok/s = **+4.81%** (gap +0.67) — and the
+  **aggregate basis flips**: hip 10.74 vs vulkan 9.31 tok/s = **−13.31%**
+  (TTFT-driven: vulkan TTFT 9.94–12.21 s that session vs 8.36–8.83 s
+  across the 2026-08-18 sessions; hip TTFT 5.43 s vs 5.47 s on its
+  2026-08-16 receipt). The v0.1.2 same-depth pairing (depth 4: vulkan
+  mtp4 15.05 vs hip mtp4 12.76 tok/s, +17.9%) stands as measured but is
+  itself a 2026-08-18 single-day snapshot — the cross-day table below is
+  the stability context for all of these.
 - **Cross-depth caveat** — the historical hip mtp receipts (2026-08-17)
   ran the **implicit `--spec-draft-n-max` default 3** (discovered
   post-hoc; [`configs/validated-stack.json`](../configs/validated-stack.json)
   `llama_cpp_vulkan.mtp_depth.note`); every v0.1.2 cell passes its depth
   explicitly and records it in `server_flags`. So 16.00-vs-13.00 is
-  depth-1-explicit vs depth-3-implicit, and the honest fixed-depth
-  cross-backend number is the +18% depth-4 pairing (this caveat is also
-  recorded in the vulkan/hip mtp4 verdict reasons).
+  depth-1-explicit vs depth-3-implicit — which is why the 2026-08-18
+  promotion ruling (built on that headline) was superseded: its hip side
+  was depth-confounded. The clean fixed-depth cross-backend numbers are
+  the d1 pairing (+4.81%, aggregate −13.31%) and the d4 pairing (+17.9%,
+  same day).
 - **MTP depth** — depth 4 never beats depth 1 on either backend (vulkan
   15.05 vs 16.00; hip 12.76 vs 13.00): the recommended variant stays
   `WITH_MTP=1` at depth 1 on both. Depth is configurable at the pin
   (`--spec-draft-n-max`, upstream default 3), NOT fixed by the checkpoint
   (row 5).
+- **Cross-day variance (v0.1.4, session 3 = 2026-08-19 vs sessions 1/2 =
+  2026-08-18)** — the same three vulkan c1 cells re-run on the next UTC
+  day dropped on every cell, while hip was same-session stable:
+
+  | Cell (stream tok/s) | s1 08-18 | s2 08-18 | s3 08-19 | s3 vs s1/s2 | max spread |
+  |---|---|---|---|---|---|
+  | mtp-c1 (depth 1) | 16.00 | 16.25 | 14.53 | −9.21% / −10.56% | 11.81% |
+  | mtp4-c1 (depth 4) | 15.05 | 15.25 | 11.67 | −22.49% / −23.49% | 30.70% |
+  | base-c1 | 10.65 | 10.91 | 10.29 | −3.35% / −5.72% | 6.07% |
+
+  Same session, the hip side: mtp-c1 explicit d1 13.86 tok/s vs the
+  canonical implicit-d3 cell 13.00 (+6.61%) — **day-confounded**
+  (different days), so it is labeled, never read as a depth claim; hip
+  TTFT 5.43 s vs 5.47 s historical. **The host-level cause of the vulkan
+  cross-day drop is NOT recorded**: the receipts carry VRAM/GTT only —
+  no clock/thermal telemetry was captured (known harness debt; future
+  stability runs should record clocks/thermals).
 - **Greedy pit status** — the §6 HIP greedy-degradation pit does **NOT
-  reproduce on Vulkan**: 6/6 vulkan cells anchor-clean (base/mtp/mtp4 ×
-  c1/c4), and hip mtp4-c1 anchored clean the same day. The pit remains a
-  hip-family (gfx1151/HIP) finding at this pin; Vulkan c8/c16 are
-  unmeasured.
-- **Quickstart status (project ruling 2026-08-18; wording upgraded v0.1.3
-  on two-session evidence)** — `BACKEND=vulkan` is the **recommended
-  opt-in** for best single-stream tok/s (`BACKEND=vulkan WITH_MTP=1`,
-  16.0 tok/s), now backed by two independent measurement sessions
-  (2026-08-18, hours apart, independent server boots) + a 30-min
-  sustained soak (108 cycles, -2.6% settle); the quickstart **default
-  stays `hip`** — the pre-registered flip rule requires >25% AND
-  stability, and the session-2 headline (16.25 vs 13.00 tok/s) is exactly
-  +25.0%, not >25%, and still mixed-depth (see the stability note below).
+  reproduce on Vulkan**: 6/6 vulkan corpus cells anchor-clean
+  (base/mtp/mtp4 × c1/c4), and across the stability sessions the
+  cell-run anchors are 10/10 (s1/s2/s3; 11/11 with the soak anchor).
+  The pit remains a hip-family (gfx1151/HIP) finding at this pin;
+  Vulkan c8/c16 are unmeasured.
+- **Quickstart status (project ruling 2026-08-19 SUPERSEDES the
+  2026-08-18 promotion; v0.1.4)** — `BACKEND=vulkan` is an **available
+  experimental opt-in, NOT recommended**: the 08-18 promotion rested on
+  the mixed-depth headline, and the clean d1 pairing (+4.81%
+  single-stream, aggregate −13.31%) plus the cross-day variance above
+  do not support a recommendation. **hip `WITH_MTP=1` is BOTH the
+  default and the recommended path** (13.0 tok/s). No-flip closed on the
+  clean arithmetic: +4.81% << the >25% pre-registered flip threshold.
   Recorded per cell in [`configs/benchmark-verdicts.json`](../configs/benchmark-verdicts.json)
-  (`metrics.reviewed_by` = `controller-2026-08-18`).
+  (the vulkan mtp-c1 ruling note carries the dated supersession; the
+  cell's mechanical verdict is unchanged — what changed is the mapping
+  layer).
 - **Stability (v0.1.3, measured 2026-08-18)** — a second, independent
   measurement session (hours after the v0.1.2 session, independent server
   boots, same host/pin/harness) reproduced every Vulkan c1 cell: mtp-c1
   16.00→16.25 tok/s (+1.5%), mtp4-c1 15.05→15.25 (+1.3%), base-c1
   10.65→10.91 (+2.5%) — session 2 uniformly slightly faster, consistent
-  with a warmer machine. A 30-min sustained-load soak on the recommended
+  with a warmer machine. A 30-min sustained-load soak on the then-promoted
   config (one boot, runner-identical flags) ran 108/108 clean cycles with
   zero health flaps, a mild settle (stream-rate halves 16.43→16.00 tok/s,
-  -2.6%; aggregate halves -2.8%) and a clean post-soak greedy anchor;
-  anchors are 7/7 across all runs. Receipts:
-  [`results/matrix-714/stability/`](results/matrix-714/stability/)
-  (receipts-only — they do not enter the 28-cell matrix). **Remaining
-  limits, still true:** single host (gfx1151), single ICD (RADV,
-  Mesa 25.2.8), same-day sessions, boot-per-cell — the soak covers
-  sustained load only.
+  -2.6%; aggregate halves -2.8%) and a clean post-soak greedy anchor.
+  Receipts: [`results/matrix-714/stability/`](results/matrix-714/stability/)
+  (receipts-only — they do not enter the 28-cell matrix). **Revised
+  v0.1.4:** the same-day picture was stable, but the next-day session-3
+  re-runs (the cross-day table above) dropped every vulkan cell — the
+  same-day-stability conclusion did not carry across days, which is part
+  of why the 2026-08-19 ruling downgraded the opt-in. **Remaining limits,
+  still true:** single host (gfx1151), single ICD (RADV, Mesa 25.2.8),
+  boot-per-cell — the soak covers sustained load only, and no
+  clock/thermal telemetry was captured (see the cross-day bullet).
 - **Unified rider (hip)** — `gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified`
   (the stock 4-slot unified default boot under 4 concurrent users): 6.7
   tok/s healthy-stream median / 5.0 aggregate (3-of-4 streams stopped

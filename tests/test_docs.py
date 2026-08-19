@@ -539,10 +539,12 @@ def test_readme_decision_table_rows_and_anchors_exist() -> None:
     """(c) The three-row decision table lives in the Quick start section and
     points at the sections that carry the evidence."""
     quick = _quick_start_section(_readme_handwritten())
-    # Row 1: interactive chat -> GGUF WITH_MTP=1 (vulkan opt-in promoted).
+    # Row 1: interactive chat -> GGUF WITH_MTP=1 on hip (the recommended
+    # path; the vulkan opt-in stays visible but not recommended — v0.1.4).
     assert "WITH_MTP=1" in quick and "gguf-quickstart.sh" in quick
     assert "BACKEND=vulkan" in quick, (
-        "the 2026-08-18 recommended opt-in is missing from the quickstart")
+        "the (downgraded, experimental) vulkan opt-in must stay visible in "
+        "the quickstart decision table")
     # Row 2: long context / vision / batch -> vLLM on :8000.
     assert "bash scripts/03-serve-vllm.sh" in quick
     assert "8000" in quick
