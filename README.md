@@ -119,7 +119,7 @@ Measured 2026-08-16 and 2026-08-18 on the reference host (gfx1151, ROCm 7.14, 80
 
 | Config | Backend | Per-stream (median) | Aggregate | TTFT | Cell verdict | Quickstart mapping |
 |---|---|---|---|---|---|---|
-| `BACKEND=vulkan` + `WITH_MTP=1` mtp-c1 @131072 — available experimental opt-in, NOT recommended (project ruling 2026-08-19 supersedes the 2026-08-18 promotion: clean d1 pairing +4.81% — the conservative FLOOR case, vk measured partial-cold — aggregate -13.31%; cross-day variance root-caused v0.1.6 to Mesa shader-cache state: cold 12.38 / warm 16.96–17.10 tok/s (+38% swing, s3 trigger unknown; warm-cache boot-paired ceiling +15.9%/+20.6%, single warm session)) | vulkan | 16.0 tok/s (TPOT 62.5 ms) | 10.4 tok/s | 8.6 s | ✅ recommended | **NOT recommended** — available experimental opt-in (downgraded 2026-08-19) |
+| `BACKEND=vulkan` + `WITH_MTP=1` mtp-c1 @131072 — available experimental opt-in, NOT recommended (project ruling 2026-08-19 supersedes the 2026-08-18 promotion: clean d1 pairing +4.81% — the conservative FLOOR case, vk measured in the unidentified slow state — aggregate -13.31%; variance decomposed v0.1.7: cold-cache swing BOUND +38% (cold 12.38 / warm 16.96–17.10 tok/s) but s3's cache was forensically INTACT — vk-specific trigger UNIDENTIFIED; common-mode drift ±5–6% (s5 vs s4: vk -4.6%, hip -6.0%); warm pairing band 4 sessions +15.88%/+20.61%/+19.90%/+15.93% incl. overnight persistence (s6 7 h 50 m after s5, cache byte-identical); aggregate/TTFT hip-favored)) | vulkan | 16.0 tok/s (TPOT 62.5 ms) | 10.4 tok/s | 8.6 s | ✅ recommended | **NOT recommended** — available experimental opt-in (downgraded 2026-08-19) |
 | `WITH_MTP=1` mtp-c1 @131072 — +28% per-stream (the corpus cell ran implicit depth 3, predating the depth flag; re-running it today pins depth 1 explicitly via SPEC_DEPTH=1 and measures ~13.86 — session 3 2026-08-19, `matrix-714/stability/session3-2026-08-19/`) | hip | 13.0 tok/s (TPOT 76.9 ms) | 10.2 tok/s | 5.5 s | ✅ recommended | **recommended path** — boot as `WITH_MTP=1 SPEC_DEPTH=1` |
 | default boot base-c1 @131072 | hip | 10.1 tok/s (TPOT 98.6 ms) | 8.4 tok/s | 5.1 s | ✅ recommended | the default boot |
 | base-c1 @32768 | hip | 10.0 tok/s (TPOT 99.6 ms) | 8.3 tok/s | 5.3 s | ✅ recommended | via `CTX_SIZE=32768` |
@@ -133,7 +133,7 @@ Measured 2026-08-16 and 2026-08-18 on the reference host (gfx1151, ROCm 7.14, 80
 | mtp-c8-ctx262144 | 4.2 (min 3.47) tok/s | 24.7 tok/s | ⚠️ caution — MTP beneficial through c8 |
 | mtp-c1-ctx262144 | 6.5 tok/s | 5.8 tok/s | ⚠️ caution — +52.6% per-stream vs base (+45.5% aggregate, basis labeled in the verdict) |
 
-**Honesty clause (aggregate never headlines over UX):** the best aggregate on this host — vLLM base-c16, 38.6 tok/s — runs each stream at 3.0 tok/s median (min 2.58): batch presentation only. GGUF-hip c8/c16 aggregates (to 27.5 tok/s) are ❌ avoid cells — greedy decoding degrades after sustained multistream load (see Known good / known bad; the pit does NOT reproduce on Vulkan, whose c8/c16 tiers are unmeasured). Interactive chat → GGUF `WITH_MTP=1` on the default hip backend (13.0 tok/s per stream — the recommended path). `BACKEND=vulkan` remains an available experimental opt-in, NOT a recommendation (project ruling 2026-08-19 supersedes the 2026-08-18 promotion: the clean d1 pairing is 14.53 vs 13.86 tok/s, +4.81% — the conservative FLOOR case, vk measured partial-cold — aggregate -13.31%; the cross-day variance is root-caused v0.1.6 to Mesa shader-cache state (cold 12.38 / warm 16.96–17.10 tok/s, +38% swing, s3 trigger unknown) — see the verdicts).
+**Honesty clause (aggregate never headlines over UX):** the best aggregate on this host — vLLM base-c16, 38.6 tok/s — runs each stream at 3.0 tok/s median (min 2.58): batch presentation only. GGUF-hip c8/c16 aggregates (to 27.5 tok/s) are ❌ avoid cells — greedy decoding degrades after sustained multistream load (see Known good / known bad; the pit does NOT reproduce on Vulkan, whose c8/c16 tiers are unmeasured). Interactive chat → GGUF `WITH_MTP=1` on the default hip backend (13.0 tok/s per stream — the recommended path). `BACKEND=vulkan` remains an available experimental opt-in, NOT a recommendation (project ruling 2026-08-19 supersedes the 2026-08-18 promotion: the clean d1 pairing is 14.53 vs 13.86 tok/s, +4.81% — the conservative FLOOR case, vk measured in the unidentified slow state — aggregate -13.31%; the variance is decomposed v0.1.7: the cold-cache swing +38% is the BOUND (cold 12.38 / warm 16.96–17.10 tok/s), s3's cache was forensically INTACT so its vk-specific trigger is UNIDENTIFIED, common-mode drift is ±5–6%, and the warm pairing band spans 4 sessions (+15.88%/+20.61%/+19.90%/+15.93% incl. overnight persistence) while aggregate/TTFT stay hip-favored) — see the verdicts).
 <!-- END GENERATED: performance-highlights -->
 
 ## Context capacity
@@ -160,7 +160,7 @@ Boot ladder (S3) + deep-prompt retrieval smoke — GGUF path, needle sentence at
 
 - ✅ **GGUF interactive at c1** — hip: all three ctx tiers recommended, default boot (10.1 tok/s per stream) and `WITH_MTP=1` (13.0 tok/s, +28% per-stream) — the recommended path; vulkan (experimental opt-in): base 10.7 and mtp 16.0 tok/s in the 2026-08-18 cells (see the Vulkan bullet for the downgraded mapping).
 - ✅ **vLLM path anchor-clean in all 8 cells** — including anchors run immediately after 16-stream benches: the GGUF greedy-degradation pit does NOT reproduce here; the honest choice for 262144 context, vision, and batch throughput (38.6 tok/s aggregate @base-c16).
-- ✅ **Vulkan backend (v0.1.2 cells; opt-in downgraded v0.1.4, cross-day variance root-caused v0.1.6)** — anchor-clean in all 6 measured vulkan cells (the hip greedy pit does NOT reproduce on this backend; cell-run anchors now 15/15 across s1–s4). `BACKEND=vulkan WITH_MTP=1` is an AVAILABLE experimental opt-in, NOT a recommendation — project ruling 2026-08-19 SUPERSEDES the 2026-08-18 promotion (mixed-depth basis): the clean d1 pairing (2026-08-19) is 14.53 vs 13.86 tok/s = +4.81% single-stream (the conservative FLOOR case — vk measured in a partial-cold cache state), aggregate flips to -13.31% (vulkan TTFT 9.94–12.21 s vs 8.36–8.83 s on 08-18), and cross-day re-runs dropped every vulkan cell (spreads 11.81%/30.70%/6.07% mtp/mtp4/base) — that drop is ROOT-CAUSED (v0.1.6, session 4) to Mesa shader-cache state dependence: identical config/flags/pin measures cold 12.38 (cache aside; TTFT 12.45 s) vs warm 16.96–17.10 tok/s (mean 17.03) = a +38% cold→warm swing; s3's 14.53 sits between cold and warm → partial-cold consistent, and the s3 TRIGGER is unknown (no Mesa upgrade, no reboot, no cache-clear found). Warm-cache boot-paired ceiling context (same day, single warm session): +15.9%/+20.6% vs the hip controls (-4.7% hip cross-boot — near-deterministic). hip `WITH_MTP=1` is BOTH the default and the recommended path (recommendation unchanged by the root-cause finding). Evidence: `docs/results/matrix-714/stability/`; one host / one ICD (RADV 25.2.8) remain the limits.
+- ✅ **Vulkan backend (v0.1.2 cells; opt-in downgraded v0.1.4, variance decomposed v0.1.7)** — anchor-clean in all 6 measured vulkan cells (the hip greedy pit does NOT reproduce on this backend; cell-run anchors now 19/19 across s1–s6). `BACKEND=vulkan WITH_MTP=1` is an AVAILABLE experimental opt-in, NOT a recommendation — project ruling 2026-08-19 SUPERSEDES the 2026-08-18 promotion (mixed-depth basis): the clean d1 pairing (2026-08-19) is 14.53 vs 13.86 tok/s = +4.81% single-stream (the conservative FLOOR case — vk measured in the unidentified slow state), aggregate flips to -13.31% (vulkan TTFT 9.94–12.21 s vs 8.36–8.83 s on 08-18), and cross-day re-runs dropped every vulkan cell (spreads 11.81%/30.70%/6.07% mtp/mtp4/base) — v0.1.6 root-caused that class to Mesa shader-cache state (identical config/flags/pin measures cold 12.38 with the cache aside / warm 16.96–17.10 tok/s, mean 17.03 = a +38% cold→warm swing), and v0.1.7's trigger-hunt forensics refine it (dated supersession #3): the cache was forensically INTACT at s3 (`matrix-714/stability/trigger-hunt-2026-08-19.md` — 866 files pre-window / 0 written inside the causal window / 1 post), so the partial-cold reading is retired: s3 ran slow with a warm untouched cache and its vk-specific TRIGGER is UNIDENTIFIED (no suspend/resume, no amdgpu reset/errors, no power-profile switch in the window; clock-stepping absent during s3's run; the only discrete in-window state change is an unattended-upgrade linux-libc-dev/linux-tools-common 6.8.0-137→138 — fact recorded, no mechanism claimed); clock-stepping is a CHRONIC common-mode condition (883+ events since the 08-12 boot, present during fast sessions too — not s3-specific). Session-5/6 series: BOTH backends drift together evening vs morning (vk -4.6%, hip -6.0% vs s4 — common-mode ±5–6%), the warm pairing band is 4 sessions +15.88%/+20.61%/+19.90%/+15.93% (s4 boots 1-2, s5, s6), OVERNIGHT persistence is confirmed (s6 7 h 50 m after s5, cache byte-identical 7884 KiB/867 files / zero writes, pairing in band), and aggregate/TTFT are consistently hip-favored (TTFT vk 8.49–8.54 vs hip 5.49–5.63 s across s5/s6; aggregate s5 +1.07%, s6 -2.39%) — vulkan's edge is the single-stream median only. hip `WITH_MTP=1` is BOTH the default and the recommended path (recommendation unchanged by every refinement). Evidence: `docs/results/matrix-714/stability/`; one host / one ICD (RADV 25.2.8) remain the limits.
 - ✅ **Boot reliability** — every declared-priority cell booted (GGUF 4–6 s warm; vLLM 171/226 s); zero failed streams across all 28 cells.
 
 **Known bad / pits:**
@@ -196,7 +196,7 @@ Full tables with links to the raw receipts: [docs/results/benchmark.md](docs/res
 
 ## Status & roadmap
 
-Current release: **v0.1.6** — [CHANGELOG](CHANGELOG.md) ·
+Current release: **v0.1.7** — [CHANGELOG](CHANGELOG.md) ·
 [Releases](https://github.com/AIwork4me/Qwen3.8-27B-ROCm/releases).
 
 Roadmap — evidence-gated intentions, not promises; each item lands when its
@@ -207,7 +207,7 @@ receipts do:
   gfx1100 builds), so submissions bring and document their own stack — the
   [protocol](docs/hardware-validation.md) is ready for it.
 - **Vulkan-vs-HIP + MTP depth — answered (v0.1.2), re-based (v0.1.4),
-  cross-day variance root-caused (v0.1.6)** —
+  cross-day variance root-caused (v0.1.6), decomposed (v0.1.7)** —
   AMD's Day-0 anchor for this model class is 24.5 tok/s (llama.cpp/Vulkan
   with MTP=4 on a 128 GB Ryzen AI Max+ 395 host, where MTP-off was faster
   at 39.9 tok/s; spike receipt:
@@ -219,27 +219,39 @@ receipts do:
   so `BACKEND=vulkan` is an available experimental opt-in, not a
   recommendation (hip `WITH_MTP=1` is both the default and the
   recommended path); depth-4 never beats depth-1 on either backend
-  (vulkan 15.05, hip 12.76). Neither backend nor depth closes the gap to
+  (vulkan 15.05, hip 12.76). The cross-day variance is now decomposed
+  (v0.1.7): the cold-cache swing bound (+38%), a common-mode ±5–6%
+  session drift, and one unexplained vk-specific slow run (s3 — cache
+  forensically intact). Neither backend nor depth closes the gap to
   24.5 on an 80 GiB host ([adaptation map](docs/adaptation.md), [benchmark
   tables](docs/results/benchmark.md), [stability
   receipts](docs/results/matrix-714/stability/)).
 - **Re-recommend `BACKEND=vulkan`? — OPEN decision for the repository
-  owner (v0.1.6, explicitly not taken by this release)** — the cross-day
-  variance is root-caused to Mesa shader-cache state dependence (cold
-  12.38 / warm 16.96–17.10 tok/s on identical config/flags/pin, +38%
-  cold→warm swing; s3's 14.53 sits between → partial-cold consistent;
-  the s3 trigger is unknown — no Mesa upgrade, no reboot, no cache-clear
-  found). The pairing numbers, both labeled: clean d1 +4.81% (the
-  conservative floor case — vk measured in a partial-cold state, hip
-  13.86) vs warm-cache boot-paired same-day +15.9% / +20.6% (a single
-  warm session, 2026-08-19; hip cross-boot −4.7%, near-deterministic).
-  The current mapping stands (vulkan = available experimental opt-in,
-  NOT recommended; hip `WITH_MTP=1 SPEC_DEPTH=1` default AND
-  recommended); whether the warm-cache evidence should move it is open
-  for the human owner — the recorded rationale against moving it today:
-  one warm session, trigger unknown (users cannot be guaranteed to stay
-  warm), and the warm/cold swing is a first-boot UX risk (~12.4 tok/s /
-  ~12.5 s TTFT after a cache clear, until warm). Numbers and links:
+  owner (v0.1.7, explicitly not taken by this release)** — the variance
+  picture after the trigger hunt + overnight series: the cold-cache arm
+  stays the swing BOUND (cold 12.38 / warm mean 17.03 on identical
+  config/flags/pin, +38% class), but s3's cache was forensically INTACT
+  (866/0/1 files around the causal window — [trigger-hunt
+  note](docs/results/matrix-714/stability/trigger-hunt-2026-08-19.md)),
+  so its vk-specific trigger is UNIDENTIFIED and the v0.1.6
+  "partial-cold" reading is retired (dated supersession #3). The
+  pairing numbers, both labeled: clean d1 +4.81% (the conservative
+  floor case — vk measured in the unidentified slow state, hip 13.86)
+  vs the warm pairing band across 4 sessions +15.88% / +20.61% /
+  +19.90% / +15.93% (s4 boots 1-2, s5, s6; overnight persistence
+  CONFIRMED — s6 ran 7 h 50 m after s5 with the cache byte-identical;
+  aggregate/TTFT consistently hip-favored: TTFT vk 8.4–8.6 s vs hip
+  5.4–5.6 s, aggregate s5 +1.07% / s6 −2.39%). The current mapping
+  stands (vulkan = available experimental opt-in, NOT recommended; hip
+  `WITH_MTP=1 SPEC_DEPTH=1` default AND recommended); whether the
+  warm-band evidence should move it is open for the human owner, restated
+  both ways — FOR re-recommending: the warm band is now 4 consistent
+  sessions and overnight persistence is proven; AGAINST: the s3 trigger
+  is MORE mysterious with the cache ruled out, P(vk-specific slow
+  state) is unquantified, and aggregate/TTFT stay hip-favored (vk's
+  edge is the single-stream median only); the warm/cold swing also
+  remains a first-boot UX risk (~12.4 tok/s / ~12.5 s TTFT after a
+  cache clear, until warm). Numbers and links:
   [adaptation map](docs/adaptation.md) §Vulkan, [stability
   receipts](docs/results/matrix-714/stability/),
   [verdicts](configs/benchmark-verdicts.json).

@@ -46,7 +46,7 @@ The model-facing wiring is platform-agnostic and needed no patches:
 | 7 | Kernel floor | N/A on servers | Strix Halo UMA needs kernel ≥ 6.16.9 (muse-rocm heritage finding; enforced by the env check) | host-class | [`configs/validated-stack.json`](../configs/validated-stack.json), [troubleshooting](troubleshooting.md#uma-bug) |
 | 8 | Output packaging | DeepSeek-style `reasoning_content` everywhere | llama.cpp emits `message.reasoning_content`; the vLLM `qwen3` parser at `4d2a68d` emits `message.reasoning` (generation identical) | pin-local | [`results/rocm-7.14/gguf-validation.md`](results/rocm-7.14/gguf-validation.md), [`results/rocm-7.14/vllm-validation.md`](results/rocm-7.14/vllm-validation.md), [troubleshooting](troubleshooting.md#reasoning-field) |
 
-## Vulkan backend × MTP depth (v0.1.2, measured 2026-08-18; re-based v0.1.4, cross-day variance root-caused v0.1.6)
+## Vulkan backend × MTP depth (v0.1.2, measured 2026-08-18; re-based v0.1.4, cross-day variance root-caused v0.1.6, refined v0.1.7)
 
 The second llama.cpp backend measured on the same host, model, prompts, and
 harness (8 cells; plan
@@ -57,8 +57,11 @@ depth-1 pairing and the cross-day re-runs
 ([`results/matrix-714/stability/`](results/matrix-714/stability/))
 supersede the mixed-depth headline the original promotion rested on. The
 v0.1.6 root-cause step (same day): session 4's controlled runs explain
-the cross-day variance as Mesa shader-cache state dependence (the
-cross-day bullet below).
+the cross-day variance class as Mesa shader-cache state dependence. The
+v0.1.7 refinement (2026-08-20): the trigger-hunt forensics
+([`results/matrix-714/stability/trigger-hunt-2026-08-19.md`](results/matrix-714/stability/trigger-hunt-2026-08-19.md))
+plus the session-5/6 series decompose the variance picture further
+(the cross-day bullet below) — dated supersession #3, history visible.
 
 - **Build** — the same llama.cpp pin as the HIP build (`4df29be4`), separate
   tree `third_party/llama.cpp/build-714-vk` via
@@ -120,11 +123,12 @@ cross-day bullet below).
   (`--spec-draft-n-max`, upstream default 3), NOT fixed by the checkpoint
   (row 5).
 - **Cross-day variance (v0.1.4, session 3 = 2026-08-19 vs sessions 1/2 =
-  2026-08-18) — ROOT-CAUSED v0.1.6 to Mesa shader-cache state dependence
-  (dated supersession of the v0.1.4 "cause not recorded" statement,
-  which stays below for history)** — the same three vulkan c1 cells
-  re-run on the next UTC day dropped on every cell, while hip was
-  same-session stable:
+  2026-08-18) — root-cause CLASS v0.1.6: Mesa shader-cache state
+  dependence; REFINED v0.1.7 into a four-part decomposition (dated
+  supersessions of the v0.1.4 "cause not recorded" statement and then of
+  the v0.1.6 "s3 partial-cold" reading, both kept visible for history)**
+  — the same three vulkan c1 cells re-run on the next UTC day dropped on
+  every cell, while hip was same-session stable:
 
   | Cell (stream tok/s) | s1 08-18 | s2 08-18 | s3 08-19 | s3 vs s1/s2 | max spread |
   |---|---|---|---|---|---|
@@ -148,62 +152,109 @@ cross-day bullet below).
   TTFT 12.45 s (reproducing and exceeding the s3 slow signature) and
   rebuilds a fresh cache mid-run (2136 KiB / 100 files), while the warm
   cache stays stable at 7884 KiB / 867 files across runs (one run
-  touched nothing):
+  touched nothing). v0.1.6 then read s3 as "partial-cold consistent";
+  v0.1.7 **retires that reading** (the trigger-hunt forensics below).
 
   | Mesa cache state | mtp-c1 stream tok/s | TTFT | measured where |
   |---|---|---|---|
-  | cold (cache moved aside) | 12.38 | 12.45 s | session 4, cache-aside arm |
-  | partial-cold (consistent) | 14.53 | 9.94 s | session 3 — the cross-day drop |
-  | warm | 16.96–17.10 (mean 17.03) | 8.37–8.50 s | session 4, boots 1/2 |
+  | cold (cache moved aside) | 12.38 | 12.45 s | session 4, cache-aside arm — the swing **BOUND** |
+  | warm — cache forensically INTACT (v0.1.7 finding) | 14.53 | 9.94 s | session 3: slow with an untouched cache — **vk-specific residual, trigger UNIDENTIFIED** |
+  | warm | 16.96–17.10 (mean 17.03) | 8.37–8.50 s | session 4 morning, boots 1/2 |
   | warm | 16.00–16.25 | 8.36–8.83 s | sessions 1/2 (2026-08-18) |
+  | warm | 16.25 | 8.49 s | session 5 (08-19 evening) |
+  | warm | 16.41 | 8.54 s | session 6 (08-20 local morning, after an idle night) |
 
-  Cold→warm swing **+38%** (cold is −27.3% vs the warm mean). s3's 14.53
-  sits between cold and warm → a **partial-cold cache state is
-  consistent**; the s3 **TRIGGER is UNKNOWN** (no Mesa upgrade, no
-  reboot — host up since 2026-08-12 per every session-4 receipt's
-  `telemetry.env`, no cache-clear found — stated honestly). Telemetry
-  rules out thermal/power: post-bench envelopes are vk 1433–1533 MHz /
-  30–32 W / 54–57 °C and hip 1910–1929 MHz / 52–53 W / 58 °C — each
-  backend in its own normal envelope, no anomaly (vk cross-boot
-  −0.79%, hip controls 14.76/14.06 tok/s = −4.7% cross-boot,
-  near-deterministic). Warm same-day **boot-paired** pairings vs the hip
-  controls: 17.10 vs 14.76 = **+15.9%**, 16.96 vs 14.06 = **+20.6%**
-  (label: warm-cache, boot-paired, 2026-08-19 — ceiling context from a
-  single warm session). RELABEL: the v0.1.4 clean d1 pairing **+4.81%
-  is the conservative floor case** (vk measured in a partial-cold
-  state) — its arithmetic and the no-flip conclusion stand unchanged.
+  Cold→warm swing **+38%** (cold is −27.3% vs the warm mean) — the
+  BOUND proof of the cache-state class, NOT s3's explanation. The v0.1.7
+  decomposition, each part receipt- or note-backed:
+
+  1. **Cache forensics (trigger hunt, 2026-08-20 integration of
+     [`trigger-hunt-2026-08-19.md`](results/matrix-714/stability/trigger-hunt-2026-08-19.md),
+     independently reproduced):** the mesa cache was **INTACT at s3** —
+     866 files pre-window / **0 written inside the causal window** / 1
+     post (session-4's marker). The v0.1.6 sentence *s3's 14.53 sits
+     between cold and warm → a partial-cold cache state is consistent;
+     the s3 TRIGGER is UNKNOWN (no Mesa upgrade, no reboot — host up
+     since 2026-08-12 per every session-4 receipt's `telemetry.env`, no
+     cache-clear found)* stays visible as history but is SUPERSEDED:
+     s3 ran slow with a warm untouched cache, so **the vk-specific s3
+     trigger is UNIDENTIFIED** — cache ruled out; no suspend/resume, no
+     amdgpu reset/errors, no power-profile switch in the causal window;
+     the clock-stepping condition was ABSENT during s3's run; the only
+     discrete in-window state change is the unattended-upgrade of
+     linux-libc-dev/linux-tools-common 6.8.0-137→138 (06:20 local
+     08-19) — recorded as fact, **no mechanism claimed**.
+  2. **Chronic common-mode clock-stepping (not s3-specific):** 883+
+     `Clock change detected` events since the 2026-08-12 boot (still
+     accruing — count per the note, not frozen); present during s1 (×2),
+     the s2 soak (×1), and s5 (×3); ABSENT during s3's run. A common-mode
+     condition, not an s3 cause.
+  3. **Common-mode session drift ±5–6%:** session 5 (evening) measured
+     BOTH backends slower than the session-4 morning runs — vk −4.6%, hip
+     −6.0% vs the s4 means — shared host-state drift that moves both
+     backends together.
+  4. **Warm band + overnight persistence:** the warm pairing band
+     (vulkan−hip, same session, warm cache) spans 4 sessions —
+     **+15.88 / +20.61 / +19.90 / +15.93%** (s4 boots 1-2, s5, s6).
+     Session 6 ran **7 h 50 m after s5** (receipts-derived; same boot
+     throughout) with the cache **byte-identical** (7884 KiB / 867
+     files, zero writes, newest mtime still session-4 run 1's
+     06:32:54Z) and the pairing in band — overnight warm persistence
+     CONFIRMED (vk 16.41 / TTFT 8.54 s; hip 14.15 / TTFT 5.49 s).
+     Aggregate/TTFT are consistently **hip-favored** (TTFT vk 8.4–8.6 s
+     vs hip 5.4–5.6 s every session; aggregate s5 +1.07%, s6 −2.39%) —
+     vulkan's edge is the single-stream median only.
+
+  Telemetry (session 4) rules out thermal/power: post-bench envelopes
+  are vk 1433–1533 MHz / 30–32 W / 54–57 °C and hip 1910–1929 MHz /
+  52–53 W / 58 °C — each backend in its own normal envelope, no anomaly
+  (vk cross-boot −0.79%, hip controls 14.76/14.06 tok/s = −4.7%
+  cross-boot, near-deterministic). RELABEL (v0.1.6, arithmetic
+  unchanged; basis refined v0.1.7): the v0.1.4 clean d1 pairing
+  **+4.81% is the conservative floor case** — vk measured well below
+  its warm band (14.53 vs 16.0–17.1) in the unidentified slow state —
+  so its arithmetic and the no-flip conclusion stand unchanged; the
+  warm pairings are ceiling context, now a 4-session band rather than a
+  single warm session.
 
   **Warmup guidance (practical, non-recommending):** if vulkan feels
   slow, first-run cache warmup is the first suspect — re-run before
   concluding; the first boot after a cache clear runs ~12.4 tok/s /
-  ~12.5 s TTFT until warm.
+  ~12.5 s TTFT until warm. (v0.1.7 note: warmup explains the cold-cache
+  bound; it does NOT explain s3 — the cache was warm there.)
 - **Greedy pit status** — the §6 HIP greedy-degradation pit does **NOT
   reproduce on Vulkan**: 6/6 vulkan corpus cells anchor-clean
   (base/mtp/mtp4 × c1/c4), and across the stability sessions the
-  cell-run anchors are 15/15 (s1–s4; 16/16 with the soak anchor).
+  cell-run anchors are 19/19 (s1–s6; 20/20 with the soak anchor).
   The pit remains a hip-family (gfx1151/HIP) finding at this pin;
   Vulkan c8/c16 are unmeasured.
 - **Quickstart status (project ruling 2026-08-19 SUPERSEDES the
   2026-08-18 promotion; v0.1.4) — UNCHANGED by the v0.1.6 root-cause
-  finding** — `BACKEND=vulkan` is an **available experimental opt-in,
-  NOT recommended**: the 08-18 promotion rested on the mixed-depth
-  headline, and the clean d1 pairing (+4.81% single-stream, aggregate
-  −13.31%; relabeled v0.1.6 the conservative floor case — vk measured
-  partial-cold) plus the cache-state variance above do not support a
+  finding and by the v0.1.7 refinement** — `BACKEND=vulkan` is an
+  **available experimental opt-in, NOT recommended**: the 08-18
+  promotion rested on the mixed-depth headline, and the clean d1
+  pairing (+4.81% single-stream, aggregate −13.31%; the conservative
+  floor case — vk measured in the unidentified slow state, well below
+  its warm band) plus the variance decomposition above do not support a
   recommendation. **hip `WITH_MTP=1 SPEC_DEPTH=1` is BOTH the default
   and the recommended path** (13.0 tok/s on the corpus cell; 13.86
   depth-explicit). No-flip closed on the clean arithmetic: +4.81% <<
-  the >25% pre-registered flip threshold. Rationale recorded with the
-  v0.1.6 ruling: the warm +15.9%/+20.6% pairings come from a single
-  warm session, the partial-cold trigger is unknown (users cannot be
-  guaranteed to stay warm), and the warm/cold swing is a user-facing
-  UX risk — so the mapping layer does not move; the "re-recommend
-  vulkan?" question is explicitly OPEN for the human owner (README
-  roadmap). Recorded per cell in
+  the >25% pre-registered flip threshold. The recorded rationale,
+  updated v0.1.7 both ways (controller ruling 2026-08-20, not
+  re-deliberated): FOR re-recommending — the warm band is now 4
+  consistent sessions (+15.88/+20.61/+19.90/+15.93%) and overnight
+  persistence is proven; AGAINST — the s3 trigger is MORE mysterious
+  with the cache ruled out, P(vk-specific slow state) is unquantified,
+  and aggregate/TTFT stay hip-favored (vk's edge is the single-stream
+  median only). The warm/cold swing remains a user-facing UX risk
+  (~12.4 tok/s / ~12.5 s TTFT after a cache clear, until warm) — so
+  the mapping layer does not move; the "re-recommend vulkan?" question
+  is explicitly OPEN for the human owner (README roadmap). Recorded
+  per cell in
   [`configs/benchmark-verdicts.json`](../configs/benchmark-verdicts.json)
-  (the vulkan mtp-c1 ruling note carries both dated supersessions; the
-  cell's mechanical verdict is unchanged — what changed is the mapping
-  layer).
+  (the vulkan mtp-c1 ruling note carries all three dated supersessions;
+  the cell's mechanical verdict is unchanged — what changed is the
+  mapping layer).
 - **Stability (v0.1.3, measured 2026-08-18)** — a second, independent
   measurement session (hours after the v0.1.2 session, independent server
   boots, same host/pin/harness) reproduced every Vulkan c1 cell: mtp-c1
@@ -222,10 +273,14 @@ cross-day bullet below).
   v0.1.6:** session 4 added the clock/thermal telemetry and root-caused
   the cross-day drop to Mesa shader-cache state (see the cross-day
   bullet) — the same-day stability reading is now understood as
-  warm-cache stability. **Remaining limits,
-  still true:** single host (gfx1151), single ICD (RADV, Mesa 25.2.8),
-  boot-per-cell — the soak covers sustained load only (and the pit
-  finding is unaffected: anchors 15/15 across s1–s4).
+  warm-cache stability. **Revised once more v0.1.7:** the daily series
+  (sessions 5/6) shows the warm-cache state persisting overnight
+  unchanged (byte-identical cache, pairing in band) and quantifies a
+  common-mode ±5–6% session drift on both backends — while s3's slow
+  run remains unexplained (cache forensically intact). **Remaining
+  limits, still true:** single host (gfx1151), single ICD (RADV, Mesa
+  25.2.8), boot-per-cell — the soak covers sustained load only (and the
+  pit finding is unaffected: anchors 19/19 across s1–s6).
 - **Unified rider (hip)** — `gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified`
   (the stock 4-slot unified default boot under 4 concurrent users): 6.7
   tok/s healthy-stream median / 5.0 aggregate (3-of-4 streams stopped

@@ -78,6 +78,36 @@ quickstart echo + adaptation, and the "re-recommend vulkan?" question is
 recorded as OPEN for the human owner in the README roadmap. Zero
 metric/verdict changes: the 8/14/6 distribution is untouched; the only
 verdicts-JSON delta is the vulkan mtp-c1 ruling note.
+
+2026-08-20 evidence integration H2 (v0.1.7): the trigger-hunt forensics
+(read-only host-log hunt in the s2->s3 causal window, evidence note
+docs/results/matrix-714/stability/trigger-hunt-2026-08-19.md,
+independently reproduced) REFUTE the v0.1.6 "s3 partial-cold" reading —
+the mesa cache was INTACT at s3 (866 files pre-window / 0 written inside
+the causal window / 1 post — the session-4 marker): s3 ran slow (14.53)
+with a warm untouched cache, so its vk-specific trigger is UNIDENTIFIED
+(cache ruled out; no suspend/resume, no amdgpu reset/errors, no
+power-profile switch in the window; the clock-stepping condition was
+ABSENT during s3's run; the only discrete in-window state change is an
+unattended-upgrade of linux-libc-dev/linux-tools-common 6.8.0-137->138 —
+recorded as fact, NO mechanism claimed). The cold-cache arm stays the
+swing BOUND proof (cold 12.38 vs warm 17.03 mean, +38% class), NOT s3's
+explanation — dated supersession #3, history visible. New recorded
+findings: (a) chronic common-mode clock-stepping (883+ "Clock change
+detected" since the 08-12 boot, still accruing — NOT s3-specific);
+(b) common-mode session drift (s5 vs s4: vk -4.6% / hip -6.0%); (c) the
+warm pairing band across 4 sessions (+15.88/+20.61/+19.90/+15.93);
+(d) overnight warm persistence CONFIRMED (session 6, 7 h 50 m after s5,
+receipts-derived — cache byte-identical, pairing in band); (e)
+aggregate/TTFT consistently hip-favored — vk's edge is the single-stream
+median only. The recommendation layer is UNCHANGED (controller ruling
+2026-08-20, recorded, not re-deliberated); warmup guidance stands; the
+README roadmap OPEN question is restated both ways honestly. Zero
+metric/verdict changes: the 8/14/6 distribution is untouched; the
+verdicts-JSON delta is the vulkan mtp-c1 ruling note plus the top-level
+ruling-of-record attribution date (controller-2026-08-20 — the H2
+refinement is the latest ruling of record; the mapping layer it leaves
+unchanged remains the 2026-08-19 ruling, quoted as such in the prose).
 """
 
 from __future__ import annotations
@@ -85,6 +115,7 @@ from __future__ import annotations
 import json
 import statistics
 import sys
+from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -102,12 +133,18 @@ REGRESSION_TOLERANCE = 0.05
 
 LEGACY_REVIEW_DATE = "2026-08-17"  # the frozen review of the 20 migrated cells
 CONTROLLER_REVIEW_DATE = "2026-08-18"  # v0.1.2 mechanical review of the 8 new cells
-# v0.1.4 (S5, 2026-08-19): the clean-pairing supersession ruling is the
-# latest ruling of record and produced THIS file state — the top-level
-# attribution follows it, while the 8 v0.1.2 cells keep their own
-# per-cell controller-2026-08-18 mechanical-review record (unchanged).
+# v0.1.4 (S5, 2026-08-19): the clean-pairing supersession ruling re-based the
+# quickstart MAPPING (vulkan downgraded) — the mapping layer it produced is
+# still the mapping of record (unchanged by every later ruling, quoted as
+# "controller ruling 2026-08-19" in the prose below).
 MAPPING_RULING_DATE = "2026-08-19"
-REVIEWED_BY = f"controller-{MAPPING_RULING_DATE}"
+# v0.1.7 (H2, 2026-08-20): the trigger-hunt + overnight-series refinement is
+# the LATEST ruling of record and produced THIS file state — the top-level
+# attribution follows it (the 8 v0.1.2 cells keep their own per-cell
+# controller-2026-08-18 mechanical-review record, unchanged; the 20 migrated
+# cells stay governed by the frozen controller-2026-08-17 review).
+EVIDENCE_RULING_DATE = "2026-08-20"
+REVIEWED_BY = f"controller-{EVIDENCE_RULING_DATE}"
 
 
 def parse_cell_id(cid: str) -> dict:
@@ -507,6 +544,26 @@ SESSION4_RUNS = (
 )
 SESSION4_DATE = "2026-08-19"
 
+# Sessions 5 and 6 (2026-08-19 evening / 2026-08-20 local morning — the
+# H1/H2 daily warm-pair series): per-run subdirectories, exact paths,
+# fail-loud, no globs (same convention as session 4). The v0.1.7 ruling
+# note quotes these receipts AND references the committed trigger-hunt
+# evidence note by path — a moved/edited artifact breaks the regen, never
+# the prose. (The note itself is a committed receipt-class artifact and is
+# never edited here — its chronically-accruing clock-event count is cited
+# as "883+ (per the note)", never frozen into a loader constant.)
+SESSION5_DIR = STABILITY_DIR / "session5-2026-08-19T2321local"
+SESSION6_DIR = STABILITY_DIR / "session6-2026-08-20T0712local"
+SESSION56_RUNS = (
+    ("run1-vk", "vulkan"),
+    ("run2-hip", "hip"),
+)
+SESSION5_DATE = "2026-08-19"   # evening (15:20–15:22Z = 23:20–23:22 local)
+SESSION6_DATE = "2026-08-20"   # local morning (23:12–23:13Z prev UTC day)
+TRIGGER_HUNT_NOTE = (STABILITY_DIR / "trigger-hunt-2026-08-19.md")
+TRIGGER_HUNT_POINTER = ("docs/results/matrix-714/stability/"
+                        "trigger-hunt-2026-08-19.md")
+
 
 def _c1_stream_tok_s(cell: dict) -> float:
     """Exact (unrounded) per-stream tok/s of a c1 cell's healthy stream.
@@ -711,6 +768,102 @@ def _load_stability_evidence() -> dict:
         "anchors_total": len(s4),
     }
 
+    # ---- sessions 5/6 (H1/H2 daily warm-pair series, 2026-08-19 evening /
+    # 2026-08-20 local morning): one vk + one hip run each, exact per-run
+    # paths (fail-loud). Session 5 additionally anchors the common-mode
+    # drift finding (both backends slower evening vs the session-4 morning
+    # runs); session 6 is the OVERNIGHT persistence receipt (cache
+    # byte-identical across an idle night, pairing in band). The
+    # trigger-hunt evidence note the v0.1.7 ruling cites must exist.
+    if not TRIGGER_HUNT_NOTE.exists():
+        raise FileNotFoundError(TRIGGER_HUNT_NOTE)
+
+    def _pair_session(sess_dir: Path) -> dict:
+        runs = {}
+        for run, backend in SESSION56_RUNS:
+            path = (sess_dir / run /
+                    f"gguf-{backend}-udq4kxl-auto-mtp-c1-ctx131072.json")
+            c = json.loads(path.read_text())
+            mc = (((c.get("load") or {}).get("telemetry") or {})
+                  .get("mesa_cache")) or {}
+            runs[run] = {
+                "tok_s": _c1_stream_tok_s(c),
+                "tok_s_2dp": round(_c1_stream_tok_s(c), 2),
+                "ttft_s_2dp": round(_c1_ttft_s(c), 2),
+                "agg": c["client"]["aggregate"]["tok_per_s"],
+                "agg_2dp": round(c["client"]["aggregate"]["tok_per_s"], 2),
+                "anchor_ok": bool(c.get("anchor", {}).get("ok")),
+                "started_utc": c["started_utc"],
+                "mesa_cache": mc,
+            }
+        return runs
+
+    def _utc(t: str) -> datetime:
+        return datetime.fromisoformat(t.replace("Z", "+00:00"))
+
+    def _pair_block(runs: dict, **extra) -> dict:
+        v, h = runs["run1-vk"], runs["run2-hip"]
+        blk = {
+            "vk_2dp": v["tok_s_2dp"], "hip_2dp": h["tok_s_2dp"],
+            "vk": v["tok_s"], "hip": h["tok_s"],    # exact, for assertions
+            "pct_2dp": f"{(v['tok_s'] / h['tok_s'] - 1) * 100:+.2f}%",
+            "vk_ttft_s_2dp": v["ttft_s_2dp"], "hip_ttft_s_2dp": h["ttft_s_2dp"],
+            "vk_agg_2dp": v["agg_2dp"], "hip_agg_2dp": h["agg_2dp"],
+            "agg_pct_2dp": f"{(v['agg'] / h['agg'] - 1) * 100:+.2f}%",
+            "anchors_ok": sum(1 for r in runs.values() if r["anchor_ok"]),
+            "anchors_total": len(runs),
+        }
+        blk.update(extra)
+        return blk
+
+    s5r, s6r = _pair_session(SESSION5_DIR), _pair_session(SESSION6_DIR)
+    s5v, s5h = s5r["run1-vk"], s5r["run2-hip"]
+    s6v, s6h = s6r["run1-vk"], s6r["run2-hip"]
+    # Common-mode drift (finding b): s5 evening vs the s4 morning means,
+    # per backend — exact basis, 1dp display.
+    wp4 = ev["session4"]["warm_pairings"]
+    hip4_mean = (wp4["boot1"][1] + wp4["boot2"][1]) / 2.0
+    ev["session5"] = _pair_block(
+        s5r, date=SESSION5_DATE, when="evening",
+        drift_vs_s4={
+            "vk_pct_1dp": f"{(s5v['tok_s'] / warm_mean - 1) * 100:+.1f}%",
+            "hip_pct_1dp": f"{(s5h['tok_s'] / hip4_mean - 1) * 100:+.1f}%",
+        })
+    # Overnight persistence (finding d): the s5->s6 gap is receipts-derived
+    # (session-5's LAST receipt start -> session-6's FIRST receipt start,
+    # same boot throughout) — 7 h 50 m, not the "~20 h" a naive date-label
+    # reading suggests. Cache byte-identity is receipt-derived from the s6
+    # vk run's own before_boot/after_teardown readings.
+    gap_min = int((_utc(s6v["started_utc"]) - _utc(s5h["started_utc"]))
+                  .total_seconds() // 60)
+    s6_before = s6v["mesa_cache"].get("before_boot") or {}
+    s6_after = s6v["mesa_cache"].get("after_teardown") or {}
+    ev["session6"] = _pair_block(
+        s6r, date=SESSION6_DATE, when="local morning",
+        gap_after_s5_min=gap_min,
+        gap_after_s5_hm=f"{gap_min // 60} h {gap_min % 60} m",
+        cache={
+            "identical": (
+                s6_before.get("du_kib") == s6_after.get("du_kib")
+                and s6_before.get("files") == s6_after.get("files")
+                and s6_before.get("newest_mtime_utc")
+                == s6_after.get("newest_mtime_utc")),
+            "du_kib": s6_before.get("du_kib"),
+            "files": s6_before.get("files"),
+            "newest_mtime_utc": s6_before.get("newest_mtime_utc"),
+        })
+    # Warm pairing band (finding c): 4 sessions — session-4 boots 1/2,
+    # session 5, session 6 — exact-basis 2dp (the committed stability
+    # README's series convention).
+    ev["warm_band"] = {
+        "label": "warm-cache pairing band",
+        "sessions": ("s4 boot1", "s4 boot2", "s5", "s6"),
+        "pcts_2dp": (
+            f"{(wp4['boot1'][0] / wp4['boot1'][1] - 1) * 100:+.2f}%",
+            f"{(wp4['boot2'][0] / wp4['boot2'][1] - 1) * 100:+.2f}%",
+            ev["session5"]["pct_2dp"], ev["session6"]["pct_2dp"]),
+    }
+
     # TTFT observation (aggregate flip is TTFT-driven): vulkan s3 range vs
     vk_ttfts_12 = [
         _c1_ttft_s(json.loads(path.read_text()))
@@ -725,9 +878,9 @@ def _load_stability_evidence() -> dict:
     }
 
     # Cross-session anchor tally: the re-measured cell runs s1/s2/s3 (3+3+4
-    # receipts), the five session-4 runs (R2), plus the soak's post-load
-    # anchor — the "pit does NOT reproduce on vulkan" evidence the
-    # supersession note restates.
+    # receipts), the five session-4 runs (R2), the four session-5/6 runs
+    # (H1/H2 daily series), plus the soak's post-load anchor — the "pit
+    # does NOT reproduce on vulkan" evidence the supersession note restates.
     cell_runs = [json.loads((CELLS_DIR / f"{cid}.json").read_text())
                  for cid in STABILITY_CELLS]
     cell_runs += [json.loads((SESSION2_DIR / f"{cid}.json").read_text())
@@ -738,6 +891,11 @@ def _load_stability_evidence() -> dict:
                               f"gguf-{backend}-udq4kxl-auto-mtp-c1-"
                               f"ctx131072.json").read_text())
                   for run, backend in SESSION4_RUNS]
+    cell_runs += [json.loads((sess / run /
+                              f"gguf-{backend}-udq4kxl-auto-mtp-c1-"
+                              f"ctx131072.json").read_text())
+                  for sess in (SESSION5_DIR, SESSION6_DIR)
+                  for run, backend in SESSION56_RUNS]
     ev["anchors"] = {
         "cell_runs_ok": sum(1 for c in cell_runs
                             if c.get("anchor", {}).get("ok")),
@@ -755,11 +913,13 @@ _STABILITY_EVIDENCE: dict | None = None
 def stability_evidence() -> dict:
     """Memoized stability-evidence loader (lazy — importing this module,
     e.g. from the tests, must stay side-effect-free). Missing receipts
-    raise FileNotFoundError on purpose: the v0.1.3/v0.1.4/v0.1.6 ruling
-    notes quote this evidence, so regenerating without it must fail loudly
-    rather than silently regress to pre-v0.1.3/v0.1.4/v0.1.6 wording.
-    Covers session 2 (+ soak) since v0.1.3, session 3 since v0.1.4, and
-    session 4 (per-run subdirectories, exact paths) since v0.1.6."""
+    raise FileNotFoundError on purpose: the v0.1.3/v0.1.4/v0.1.6/v0.1.7
+    ruling notes quote this evidence, so regenerating without it must fail
+    loudly rather than silently regress to pre-v0.1.3 wording. Covers
+    session 2 (+ soak) since v0.1.3, session 3 since v0.1.4, session 4
+    (per-run subdirectories, exact paths) since v0.1.6, and sessions 5/6
+    (warm-pair series; plus the trigger-hunt note existence check) since
+    v0.1.7."""
     global _STABILITY_EVIDENCE
     if _STABILITY_EVIDENCE is None:
         _STABILITY_EVIDENCE = _load_stability_evidence()
@@ -816,6 +976,19 @@ def v012_ruling_note(cid: str, all_metrics: dict | None,
         wp = s4["warm_pairings"]
         ch = s4["cache"]
         t4 = s4["telemetry"]
+        # Sessions 5/6 + the warm band (H2, v0.1.7): every number in the
+        # H2 refinement paragraph interpolates from these, never a hand
+        # literal.
+        s5 = ev["session5"]
+        s6 = ev["session6"]
+        wb = ev["warm_band"]
+        # Warm-session vk range for the floor-case relabel (s1/s2 corpus +
+        # session-2 re-runs, s4 warm boots, s5, s6 — every vk mtp-c1 run
+        # with the cache present).
+        warm_vals = [m1["s1_2dp"], m1["s2_2dp"],
+                     s4["vk_boot1_2dp"], s4["vk_boot2_2dp"],
+                     s5["vk_2dp"], s6["vk_2dp"]]
+        warm_lo_2dp, warm_hi_2dp = min(warm_vals), max(warm_vals)
 
         def _rng(pair) -> str:
             """Envelope display: '1433–1533 MHz'; a single value prints
@@ -914,7 +1087,9 @@ def v012_ruling_note(cid: str, all_metrics: dict | None,
                 f"state is consistent with the s3 drop; the s3 TRIGGER "
                 f"remains UNIDENTIFIED (no Mesa upgrade, no reboot — host "
                 f"up since {s4['host_boot_time'][:10]}, no cache-clear "
-                f"found — stated honestly). RELABELS, arithmetic "
+                f"found — stated honestly; that PARTIAL-COLD reading is "
+                f"itself SUPERSEDED 2026-08-20 by the H2 forensics below — "
+                f"the cache was forensically INTACT at s3). RELABELS, arithmetic "
                 f"unchanged: the clean pairing {cp['pct_2dp']} is the "
                 f"CONSERVATIVE FLOOR CASE (vk measured in a partial-cold "
                 f"state; the no-flip conclusion stands, "
@@ -944,11 +1119,78 @@ def v012_ruling_note(cid: str, all_metrics: dict | None,
                 f"warm/cold swing is a user-facing UX risk (first boot "
                 f"after a cache clear: ~12.4 tok/s / ~12.5 s TTFT until "
                 f"warm). The re-recommendation question is recorded as "
-                f"OPEN for the human owner (README roadmap). Unaffected "
+                f"OPEN for the human owner (README roadmap). H2 "
+                f"REFINEMENT (2026-08-20, v0.1.7) SUPERSEDES the v0.1.6 "
+                f"partial-cold reading of s3 — dated supersession #3, "
+                f"history visible above: the trigger-hunt cache forensics "
+                f"({TRIGGER_HUNT_POINTER} — a read-only host-log hunt in "
+                f"the s2→s3 causal window, independently reproduced) found "
+                f"the mesa cache INTACT at s3 — 866 files pre-window / "
+                f"0 written inside the causal window / 1 post (the "
+                f"session-4 marker) — so 's3 = partial-cold cache' is "
+                f"CONTRADICTED as the explanation: s3 ran slow "
+                f"({s3vk_2dp:.2f}) with a warm untouched cache. The "
+                f"cold-cache ARM remains valid as the swing BOUND proof "
+                f"(cold {s4['aside_2dp']:.2f} vs warm mean "
+                f"{s4['warm_mean_2dp']:.2f} = the {s4['swing_pct_0dp']} "
+                f"class), NOT s3's explanation. s3's vk-specific TRIGGER: "
+                f"UNIDENTIFIED — cache ruled out; NO suspend/resume, NO "
+                f"amdgpu reset/errors, NO power-profile switch in the "
+                f"causal window; the clock-stepping condition was ABSENT "
+                f"during s3's run; the only discrete in-window state "
+                f"change is the unattended-upgrade of linux-libc-dev/"
+                f"linux-tools-common 6.8.0-137→138 (06:20 local 08-19) — "
+                f"recorded as fact, NO mechanism claimed. NEW RECORDED "
+                f"FINDINGS: (a) chronic common-mode clock-stepping — 883+ "
+                f"'Clock change detected' events since the 2026-08-12 "
+                f"boot, still accruing (count per the note; present "
+                f"during s1 ×2, the s2 soak ×1, and s5 ×3) — explicitly "
+                f"NOT s3-specific; (b) common-mode session drift — BOTH "
+                f"backends slower evening vs morning (s5 vs the s4 means: "
+                f"vk {s5['drift_vs_s4']['vk_pct_1dp']}, hip "
+                f"{s5['drift_vs_s4']['hip_pct_1dp']}): shared host-state "
+                f"drift of ±5–6%; (c) the warm pairing band across 4 "
+                f"sessions is {'/'.join(wb['pcts_2dp'])} (s4 boots 1-2, "
+                f"s5, s6); (d) OVERNIGHT warm persistence CONFIRMED — "
+                f"session 6 ran {s6['gap_after_s5_hm']} after s5 "
+                f"(receipts-derived, same boot), the cache byte-identical "
+                f"({s6['cache']['du_kib']} KiB/{s6['cache']['files']} "
+                f"files, zero writes, newest mtime still session-4 run "
+                f"1's {s6['cache']['newest_mtime_utc']}), pairing "
+                f"{s6['pct_2dp']} in band (vk {s6['vk_2dp']:.2f} / TTFT "
+                f"{s6['vk_ttft_s_2dp']:.2f} s; hip {s6['hip_2dp']:.2f} / "
+                f"TTFT {s6['hip_ttft_s_2dp']:.2f} s); (e) aggregate/TTFT "
+                f"consistently hip-favored — TTFT vk 8.4–8.6 s vs hip "
+                f"5.4–5.6 s every session (s5 "
+                f"{s5['vk_ttft_s_2dp']:.2f}/{s5['hip_ttft_s_2dp']:.2f} s, "
+                f"s6 {s6['vk_ttft_s_2dp']:.2f}/{s6['hip_ttft_s_2dp']:.2f} "
+                f"s); aggregate s5 {s5['agg_pct_2dp']} (vk "
+                f"{s5['vk_agg_2dp']:.2f} vs hip {s5['hip_agg_2dp']:.2f}), "
+                f"s6 {s6['agg_pct_2dp']} (hip {s6['hip_agg_2dp']:.2f} vs "
+                f"vk {s6['vk_agg_2dp']:.2f}) — vulkan's edge is the "
+                f"single-stream median only. RELABEL basis refined: the "
+                f"clean pairing {cp['pct_2dp']} keeps the CONSERVATIVE "
+                f"FLOOR CASE label — vk measured in the UNIDENTIFIED slow "
+                f"state, well below its warm-session range "
+                f"({warm_lo_2dp:.2f}–{warm_hi_2dp:.2f} tok/s across "
+                f"s1/s2/s4/s5/s6) — the arithmetic and the "
+                f"no-flip conclusion stand unchanged. RECOMMENDATION UNCHANGED "
+                f"(controller ruling 2026-08-20, recorded, not "
+                f"re-deliberated): vulkan stays an AVAILABLE experimental "
+                f"opt-in, NOT recommended; hip WITH_MTP=1 SPEC_DEPTH=1 "
+                f"stays BOTH the default AND the recommended path; the "
+                f"warmup guidance stands. The OPEN re-recommendation "
+                f"question (README roadmap) is restated BOTH ways "
+                f"honestly: FOR — the warm band is now 4 consistent "
+                f"sessions and overnight persistence is proven; AGAINST — "
+                f"the s3 trigger is MORE mysterious (cache ruled out), "
+                f"P(vk-specific slow state) is unquantified, and "
+                f"aggregate/TTFT stay hip-favored. Not decided here. "
+                f"Unaffected "
                 f"findings, restated: the greedy pit still does NOT "
                 f"reproduce on vulkan — cell-run anchors "
                 f"{an['cell_runs_ok']}/{an['cell_runs_total']} clean "
-                f"across s1/s2/s3/s4 ({an['with_soak_ok']}/{an['with_soak_total']} "
+                f"across s1–s6 ({an['with_soak_ok']}/{an['with_soak_total']} "
                 f"with the soak anchor); depth 1 still beats depth 4 on "
                 f"both backends (mtp stays the recommended variant, no "
                 f"mtp4 recommendation; clean-gap exact basis "
@@ -1367,7 +1609,7 @@ def build_verdicts(root: Path = ROOT) -> dict:
     # (additionalProperties: false) — provenance stays in this generator's
     # docstring and in the rendered docs, not in the JSON.
     return {
-        "checked_at": MAPPING_RULING_DATE,
+        "checked_at": EVIDENCE_RULING_DATE,
         "reviewed_by": REVIEWED_BY,
         "cells": out_cells,
     }

@@ -30,6 +30,8 @@ backend pairing (see its section below).
 | [session2-2026-08-18](session2-2026-08-18/) | 2026-08-18, receipt timestamps span 11:28:12Z–12:01:21Z | 3 re-measured cells + one 30-min sustained-load soak | runner with `CELLS_DIR=<this session dir>` (matrix untouched); `scripts/stability-soak.sh` for the soak |
 | [session3-2026-08-19](session3-2026-08-19/) | 2026-08-19, receipt timestamps span 00:56:51Z–00:59:50Z | 4 re-measured cells: hip mtp-c1 with explicit depth 1 (the depth-matched pairing side) + the 3 Vulkan c1 cells (cross-day re-run); no soak | runner with `CELLS_DIR=<this session dir>` (matrix untouched) |
 | [session4-2026-08-19](session4-2026-08-19/) | 2026-08-19, receipt timestamps span 06:32:54Z–06:41:10Z | 5 runs, serial: vulkan mtp-c1 ×3 (boot #1, boot #2 within-day cross-boot, cache-aside arm) interleaved with hip mtp-c1 ×2 (controls); first session with clock/power/temp + mesa-cache telemetry (root-cause step R1) | runner with `CELLS_DIR=<per-run subdirectory of this session dir>` (matrix untouched); the cache-aside arm is orchestrated outside the runner (see its note below) |
+| [session5-2026-08-19T2321local](session5-2026-08-19T2321local/) | 2026-08-19, receipt timestamps 15:20:34Z–15:21:45Z (23:20–23:21 local) | 2 runs, serial (first daily warm pair): vulkan mtp-c1 + hip mtp-c1, GPU clean between; same-run telemetry + mesa-cache readings; accompanied by the host-log trigger-hunt evidence note [`trigger-hunt-2026-08-19.md`](trigger-hunt-2026-08-19.md) | runner with `CELLS_DIR=<per-run subdirectory of this session dir>` (matrix untouched) |
+| [session6-2026-08-20T0712local](session6-2026-08-20T0712local/) | 2026-08-20 local date (UTC 2026-08-19), receipt timestamps 23:12:02Z–23:13:01Z (07:12–07:13 local) | 2 runs, serial (daily warm pair #2, first after an idle night): vulkan mtp-c1 + hip mtp-c1, GPU clean between; same-run telemetry + mesa-cache readings | runner with `CELLS_DIR=<per-run subdirectory of this session dir>` (matrix untouched) |
 
 ## Cell re-measurement: v0.1.2 vs session 2
 
@@ -258,3 +260,94 @@ during the run; (3) after the run and teardown the fresh cache measured
 `~/.cache/mesa_shader_cache.fresh-20260819T064054Z`; (4) the original cache
 was moved back and verified: du 7884 KiB / 867 files — an exact match to
 the before-aside reading.
+
+## Session 5 (2026-08-19 23:20–23:22 local): warm pair #1 of the daily series
+
+Two runs, serial, one boot per run, GPU verified clean before each (no
+`llama-server` process; GTT 223–231 MiB idle baseline). Same runner, prompt
+set, pin, and telemetry harness as session 4; host state identical (boot
+since 2026-08-12 09:42, power profile `balanced`, dpm `auto`). Receipts:
+[run1-vk](session5-2026-08-19T2321local/run1-vk/gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072.json),
+[run2-hip](session5-2026-08-19T2321local/run2-hip/gguf-hip-udq4kxl-auto-mtp-c1-ctx131072.json).
+The mesa cache read 7884 KiB / 867 files before run 1 — unchanged since the
+session-4 morning readings (zero new cache entries today before this session).
+Host-log trigger-hunt forensics for the s2→s3 causal window (facts only):
+[`trigger-hunt-2026-08-19.md`](trigger-hunt-2026-08-19.md).
+
+### Per-run table
+
+Same column conventions as the session-4 table (c1 single stream; stream
+tok/s = 1000/tpot_ms at the corpus 2dp convention; aggregate =
+completion_tokens / wall_s).
+
+| Run | backend | stream tok/s | TTFT (s) | aggregate tok/s | anchor | boot wall (s) | load sclk/mclk · power · temp | post-bench sclk/mclk · power · temp | mesa cache before boot → after teardown |
+|---|---|---|---|---|---|---|---|---|---|
+| run1 (15:20:34Z) | vulkan | 16.25 | 8.49 | 10.58 | ok | 6 | 1424/1000 · 15.07 · 47.0 | 1569/1000 · 33.03 · 56.0 | 7884 KiB / 867 files → 7884 KiB / 867 files (unchanged, newest mtime still session-4 run 1's 06:32:54Z) |
+| run2 (15:21:45Z) | hip | 13.55 | 5.63 | 10.47 | ok | 6 | 1186/1000 · 16.03 · 51.0 | 1882/1000 · 53.03 · 59.0 | not captured (vulkan-only field) |
+
+Load memory: run1 VRAM 29460 MiB / GTT 1221 MiB (vulkan split); run2 VRAM
+1560 MiB / GTT 28062 MiB (hip split). Run 1's stream finished at 256 tokens
+with `finish_reason=stop`; run 2's hit the 256-token cap
+(`finish_reason=length`). Cell-run anchors are now 17/17 across
+s1/s2/s3/s4/s5.
+
+### Reference values (same two cells, prior sessions)
+
+| Cell | s1 (08-18) | s2 (08-18) | s3 (08-19) | s4 warm runs (08-19) | s5 (this, 08-19 evening) |
+|---|---|---|---|---|---|
+| `gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072` | 16.00 · TTFT 8.63 | 16.25 · 8.64 | 14.53 · 9.94 | 17.10 · 8.37 / 16.96 · 8.50 | 16.25 · 8.49 |
+| `gguf-hip-udq4kxl-auto-mtp-c1-ctx131072` (explicit d1) | — | — | 13.86 · 5.43 | 14.76 · 5.46 / 14.06 · 5.46 | 13.55 · 5.63 |
+
+Exact-basis deltas from the receipts: vulkan vs the two s4 warm runs
+−4.98% / −4.22% (vs their mean −4.60%), vs s1/s2/s3 +1.51% / +0.00% /
++11.81%; hip vs the two s4 runs −8.17% / −3.66% (vs their mean −5.97%), vs
+the s3 d1 value −2.26%. Same-session pairing (both this session, warm cache):
+vulkan − hip = +2.70 tok/s = +19.90% of hip; aggregate basis hip 10.47 vs
+vulkan 10.58 (gap +0.11, +1.07% of hip).
+
+## Session 6 (2026-08-20 07:12–07:13 local): warm pair #2 of the daily series — first after an idle night
+
+Two runs, serial, one boot per run, GPU verified clean before each (no
+`llama-server` process; GTT 224–232 MiB idle baseline). Same runner, prompt
+set, pin, and telemetry harness as sessions 4/5; host state identical (boot
+since 2026-08-12 09:42, power profile `balanced`, dpm `auto`). Receipts:
+[run1-vk](session6-2026-08-20T0712local/run1-vk/gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072.json),
+[run2-hip](session6-2026-08-20T0712local/run2-hip/gguf-hip-udq4kxl-auto-mtp-c1-ctx131072.json).
+Before run 1 — after the idle night following session 5 (session-5 last
+receipt 15:21:45Z, this session's run 1 starts 23:12:02Z, same boot
+throughout) — the mesa cache read 7884 KiB / 867 files with the newest mtime
+still session-4 run 1's 06:32:54Z: zero new cache files and zero size growth
+across the night. After both runs the cache measured the same 7884 KiB /
+867 files (0 files with an mtime after session 5's runs).
+
+### Per-run table
+
+Same column conventions as the session-4/5 tables (c1 single stream; stream
+tok/s = 1000/tpot_ms at the corpus 2dp convention; aggregate =
+completion_tokens / wall_s).
+
+| Run | backend | stream tok/s | TTFT (s) | aggregate tok/s | anchor | boot wall (s) | load sclk/mclk · power · temp | post-bench sclk/mclk · power · temp | mesa cache before boot → after teardown |
+|---|---|---|---|---|---|---|---|---|---|
+| run1 (23:12:02Z) | vulkan | 16.41 | 8.54 | 10.63 | ok | 6 | 1353/1000 · 15.10 · 46.0 | 1544/1000 · 33.03 · 56.0 | 7884 KiB / 867 files → 7884 KiB / 867 files (unchanged, newest mtime still session-4 run 1's 06:32:54Z) |
+| run2 (23:13:01Z) | hip | 14.15 | 5.49 | 10.89 | ok | 6 | 1397/1000 · 16.09 · 51.0 | 1932/1000 · 54.03 · 58.0 | not captured (vulkan-only field) |
+
+Load memory: run1 VRAM 29454 MiB / GTT 1226 MiB (vulkan split); run2 VRAM
+1556 MiB / GTT 28064 MiB (hip split). Both streams hit the 256-token cap
+(`finish_reason=length`). Cell-run anchors are now 19/19 across
+s1/s2/s3/s4/s5/s6.
+
+### Reference values (same two cells, prior sessions)
+
+| Cell | s1 (08-18) | s2 (08-18) | s3 (08-19) | s4 warm runs (08-19) | s5 (08-19 evening) | s6 (this, 08-20 morning) |
+|---|---|---|---|---|---|---|
+| `gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072` | 16.00 · TTFT 8.63 | 16.25 · 8.64 | 14.53 · 9.94 | 17.10 · 8.37 / 16.96 · 8.50 | 16.25 · 8.49 | 16.41 · 8.54 |
+| `gguf-hip-udq4kxl-auto-mtp-c1-ctx131072` (explicit d1) | — | — | 13.86 · 5.43 | 14.76 · 5.46 / 14.06 · 5.46 | 13.55 · 5.63 | 14.15 · 5.49 |
+
+Exact-basis deltas from the receipts: vulkan vs the two s4 warm runs
+−4.04% / −3.27% (vs their mean −3.65%), vs s1/s2/s3/s5 +2.52% / +0.99% /
++12.92% / +0.99%; hip vs the two s4 runs −4.08% / +0.63% (vs their mean
+−1.78%), vs the s3 d1 value +2.08%, vs s5 +4.45%. Same-session pairing
+(both this session, warm cache): vulkan − hip = +2.25 tok/s = +15.93% of
+hip; aggregate basis hip 10.89 vs vulkan 10.63 (gap −0.26, −2.39% of hip).
+Warm-pair series so far (exact-basis, % of hip): s4 +15.88% / +20.61%,
+s5 +19.90%, s6 +15.93%.
