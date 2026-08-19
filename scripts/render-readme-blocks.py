@@ -52,6 +52,22 @@ extends to s1–s4 (15/15). The recommendation layer is NOT touched by
 this renderer — the mapping stays exactly as the 2026-08-19 ruling
 recorded it (vulkan NOT recommended; the "re-recommend vulkan?" OPEN
 question lives in the hand-written README roadmap).
+
+2026-08-20 evidence integration H2 (v0.1.7): the trigger-hunt forensics
+REFUTE the v0.1.6 "s3 partial-cold" reading (cache forensically INTACT
+at s3 — 866/0/1 files around the causal window; vk-specific trigger
+UNIDENTIFIED; the cold-cache arm stays the +38% swing BOUND, not s3's
+explanation), and the session-5/6 series strengthens the warm band (4
+sessions +15.88/+20.61/+19.90/+15.93, overnight persistence CONFIRMED,
+common-mode drift ±5–6%, aggregate/TTFT consistently hip-favored). Every
+variance statement the generators emit is updated to that refined
+decomposition (dated supersession #3 — the v0.1.6 wording stays visible
+as history inside the ruling note), the floor-case label follows (vk
+measured in the unidentified slow state), and the anchor tally extends
+to s1–s6 (19/19). The recommendation layer is STILL not touched by this
+renderer — mapping unchanged (controller ruling 2026-08-20, recorded,
+not re-deliberated); the OPEN question's both-ways restatement lives in
+the hand-written README roadmap.
 """
 
 from __future__ import annotations
@@ -226,7 +242,9 @@ def render_performance_highlights(data: dict) -> str:
     ev = GEN_VERDICTS.stability_evidence()
     cp = ev["clean_pairing"]
     s4 = ev["session4"]
-    wp = s4["warm_pairings"]
+    s5 = ev["session5"]
+    s6 = ev["session6"]
+    wb = ev["warm_band"]
     gguf_reco = [v[i] for i in (
         "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072",
         "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072",
@@ -271,15 +289,18 @@ def render_performance_highlights(data: dict) -> str:
                 "experimental opt-in, NOT recommended (project ruling "
                 "2026-08-19 supersedes the 2026-08-18 promotion: clean d1 "
                 f"pairing {cp['pct_2dp']} — the conservative FLOOR case, "
-                "vk measured partial-cold — aggregate "
-                f"{cp['agg_pct_2dp']}; cross-day variance root-caused "
-                "v0.1.6 to Mesa shader-cache state: cold "
-                f"{s4['aside_2dp']:.2f} / warm "
+                "vk measured in the unidentified slow state — aggregate "
+                f"{cp['agg_pct_2dp']}; variance decomposed v0.1.7: "
+                "cold-cache swing BOUND "
+                f"{s4['swing_pct_0dp']} (cold {s4['aside_2dp']:.2f} / warm "
                 f"{s4['vk_boot2_2dp']:.2f}–{s4['vk_boot1_2dp']:.2f} "
-                f"tok/s ({s4['swing_pct_0dp']} swing, s3 trigger unknown; "
-                "warm-cache boot-paired ceiling "
-                f"{wp['boot1_pct_1dp']}/{wp['boot2_pct_1dp']}, single "
-                "warm session))",
+                "tok/s) but s3's cache was forensically INTACT — "
+                "vk-specific trigger UNIDENTIFIED; common-mode drift "
+                f"±5–6% (s5 vs s4: vk {s5['drift_vs_s4']['vk_pct_1dp']}, "
+                f"hip {s5['drift_vs_s4']['hip_pct_1dp']}); warm pairing "
+                f"band 4 sessions {'/'.join(wb['pcts_2dp'])} incl. "
+                f"overnight persistence (s6 {s6['gap_after_s5_hm']} after "
+                "s5, cache byte-identical); aggregate/TTFT hip-favored))",
             "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072":
                 "`WITH_MTP=1` mtp-c1 @131072 — +28% per-stream (the corpus "
                 "cell ran implicit depth 3, predating the depth flag; "
@@ -341,13 +362,17 @@ def render_performance_highlights(data: dict) -> str:
         f"experimental opt-in, NOT a recommendation (project ruling "
         f"2026-08-19 supersedes the 2026-08-18 promotion: the clean d1 "
         f"pairing is {cp['vk_2dp']:.2f} vs {cp['hip_2dp']:.2f} tok/s, "
-        f"{cp['pct_2dp']} — the conservative FLOOR case, vk measured "
-        f"partial-cold — aggregate {cp['agg_pct_2dp']}; the cross-day "
-        f"variance is root-caused v0.1.6 to Mesa shader-cache state "
-        f"(cold {s4['aside_2dp']:.2f} / warm "
-        f"{s4['vk_boot2_2dp']:.2f}–{s4['vk_boot1_2dp']:.2f} tok/s, "
-        f"{s4['swing_pct_0dp']} swing, s3 trigger unknown) — see the "
-        f"verdicts).",
+        f"{cp['pct_2dp']} — the conservative FLOOR case, vk measured in "
+        f"the unidentified slow state — aggregate {cp['agg_pct_2dp']}; "
+        f"the variance is decomposed v0.1.7: the cold-cache swing "
+        f"{s4['swing_pct_0dp']} is the BOUND (cold "
+        f"{s4['aside_2dp']:.2f} / warm "
+        f"{s4['vk_boot2_2dp']:.2f}–{s4['vk_boot1_2dp']:.2f} tok/s), "
+        f"s3's cache was forensically INTACT so its vk-specific trigger "
+        f"is UNIDENTIFIED, common-mode drift is ±5–6%, and the warm "
+        f"pairing band spans 4 sessions "
+        f"({'/'.join(wb['pcts_2dp'])} incl. overnight persistence) "
+        f"while aggregate/TTFT stay hip-favored) — see the verdicts).",
     ]
     return "\n".join(lines)
 
@@ -468,7 +493,9 @@ def render_known_good_bad(data: dict) -> str:
     cd = ev["crossday"]
     an = ev["anchors"]
     s4 = ev["session4"]
-    wp = s4["warm_pairings"]
+    s5 = ev["session5"]
+    s6 = ev["session6"]
+    wb = ev["warm_band"]
     lines = [
         "**Known good** (verdict receipts in `configs/benchmark-verdicts.json`):",
         "",
@@ -483,16 +510,16 @@ def render_known_good_bad(data: dict) -> str:
         "pit does NOT reproduce here; the honest choice for 262144 context, "
         "vision, and batch throughput (38.6 tok/s aggregate @base-c16).",
         "- ✅ **Vulkan backend (v0.1.2 cells; opt-in downgraded v0.1.4, "
-        "cross-day variance root-caused v0.1.6)** — "
+        "variance decomposed v0.1.7)** — "
         f"anchor-clean in all {len(vk_clean)} measured vulkan cells (the hip "
         "greedy pit does NOT reproduce on this backend; cell-run anchors now "
-        f"{an['cell_runs_ok']}/{an['cell_runs_total']} across s1–s4). "
+        f"{an['cell_runs_ok']}/{an['cell_runs_total']} across s1–s6). "
         "`BACKEND=vulkan WITH_MTP=1` is an AVAILABLE experimental opt-in, "
         "NOT a recommendation — project ruling 2026-08-19 SUPERSEDES the "
         "2026-08-18 promotion (mixed-depth basis): the clean d1 pairing "
         f"({cp['date']}) is {cp['vk_2dp']:.2f} vs {cp['hip_2dp']:.2f} tok/s "
         f"= {cp['pct_2dp']} single-stream (the conservative FLOOR case — "
-        "vk measured in a partial-cold cache state), aggregate flips to "
+        "vk measured in the unidentified slow state), aggregate flips to "
         f"{cp['agg_pct_2dp']} (vulkan TTFT "
         f"{ev['ttft']['vk_s3_range'][0]:.2f}–{ev['ttft']['vk_s3_range'][1]:.2f} "
         f"s vs {ev['ttft']['vk_s12_range'][0]:.2f}–"
@@ -501,22 +528,39 @@ def render_known_good_bad(data: dict) -> str:
         f"{cd['gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072']['spread_pct']:.2f}%/"
         f"{cd['gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072']['spread_pct']:.2f}%/"
         f"{cd['gguf-vulkan-udq4kxl-auto-base-c1-ctx131072']['spread_pct']:.2f}% "
-        "mtp/mtp4/base) — that drop is ROOT-CAUSED (v0.1.6, session 4) to "
-        "Mesa shader-cache state dependence: identical config/flags/pin "
-        f"measures cold {s4['aside_2dp']:.2f} (cache aside; TTFT "
-        f"{s4['aside_ttft_s_2dp']:.2f} s) vs warm "
-        f"{s4['vk_boot2_2dp']:.2f}–{s4['vk_boot1_2dp']:.2f} tok/s "
-        f"(mean {s4['warm_mean_2dp']:.2f}) = a "
-        f"{s4['swing_pct_0dp']} cold→warm swing; s3's "
-        f"{cp['vk_2dp']:.2f} sits between cold and warm → partial-cold "
-        "consistent, and the s3 TRIGGER is unknown (no Mesa upgrade, no "
-        "reboot, no cache-clear found). Warm-cache boot-paired ceiling "
-        f"context (same day, single warm session): "
-        f"{wp['boot1_pct_1dp']}/{wp['boot2_pct_1dp']} vs the hip controls "
-        f"({s4['hip_crossboot_pct_1dp']} hip cross-boot — "
-        "near-deterministic). hip `WITH_MTP=1` is BOTH the default and "
-        "the recommended path (recommendation unchanged by the root-cause "
-        "finding). "
+        "mtp/mtp4/base) — v0.1.6 root-caused that class to Mesa "
+        "shader-cache state (identical config/flags/pin measures cold "
+        f"{s4['aside_2dp']:.2f} with the cache aside / warm "
+        f"{s4['vk_boot2_2dp']:.2f}–{s4['vk_boot1_2dp']:.2f} tok/s, mean "
+        f"{s4['warm_mean_2dp']:.2f} = a {s4['swing_pct_0dp']} cold→warm "
+        "swing), and v0.1.7's trigger-hunt forensics refine it (dated "
+        f"supersession #3): the cache was forensically INTACT at s3 "
+        "(`matrix-714/stability/trigger-hunt-2026-08-19.md` — 866 files "
+        "pre-window / 0 written inside the causal window / 1 post), so "
+        "the partial-cold reading is retired: s3 ran slow with a warm "
+        "untouched cache and its vk-specific TRIGGER is UNIDENTIFIED "
+        "(no suspend/resume, no amdgpu reset/errors, no power-profile "
+        "switch in the window; clock-stepping absent during s3's run; "
+        "the only discrete in-window state change is an "
+        "unattended-upgrade linux-libc-dev/linux-tools-common "
+        "6.8.0-137→138 — fact recorded, no mechanism claimed); "
+        "clock-stepping is a CHRONIC common-mode condition (883+ events "
+        "since the 08-12 boot, present during fast sessions too — not "
+        "s3-specific). Session-5/6 series: BOTH backends drift together "
+        f"evening vs morning (vk {s5['drift_vs_s4']['vk_pct_1dp']}, hip "
+        f"{s5['drift_vs_s4']['hip_pct_1dp']} vs s4 — common-mode ±5–6%), "
+        f"the warm pairing band is 4 sessions {'/'.join(wb['pcts_2dp'])} "
+        f"(s4 boots 1-2, s5, s6), OVERNIGHT persistence is confirmed "
+        f"(s6 {s6['gap_after_s5_hm']} after s5, cache byte-identical "
+        f"{s6['cache']['du_kib']} KiB/{s6['cache']['files']} files / zero "
+        "writes, pairing in band), and aggregate/TTFT are consistently "
+        f"hip-favored (TTFT vk {s5['vk_ttft_s_2dp']:.2f}–"
+        f"{s6['vk_ttft_s_2dp']:.2f} vs hip {s6['hip_ttft_s_2dp']:.2f}–"
+        f"{s5['hip_ttft_s_2dp']:.2f} s across s5/s6; aggregate s5 "
+        f"{s5['agg_pct_2dp']}, s6 {s6['agg_pct_2dp']}) — vulkan's edge "
+        "is the single-stream median only. hip `WITH_MTP=1` is BOTH the "
+        "default and the recommended path (recommendation unchanged by "
+        "every refinement). "
         f"Evidence: `{ev['pointer']}`; one host / one ICD (RADV 25.2.8) "
         "remain the limits.",
         "- ✅ **Boot reliability** — every declared-priority cell booted (GGUF "
@@ -712,6 +756,9 @@ def render_benchmark_md(data: dict) -> str:
     tf = ev["ttft"]
     s4 = ev["session4"]
     wp = s4["warm_pairings"]
+    s5 = ev["session5"]
+    s6 = ev["session6"]
+    wb = ev["warm_band"]
     t4 = s4["telemetry"]
 
     def _rng(pair):
@@ -774,7 +821,10 @@ def render_benchmark_md(data: dict) -> str:
         f"{cp['vk_2dp']:.2f} sits between cold and warm → a partial-cold "
         "cache state is consistent, and the s3 TRIGGER remains "
         "unidentified (no Mesa upgrade, no reboot — host up since "
-        f"{s4['host_boot_time'][:10]}, no cache-clear found); telemetry "
+        f"{s4['host_boot_time'][:10]}, no cache-clear found) — that "
+        "partial-cold reading is itself SUPERSEDED 2026-08-20 by the H2 "
+        "forensics below (the cache was forensically INTACT at s3); "
+        "telemetry "
         "shows no thermal/power anomaly (vk post-bench "
         f"{_rng(t4['vk_post_sclk_range'])} MHz / "
         f"{_rng(t4['vk_post_power_range'])} W / "
@@ -807,9 +857,50 @@ def render_benchmark_md(data: dict) -> str:
         "warm; the warm/cold swing is a user-facing UX risk: first boot "
         "after a cache clear runs ~12.4 tok/s / ~12.5 s TTFT until "
         "warm); the re-recommendation question is OPEN for the human "
-        "owner (README roadmap). Unaffected: the greedy pit still "
+        "owner (README roadmap). H2 REFINEMENT (2026-08-20, v0.1.7, "
+        "controller ruling recorded — not re-deliberated) SUPERSEDES the "
+        "v0.1.6 partial-cold reading of s3 — dated supersession #3, "
+        "history visible above: the trigger-hunt forensics "
+        "(matrix-714/stability/trigger-hunt-2026-08-19.md, independently "
+        "reproduced) found the mesa cache INTACT at s3 (866 files "
+        "pre-window / 0 written inside the causal window / 1 post — the "
+        "session-4 marker): 's3 = partial-cold cache' is CONTRADICTED as "
+        "the explanation — s3 ran slow with a warm untouched cache, so "
+        "its vk-specific trigger is UNIDENTIFIED (cache ruled out; no "
+        "suspend/resume, no amdgpu reset/errors, no power-profile switch "
+        "in the window; clock-stepping absent during s3's run; the only "
+        "discrete in-window state change is the unattended-upgrade "
+        "linux-libc-dev/linux-tools-common 6.8.0-137→138 — recorded as "
+        "fact, no mechanism claimed), while the cold-cache arm remains "
+        "the swing BOUND proof, not s3's explanation. New recorded "
+        "findings: chronic common-mode clock-stepping (883+ events since "
+        "the 08-12 boot, still accruing — present during s1, the s2 soak "
+        "and s5, NOT s3-specific); common-mode session drift (s5 vs s4: "
+        f"vk {s5['drift_vs_s4']['vk_pct_1dp']}, hip "
+        f"{s5['drift_vs_s4']['hip_pct_1dp']} — shared host-state drift "
+        "±5–6%); the warm pairing band across 4 sessions "
+        f"({'/'.join(wb['pcts_2dp'])} — s4 boots 1-2, s5 "
+        f"({s5['vk_2dp']:.2f} vs {s5['hip_2dp']:.2f}), s6 "
+        f"({s6['vk_2dp']:.2f} vs {s6['hip_2dp']:.2f})); OVERNIGHT warm "
+        f"persistence CONFIRMED (s6 ran {s6['gap_after_s5_hm']} after "
+        f"s5, receipts-derived; cache byte-identical "
+        f"{s6['cache']['du_kib']} KiB/{s6['cache']['files']} files, zero "
+        f"writes, newest mtime still {s6['cache']['newest_mtime_utc']}; "
+        f"pairing {s6['pct_2dp']} in band); and aggregate/TTFT "
+        "consistently hip-favored (TTFT vk 8.4–8.6 s vs hip 5.4–5.6 s "
+        f"every session; aggregate s5 {s5['agg_pct_2dp']}, s6 "
+        f"{s6['agg_pct_2dp']}) — vulkan's edge is the single-stream "
+        "median only. RECOMMENDATION UNCHANGED (controller ruling "
+        "2026-08-20): vulkan stays an available experimental opt-in, NOT "
+        "recommended; hip `WITH_MTP=1 SPEC_DEPTH=1` is both the default "
+        "and the recommended path; warmup guidance stands; the OPEN "
+        "re-recommendation question is restated both ways (FOR: 4-session "
+        "warm band + proven overnight persistence; AGAINST: s3 trigger "
+        "more mysterious with the cache ruled out, P(vk-specific slow "
+        "state) unquantified, aggregate/TTFT hip-favored) — not decided "
+        "here. Unaffected: the greedy pit still "
         "does NOT reproduce on vulkan (cell-run anchors "
-        f"{an['cell_runs_ok']}/{an['cell_runs_total']} across s1–s4, "
+        f"{an['cell_runs_ok']}/{an['cell_runs_total']} across s1–s6, "
         f"{an['with_soak_ok']}/{an['with_soak_total']} with the soak "
         "anchor); depth 1 beats depth 4 on both backends; the "
         "unified-default-boot c4@131072 rider stays measured-with-caveat "
@@ -953,7 +1044,25 @@ def render_benchmark_md(data: dict) -> str:
         "gains the conservative-floor-case label, and the recommendation "
         "layer is UNCHANGED (vulkan not recommended; hip "
         "`WITH_MTP=1 SPEC_DEPTH=1` default AND recommended). Again zero "
-        "verdict/metric changes.\n")
+        "verdict/metric changes.\n"
+        "- Controller ruling 2026-08-20 (v0.1.7 H2, dated supersession #3 "
+        "on the same cell): the trigger-hunt forensics RETIRE the v0.1.6 "
+        "'s3 partial-cold' reading — the cache was forensically INTACT "
+        "at s3 (866/0/1 files around the causal window), so the vk-"
+        "specific s3 trigger is UNIDENTIFIED and the cold-cache arm is "
+        "the swing BOUND, not s3's explanation. New findings recorded: "
+        "chronic common-mode clock-stepping (not s3-specific), "
+        "common-mode drift ±5–6% (both backends), the 4-session warm "
+        "pairing band "
+        f"({'/'.join(wb['pcts_2dp'])}) with overnight persistence "
+        "CONFIRMED (s6 after an idle night, cache byte-identical), and "
+        "aggregate/TTFT consistently hip-favored. Recommendation layer "
+        "UNCHANGED; warmup guidance stands; the OPEN re-recommendation "
+        "question is restated both ways in the README roadmap. Zero "
+        "verdict/metric changes; anchor tally now "
+        f"{an['cell_runs_ok']}/{an['cell_runs_total']} across s1–s6 "
+        f"({an['with_soak_ok']}/{an['with_soak_total']} with the soak "
+        "anchor).\n")
     out.append(reasoning_moot_mark(data["cells"]) + "\n")
     out.append("\n## Raw receipts\n")
     out.append("Every cell links from the tables above; the declaration "

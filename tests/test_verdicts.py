@@ -541,9 +541,10 @@ def test_no_flip_closed_on_the_clean_pairing_arithmetic_v014():
     assert ev["ttft"]["vk_s12_range"] == (8.36, 8.83)
     assert ev["ttft"]["hip_s3_2dp"] == 5.43 and ev["ttft"]["hip_corpus_2dp"] == 5.47
     # The cross-session anchor tally (the pit non-reproduction stands);
-    # extended v0.1.6 to include the five session-4 runs.
-    assert ev["anchors"] == {"cell_runs_ok": 15, "cell_runs_total": 15,
-                             "with_soak_ok": 16, "with_soak_total": 16}
+    # extended v0.1.6 to the five session-4 runs and v0.1.7 to the four
+    # session-5/6 runs.
+    assert ev["anchors"] == {"cell_runs_ok": 19, "cell_runs_total": 19,
+                             "with_soak_ok": 20, "with_soak_total": 20}
 
 
 # --------------------- 6c. v0.1.6 R2 — the cache-state root-cause arithmetic
@@ -620,7 +621,12 @@ def test_cache_state_story_on_user_facing_surfaces_v016():
     """Ruling 3 + 4: the warmup guidance line is in the quickstart echo and
     adaptation; the OPEN re-recommendation question is in the README
     roadmap with the warm/cold numbers; the recommendation language is
-    unchanged everywhere (vulkan NOT recommended, hip recommended)."""
+    unchanged everywhere (vulkan NOT recommended, hip recommended).
+    v0.1.7: the cache-state CLASS story stays (it is still the root-cause
+    class and the cold-cache arm is still the swing bound), but the s3
+    partial-cold READING is superseded — both texts stay visible with
+    markers, and the refined decomposition (band/overnight/drift/
+    hip-favored aggregate) is present."""
     src = QUICKSTART.read_text()
     assert "warmup note" in src and "re-run before concluding" in src, (
         "the quickstart vulkan echo must carry the one-line warmup guidance")
@@ -631,11 +637,24 @@ def test_cache_state_story_on_user_facing_surfaces_v016():
     assert 'BACKEND="${BACKEND:-hip}"' in src
     adaptation = (ROOT / "docs" / "adaptation.md").read_text()
     assert "Mesa shader-cache state" in adaptation
-    assert "root-caused v0.1.6" in adaptation.lower()
+    assert "root-cause CLASS v0.1.6" in adaptation
     for number in ("12.38", "14.53", "16.96–17.10", "16.00–16.25", "+38%"):
         assert number in adaptation, (
             f"adaptation.md warm/cold table lost {number}")
-    assert "TRIGGER is UNKNOWN" in adaptation
+    # BOTH texts visible with supersession markers (v0.1.7): the v0.1.6
+    # partial-cold wording stays as history, retired by the forensics.
+    assert "TRIGGER is UNKNOWN" in adaptation, (
+        "the superseded v0.1.6 sentence must stay visible, marked")
+    assert "partial-cold" in adaptation and "retires that reading" in adaptation
+    assert "forensically INTACT" in adaptation
+    assert "trigger UNIDENTIFIED" in adaptation
+    # The warm/cold table gained the s5/s6 rows; the refined decomposition
+    # parts are all present.
+    for fragment in ("16.25 | 8.49", "16.41 | 8.54", "+15.88 / +20.61",
+                     "+19.90 / +15.93", "7 h 50 m", "byte-identical",
+                     "±5–6%", "hip-favored", "no mechanism"):
+        assert fragment in adaptation, (
+            f"adaptation.md v0.1.7 decomposition lost {fragment!r}")
     assert "first-run cache warmup is the first suspect" in adaptation
     assert "conservative floor case" in adaptation.lower()
     readme = README.read_text()
@@ -646,6 +665,110 @@ def test_cache_state_story_on_user_facing_surfaces_v016():
     # (benchmark.md words it "NO recommendation").
     assert "NOT recommended" in readme
     assert "NO recommendation" in BENCH_MD.read_text()
+
+
+# -------------- 6d. v0.1.7 H2 — trigger-hunt + overnight-series arithmetic
+#
+# The trigger-hunt forensics retire the v0.1.6 "s3 partial-cold" reading
+# (supersession #3) and the session-5/6 series strengthens the warm band.
+# Every pinned number below recomputes from the receipts through
+# stability_evidence(): the s5/s6 pairings, the 4-session band, the
+# overnight-persistence facts (gap + cache byte-identity on the s6 vk
+# receipt), the common-mode drift deltas, and the ruling-note fragments.
+
+def test_trigger_hunt_overnight_series_arithmetic_v017():
+    ev = gv.stability_evidence()
+    # Session 5 (2026-08-19 evening): the warm pair.
+    s5 = ev["session5"]
+    assert s5["date"] == "2026-08-19" and s5["when"] == "evening"
+    assert s5["vk_2dp"] == 16.25 and s5["hip_2dp"] == 13.55
+    assert s5["pct_2dp"] == "+19.90%"
+    assert round((s5["vk"] / s5["hip"] - 1) * 100, 2) == 19.90
+    assert s5["vk_ttft_s_2dp"] == 8.49 and s5["hip_ttft_s_2dp"] == 5.63
+    assert s5["vk_agg_2dp"] == 10.58 and s5["hip_agg_2dp"] == 10.47
+    assert s5["agg_pct_2dp"] == "+1.07%"
+    assert s5["anchors_ok"] == 2 and s5["anchors_total"] == 2
+    # Common-mode drift (finding b): BOTH backends slower evening vs the
+    # session-4 morning means — shared host-state drift ±5–6%.
+    assert s5["drift_vs_s4"] == {"vk_pct_1dp": "-4.6%",
+                                 "hip_pct_1dp": "-6.0%"}
+    # Session 6 (2026-08-20 local morning): the overnight pair.
+    s6 = ev["session6"]
+    assert s6["date"] == "2026-08-20" and s6["when"] == "local morning"
+    assert s6["vk_2dp"] == 16.41 and s6["hip_2dp"] == 14.15
+    assert s6["pct_2dp"] == "+15.93%"
+    assert round((s6["vk"] / s6["hip"] - 1) * 100, 2) == 15.93
+    assert s6["vk_ttft_s_2dp"] == 8.54 and s6["hip_ttft_s_2dp"] == 5.49
+    assert s6["vk_agg_2dp"] == 10.63 and s6["hip_agg_2dp"] == 10.89
+    assert s6["agg_pct_2dp"] == "-2.39%"   # hip-favored aggregate
+    assert s6["anchors_ok"] == 2 and s6["anchors_total"] == 2
+    # Overnight persistence (finding d): the receipts-derived gap is
+    # 7 h 50 m (s5's LAST receipt start -> s6's FIRST receipt start) —
+    # NOT the ~20 h a naive date-label reading suggests — and the s6 vk
+    # receipt's own cache readings are byte-identical before/after (zero
+    # writes; newest mtime still session-4 run 1's marker).
+    assert s6["gap_after_s5_min"] == 470
+    assert s6["gap_after_s5_hm"] == "7 h 50 m"
+    assert s6["cache"] == {"identical": True, "du_kib": 7884, "files": 867,
+                           "newest_mtime_utc": "2026-08-19T06:32:54Z"}
+    # Warm pairing band (finding c): 4 sessions, exact-basis 2dp.
+    wb = ev["warm_band"]
+    assert wb["sessions"] == ("s4 boot1", "s4 boot2", "s5", "s6")
+    assert wb["pcts_2dp"] == ("+15.88%", "+20.61%", "+19.90%", "+15.93%")
+    wp = ev["session4"]["warm_pairings"]
+    for pair, pct in zip((wp["boot1"], wp["boot2"],
+                          (s5["vk"], s5["hip"]), (s6["vk"], s6["hip"])),
+                         (15.88, 20.61, 19.90, 15.93)):
+        assert round((pair[0] / pair[1] - 1) * 100, 2) == pct, (
+            f"band value {pct} does not recompute from exact operands")
+    # The anchor tally now spans s1-s6 (the pit non-reproduction finding).
+    assert ev["anchors"]["cell_runs_ok"] == 19
+    assert ev["anchors"]["with_soak_ok"] == 20
+    # The ruling note carries supersession #3 + findings (a)-(e),
+    # referencing the trigger-hunt note by path.
+    r = {c["id"]: c for c in load(VERDICTS)["cells"]}[
+        "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]["reason"]
+    for fragment in ("H2 REFINEMENT (2026-08-20, v0.1.7)",
+                     "dated supersession #3",
+                     "docs/results/matrix-714/stability/"
+                     "trigger-hunt-2026-08-19.md",
+                     "INTACT at s3", "0 written inside the causal window",
+                     "CONTRADICTED", "swing BOUND proof",
+                     "UNIDENTIFIED", "unattended-upgrade",
+                     "linux-libc-dev/", "NO mechanism claimed",
+                     "chronic common-mode clock-stepping", "883+",
+                     "NOT s3-specific", "common-mode session drift",
+                     "±5–6%", "warm pairing band across 4 sessions",
+                     "OVERNIGHT warm persistence CONFIRMED",
+                     "7 h 50 m", "byte-identical",
+                     "hip-favored", "single-stream median only",
+                     "controller ruling 2026-08-20",
+                     "warmup guidance stands",
+                     "MORE mysterious", "unquantified", "Not decided here"):
+        assert fragment in r, (
+            f"ruling note lost the v0.1.7 fragment {fragment!r}")
+    # The superseded v0.1.6 wording stays visible, marked.
+    assert "PARTIAL-COLD cache" in r and "SUPERSEDED 2026-08-20" in r
+
+
+def test_trigger_hunt_note_is_committed_and_untouched_class():
+    """The evidence note the v0.1.7 ruling cites is a committed
+    receipt-class artifact: it exists at the referenced path and carries
+    the forensic facts the ruling quotes (866/0/1 file buckets, the
+    unattended-upgrade transaction, the chronic clock condition with its
+    dated correction)."""
+    note = (ROOT / "docs/results/matrix-714/stability/"
+            "trigger-hunt-2026-08-19.md")
+    text = note.read_text(encoding="utf-8")
+    assert "866" in text and "0        # mtime INSIDE the window" in text
+    assert "unattended-upgrade" in text
+    assert "6.8.0-137.137" in text and "6.8.0-138.138" in text
+    assert "Clock change detected" in text and "still accruing" in text
+    assert "NONE inside s3" in text  # clock events absent during s3's run
+    # It draws no causal conclusions itself (the interpretive layer is
+    # H2's — recorded in the note's own preamble).
+    assert "Facts + verbatim command output only" in text
+    assert "No causal claim is made here" in text
 
 
 def test_no_quickstart_referenced_config_is_avoid():
@@ -901,13 +1024,15 @@ def test_v012_cells_have_verdicts_and_the_ruling_recorded():
             f"{cid}: v0.1.2 cells are rule-correct, zero overrides")
         assert "2026-08-18" in cell["reason"], (
             f"{cid}: the ruling/review note is missing from the reason")
-    # Corpus attribution (updated v0.1.4): the 2026-08-19 supersession
-    # ruling is the ruling of record for THIS file state; exactly the 8
-    # v0.1.2 cells carry a per-cell reviewed_by (their MECHANICAL review —
-    # unchanged by the mapping-layer supersession), while the 20 migrated
-    # cells stay governed by the frozen controller-2026-08-17 review.
-    assert v["reviewed_by"] == "controller-2026-08-19"
-    assert v["checked_at"] == "2026-08-19"
+    # Corpus attribution (updated v0.1.4, re-dated v0.1.7): the latest
+    # ruling of record that produced THIS file state is the 2026-08-20 H2
+    # refinement (the mapping layer it leaves unchanged remains the
+    # 2026-08-19 ruling); exactly the 8 v0.1.2 cells carry a per-cell
+    # reviewed_by (their MECHANICAL review — unchanged by every
+    # mapping-layer supersession), while the 20 migrated cells stay
+    # governed by the frozen controller-2026-08-17 review.
+    assert v["reviewed_by"] == "controller-2026-08-20"
+    assert v["checked_at"] == "2026-08-20"
     per_cell = [c for c in v["cells"] if c["metrics"].get("reviewed_by")]
     assert len(per_cell) == 8
 
@@ -921,8 +1046,11 @@ def test_ruling_supersession_2026_08_19_recorded_and_quickstart_matches():
     finding stands. v0.1.6 (R2, same day): the cross-day cause statement
     ("NOT recorded") is itself SUPERSEDED — the variance is explained as
     Mesa shader-cache state dependence with warm/cold bounds, and the
-    recommendation stays unchanged (see
-    test_cache_state_arithmetic_v016)."""
+    recommendation stays unchanged. v0.1.7 (H2, 2026-08-20): the v0.1.6
+    partial-cold READING of s3 is superseded in turn — the cache was
+    forensically INTACT at s3, the trigger is UNIDENTIFIED, and the
+    recommendation STILL stays unchanged (see
+    test_trigger_hunt_overnight_series_arithmetic_v017)."""
     by_id = {c["id"]: c for c in load(VERDICTS)["cells"]}
     vk = by_id["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]
     # Both dates visible in the supersession note (never a silent rewrite).
@@ -952,9 +1080,9 @@ def test_ruling_supersession_2026_08_19_recorded_and_quickstart_matches():
     assert "MECHANICAL verdict (recommended) is unchanged" in r
     # No-flip closed on the clean arithmetic.
     assert "+4.81% << the >25% pre-registered flip threshold" in r
-    # The unaffected pit finding, restated (now 15/15 across s1-s4).
+    # The unaffected pit finding, restated (now 19/19 across s1-s6).
     assert "does NOT reproduce on vulkan" in r
-    assert "15/15" in r and "16/16" in r
+    assert "19/19" in r and "20/20" in r
     # The mechanical verdicts stand (8/14/6 distribution unchanged).
     assert vk["verdict"] == "recommended"
     # The quickstart binds the same story: default hip, downgraded opt-in.

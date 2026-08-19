@@ -27,12 +27,15 @@
 #                             = +4.81% single-stream, aggregate basis
 #                             hip 10.74 vs vulkan 9.31 tok/s = -13.31%;
 #                             cross-day re-runs dropped every vulkan cell, up
-#                             to -23.49% — root-caused 2026-08-19 (v0.1.6) to
-#                             Mesa shader-cache state: cold 12.38 / warm
-#                             16.96-17.10 tok/s (+38% swing; the s3
-#                             partial-cold trigger is unknown), warm-cache
-#                             boot-paired ceiling +15.9%/+20.6% from a single
-#                             warm session — recommendation unchanged; see
+#                             to -23.49% — root-cause class 2026-08-19
+#                             (v0.1.6): Mesa shader-cache state (cold 12.38 /
+#                             warm 16.96-17.10 tok/s, +38% swing BOUND);
+#                             refined 2026-08-20 (v0.1.7 trigger hunt): s3's
+#                             cache was forensically INTACT — the vk-specific
+#                             trigger is UNIDENTIFIED; the warm pairing band
+#                             is 4 sessions (+15.88/+20.61/+19.90/+15.93%)
+#                             incl. overnight persistence; aggregate/TTFT
+#                             hip-favored — recommendation unchanged; see
 #                             the warmup note in the echo below; build via
 #                             scripts/06-build-llama-vulkan.sh; evidence:
 #                             docs/results/matrix-714/stability/ and the

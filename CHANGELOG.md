@@ -8,6 +8,94 @@ receipts [`docs/results/matrix-714/cells/`](docs/results/matrix-714/cells/),
 and the rehearsal receipt
 [`docs/results/rocm-7.14/one-pass-rehearsal.md`](docs/results/rocm-7.14/one-pass-rehearsal.md).
 
+## v0.1.7 — 2026-08-20
+
+Evidence-integration release (H2): the trigger-hunt forensics
+([`docs/results/matrix-714/stability/trigger-hunt-2026-08-19.md`](docs/results/matrix-714/stability/trigger-hunt-2026-08-19.md)
+— read-only host-log hunt in the s2→s3 causal window, independently
+reproduced) **refute the v0.1.6 "s3 partial-cold" reading** (dated
+supersession #3 — the repo's third; history stays visible in the ruling
+note), and the session-5/6 series
+([`session5-2026-08-19T2321local/`](docs/results/matrix-714/stability/session5-2026-08-19T2321local/),
+[`session6-2026-08-20T0712local/`](docs/results/matrix-714/stability/session6-2026-08-20T0712local/))
+**strengthens the warm band to 4 sessions with overnight persistence**.
+**No corpus data changed**: the 28 cells, `matrix.json`, every cell
+verdict, every metric, and the 8/14/6 distribution are untouched; the
+verdicts-JSON delta is the vulkan mtp-c1 ruling note plus the top-level
+ruling-of-record attribution (→ `controller-2026-08-20`). **The
+recommendation layer is UNCHANGED** (controller ruling 2026-08-20,
+recorded, not re-deliberated); the warmup guidance stands.
+
+### Supersession #3 — s3's cache was INTACT
+
+- **The forensic finding:** the mesa cache was **INTACT at s3** — 866
+  files pre-window / **0 written inside the causal window** / 1 post
+  (session-4's marker at 06:32:54Z). "s3 = partial-cold cache" is
+  **contradicted** as the explanation: s3 ran slow (14.53) with a warm
+  untouched cache. The v0.1.6 wording stays visible in the ruling note,
+  marked superseded 2026-08-20.
+- **The cold-cache arm survives as the swing BOUND proof** (cold 12.38
+  vs warm mean 17.03 = the +38% class) — a bound on the variance class,
+  no longer offered as s3's explanation.
+- **s3's vk-specific trigger: UNIDENTIFIED.** Cache ruled out; no
+  suspend/resume, no amdgpu reset/errors, no power-profile switch in
+  the causal window; the clock-stepping condition was ABSENT during
+  s3's run; the only discrete in-window state change is the
+  unattended-upgrade of linux-libc-dev/linux-tools-common
+  6.8.0-137→138 (06:20 local 08-19) — recorded as fact, **no mechanism
+  claimed**.
+
+### New recorded findings (a)–(e)
+
+- **(a) Chronic common-mode clock-stepping:** 883+ `Clock change
+  detected` events since the 2026-08-12 boot (still accruing — count
+  per the note, never frozen); present during s1 (×2), the s2 soak
+  (×1), and s5 (×3); explicitly NOT s3-specific.
+- **(b) Common-mode session drift ±5–6%:** session 5 (evening) measured
+  BOTH backends slower than the session-4 morning runs — vk −4.6%, hip
+  −6.0% vs the s4 means — shared host-state drift.
+- **(c) Warm pairing band, 4 sessions:** **+15.88 / +20.61 / +19.90 /
+  +15.93%** (s4 boots 1-2, s5, s6) — what v0.1.6 called ceiling context
+  from "a single warm session" is now a 4-session band.
+- **(d) Overnight warm persistence CONFIRMED:** session 6 ran **7 h
+  50 m after s5** (receipts-derived — s5's last receipt to s6's first,
+  same boot; not the "~20 h" a date-label reading suggests); the cache
+  was **byte-identical** (7884 KiB / 867 files, zero writes, newest
+  mtime still session-4 run 1's 06:32:54Z) and the pairing +15.93% is
+  in band (vk 16.41 / TTFT 8.54 s; hip 14.15 / TTFT 5.49 s).
+- **(e) Aggregate/TTFT consistently hip-favored:** TTFT vk 8.4–8.6 s vs
+  hip 5.4–5.6 s every session; aggregate s5 +1.07% (hip 10.47 vs vk
+  10.58), s6 −2.39% (hip 10.89 vs vk 10.63) — vulkan's edge is the
+  single-stream median only.
+
+### Recommendation unchanged; OPEN question restated both ways
+
+- **Mapping unchanged:** vulkan stays an **available experimental
+  opt-in, NOT recommended**; hip `WITH_MTP=1 SPEC_DEPTH=1` stays
+  **default AND recommended**; warmup guidance stands. The +4.81% clean
+  pairing keeps the conservative-floor-case label (basis refined: vk
+  measured in the unidentified slow state, well below its warm band —
+  arithmetic and the no-flip conclusion unchanged).
+- **The OPEN "re-recommend vulkan?" question (README roadmap) is
+  restated BOTH ways honestly, not decided:** FOR — the warm band is
+  now 4 consistent sessions and overnight persistence is proven;
+  AGAINST — the s3 trigger is MORE mysterious (cache ruled out),
+  P(vk-specific slow state) is unquantified, and aggregate/TTFT stay
+  hip-favored.
+- **Surfaces updated:** the vulkan mtp-c1 ruling note
+  (`configs/benchmark-verdicts.json`), the generated README blocks +
+  [`docs/results/benchmark.md`](docs/results/benchmark.md) variance
+  statements (both texts visible with supersession markers),
+  [`docs/adaptation.md`](docs/adaptation.md) §Vulkan (variance
+  paragraph rewritten to the four-part decomposition; warm/cold table
+  gains s5+s6 rows), the quickstart header comment (echo/boot logic
+  byte-identical), README current-release + roadmap. `CITATION.cff`
+  0.1.7. Tests: the anchor tally extends to 19/19 across s1–s6 (20/20
+  with the soak); a new test recomputes the 4-session band, the s5/s6
+  pairings, the overnight-persistence facts (cache before==after on the
+  s6 vk receipt), and the common-mode deltas from the loader; the
+  quickstart-mapping test still asserts vulkan NOT recommended.
+
 ## v0.1.6 — 2026-08-19
 
 Variance root-cause release (R2): the session-4 controlled runs
