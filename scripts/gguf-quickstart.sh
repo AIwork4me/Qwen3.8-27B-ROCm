@@ -17,18 +17,22 @@
 #                             see configs/validated-stack.json
 #                             llama_cpp_vulkan.mtp_depth; upstream default 3)
 #   BACKEND=<hip|vulkan>      llama.cpp build to serve. DEFAULT hip (build-714,
-#                             unchanged). vulkan = build-714-vk — the
-#                             RECOMMENDED OPT-IN for best single-stream tok/s
-#                             (project ruling 2026-08-18: vulkan mtp-c1 16.0
-#                             vs hip 13.0 tok/s, anchors clean 6/6; build via
-#                             scripts/06-build-llama-vulkan.sh). Backed by two
-#                             independent measurement sessions (2026-08-18,
-#                             hours apart, independent server boots) + a
-#                             30-min sustained soak (108 cycles, -2.6% settle;
-#                             docs/results/matrix-714/stability/). Still
-#                             experimental — single host (gfx1151), one ICD
-#                             (RADV 25.2.8): see benchmark verdicts before
-#                             relying on it.
+#                             unchanged) — hip WITH_MTP=1 is BOTH the default
+#                             and the recommended path. vulkan = build-714-vk —
+#                             an AVAILABLE experimental opt-in, NOT
+#                             recommended (project ruling 2026-08-19 supersedes
+#                             the 2026-08-18 promotion, which rested on a
+#                             mixed-depth pairing: the clean depth-1 same-day
+#                             pairing measures vulkan 14.53 vs hip 13.86 tok/s
+#                             = +4.81% single-stream, aggregate basis
+#                             hip 10.74 vs vulkan 9.31 tok/s = -13.31%;
+#                             cross-day re-runs dropped every vulkan cell, up
+#                             to -23.49% — cause not recorded, no clock/
+#                             thermal telemetry in the receipts; build via
+#                             scripts/06-build-llama-vulkan.sh; evidence:
+#                             docs/results/matrix-714/stability/ and the
+#                             benchmark verdicts). Experimental — single host
+#                             (gfx1151), one ICD (RADV 25.2.8).
 #   WITH_MMPROJ=0             skip the vision projector even when present
 #   VERIFY_GGUF=1             full SHA256 re-verification before serving (~1 min)
 #   EXTRA_ARGS='...'          extra llama-server flags appended verbatim
@@ -89,15 +93,18 @@ done
 
 MANIFEST="configs/artifact-manifest.json"
 STACK="configs/validated-stack.json"
-# Backend selection: hip (the validated default, unchanged) or an explicit
-# Vulkan opt-in. Project ruling 2026-08-18 (v0.1.2): Vulkan is the
-# recommended OPT-IN for best single-stream tok/s (mtp-c1 16.0 vs hip 13.0
-# tok/s, anchors clean 6/6) — the default stays hip: the pre-registered
-# flip rule requires >25% AND stability, and the session-2 headline
-# (16.25 vs 13.00 tok/s) is exactly +25.0%, not >25%, and still
-# mixed-depth (arithmetic recorded in the verdicts; v0.1.3). Limits:
-# single host (gfx1151), one ICD (RADV 25.2.8). LLAMA_SERVER remains the
-# top-level override.
+# Backend selection: hip (the validated default AND the recommended path,
+# unchanged) or an explicit Vulkan opt-in. Project ruling 2026-08-19
+# (v0.1.4) SUPERSEDES the 2026-08-18 promotion: the clean depth-1 same-day
+# pairing (session 3, both backends explicit --spec-draft-n-max 1) is
+# vulkan 14.53 vs hip 13.86 tok/s = +4.81% single-stream, the aggregate
+# basis flips to -13.31% (vulkan TTFT 9.94-12.21 s vs 8.36-8.83 s on
+# 08-18), and the cross-day re-runs dropped every vulkan cell (spreads to
+# 30.70%) — so BACKEND=vulkan is an AVAILABLE experimental opt-in, NOT a
+# recommendation; hip WITH_MTP=1 is the recommended path. No-flip closed:
+# +4.81% << the >25% flip threshold (arithmetic recorded in the verdicts;
+# docs/results/matrix-714/stability/). Limits: single host (gfx1151), one
+# ICD (RADV 25.2.8). LLAMA_SERVER remains the top-level override.
 BACKEND="${BACKEND:-hip}"
 case "$BACKEND" in
     hip)    SERVER="${LLAMA_SERVER:-$ROOT/third_party/llama.cpp/build-714/bin/llama-server}"
@@ -239,10 +246,10 @@ fi
 
 echo "llama-server : $SERVER ($("$SERVER" --version 2>&1 | head -n1))"
 if [ "$BACKEND" = "vulkan" ]; then
-    echo "backend      : $BACKEND (RECOMMENDED OPT-IN for best single-stream tok/s — 16.0 vs 13.0 tok/s with WITH_MTP=1, mixed-depth pairing — see benchmark verdicts for the same-depth +19.5%; project ruling 2026-08-18. Two independent measurement sessions (2026-08-18, independent boots) + 30-min soak (108 cycles, -2.6% settle). Still experimental: single host (gfx1151), one ICD (RADV 25.2.8) — see benchmark verdicts)"
+    echo "backend      : $BACKEND (AVAILABLE experimental opt-in — NOT recommended; project ruling 2026-08-19 supersedes the 2026-08-18 promotion: the clean depth-1 same-day pairing is 14.53 vs 13.86 tok/s = +4.81% single-stream, aggregate basis -13.31%; cross-day re-runs dropped every vulkan cell — see benchmark verdicts and docs/results/matrix-714/stability/)"
 else
-    echo "backend      : $BACKEND (default, unchanged)"
-    echo "tip (opt-in) : for best single-stream tok/s run: BACKEND=vulkan WITH_MTP=1 bash scripts/gguf-quickstart.sh  # 16.0 tok/s (build first: scripts/06-build-llama-vulkan.sh; experimental — see benchmark verdicts)"
+    echo "backend      : $BACKEND (default AND recommended path — run WITH_MTP=1 for the recommended interactive config, 13.0 tok/s per stream)"
+    echo "note (opt-in): BACKEND=vulkan exists as an experimental opt-in, not a recommendation (downgraded 2026-08-19; clean d1 pairing +4.81% vs hip, aggregate -13.31% — evidence: benchmark verdicts, docs/results/matrix-714/stability/)"
 fi
 echo "model        : $MODEL_PATH ($(du -h "$MODEL_PATH" | cut -f1))"
 echo "ctx-size     : $CTX_SIZE  (override: CTX_SIZE=<n>)"

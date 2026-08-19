@@ -40,6 +40,22 @@ docs/results/matrix-714/stability/ — receipts-only, never matrix cells),
 and the no-flip arithmetic is recorded in the note so the session-2
 headline (+25.0% exactly) is never misread as the >25% default-flip
 trigger. Wording upgrade ONLY: no verdict, metric, or default changes.
+
+2026-08-19 evidence integration S5 (v0.1.4): the session-3 receipts
+(clean depth-1/depth-1 backend pairing + cross-day re-runs, same loader
+convention) SUPERSEDE the 2026-08-18 promotion basis — the hip side of the
+promoted pairing was depth-confounded. Dated supersession, not a silent
+rewrite: the vulkan mtp-c1 ruling note records ruling 2026-08-18
+(promotion, mixed-depth basis) SUPERSEDED BY ruling 2026-08-19 (clean d1
+pairing +4.81% single-stream, aggregate −13.31%, cross-day variance), both
+dates visible. The quickstart recommendation MAPPING is downgraded
+(vulkan: available experimental opt-in, not recommended; hip WITH_MTP=1 is
+both the default and the recommended path). Cell VERDICTS, metrics, and
+the 8/14/6 distribution are UNCHANGED — the mechanical verdicts from their
+own receipts stand; only the mapping-layer prose changed. The pit finding
+(vulkan anchor-clean) is unaffected and stays stated. The host-level cause
+of the vulkan cross-day drop is NOT recorded — receipts carry VRAM/GTT
+only, no clock/thermal telemetry (stated honestly; known harness debt).
 """
 
 from __future__ import annotations
@@ -63,8 +79,13 @@ FLOOR_CAUTION_BAND_TOK_S = 8.0
 REGRESSION_TOLERANCE = 0.05
 
 LEGACY_REVIEW_DATE = "2026-08-17"  # the frozen review of the 20 migrated cells
-CONTROLLER_REVIEW_DATE = "2026-08-18"  # v0.1.2 review; produced this file state
-REVIEWED_BY = f"controller-{CONTROLLER_REVIEW_DATE}"
+CONTROLLER_REVIEW_DATE = "2026-08-18"  # v0.1.2 mechanical review of the 8 new cells
+# v0.1.4 (S5, 2026-08-19): the clean-pairing supersession ruling is the
+# latest ruling of record and produced THIS file state — the top-level
+# attribution follows it, while the 8 v0.1.2 cells keep their own
+# per-cell controller-2026-08-18 mechanical-review record (unchanged).
+MAPPING_RULING_DATE = "2026-08-19"
+REVIEWED_BY = f"controller-{MAPPING_RULING_DATE}"
 
 
 def parse_cell_id(cid: str) -> dict:
@@ -361,6 +382,25 @@ def quickstart_c4_caveat(all_metrics: dict | None,
 # still mixed-depth — the clean same-depth d4 pairing on session-2 numbers
 # is 15.25 vs 12.76 tok/s, +19.5%. That arithmetic is quoted in the ruling
 # note below so nobody misreads +25.0% as a trigger.
+#
+# v0.1.4 SUPERSESSION (2026-08-19, S5 — DECIDED, recorded, not
+# re-deliberated): session 3 measured the CLEAN depth-1 pairing both sides
+# explicit (hip mtp-c1 --spec-draft-n-max 1 + the 3 vulkan c1 re-runs,
+# next UTC day). Result: vulkan 14.53 vs hip 13.86 tok/s = +4.81%
+# single-stream (exact basis; the 2026-08-18 promotion basis was the
+# MIXED-DEPTH +23.1% headline — vulkan d1 vs hip IMPLICIT d3, a
+# depth-confounded hip side), aggregate basis hip 10.74 vs vulkan 9.31 =
+# -13.31% (TTFT-driven), and the vulkan cells show cross-day variance up
+# to a 30.70% spread while hip is same-session stable. Ruling:
+# quickstart guidance downgrades BACKEND=vulkan from "RECOMMENDED OPT-IN"
+# to an AVAILABLE experimental opt-in (mechanism + experimental framing
+# kept, recommendation language dropped); hip WITH_MTP=1 is BOTH the
+# default AND the recommended path. No-flip closed on the clean basis:
+# +4.81% << the >25% threshold. Corpus cell verdicts and the 8/14/6
+# distribution UNCHANGED (mechanical verdicts from their own receipts
+# stand); the pit finding (vulkan anchor-clean) is unaffected and stays
+# stated. Cause of the vulkan cross-day drop NOT recorded (VRAM/GTT only
+# in the receipts — no clock/thermal telemetry; known harness debt).
 V012_REVIEWED_BY = "controller-2026-08-18"
 V012_CELLS = frozenset({
     "gguf-vulkan-udq4kxl-auto-base-c1-ctx131072",
@@ -390,6 +430,12 @@ CROSS_DEPTH_CAVEAT = ("the hip mtp-c1 receipt (2026-08-17; receipt "
                       "mtp_depth.note)")
 
 
+def _pct2(this: float, other: float) -> str:
+    """2dp exact-basis pct — the convention the committed stability README
+    uses for the cross-day deltas (−3.35% must not 1dp-round to −3.3%)."""
+    return f"{(this / other - 1) * 100:+.2f}%"
+
+
 def _pct(this: float, other: float) -> str:
     return f"{(this / other - 1) * 100:+.1f}%"
 
@@ -402,14 +448,26 @@ def _pct(this: float, other: float) -> str:
 # them — so they are loaded here and interpolated with the same
 # never-drift convention as the cells (moved/edited receipts fail the
 # regen loudly instead of letting the prose drift).
+#
+# S5 (v0.1.4, 2026-08-19): the loader extends to the session-3 receipts
+# (session3-2026-08-19/ — the 4th receipt there is hip mtp-c1 with EXPLICIT
+# depth 1, the depth-matched pairing side) and computes the clean d1/d1
+# pairing, the cross-day deltas/spreads, the aggregate flip, the TTFT
+# observation, and the cross-session anchor tally the v0.1.4 supersession
+# note quotes. Same fail-loud convention: a moved/edited session-3 receipt
+# breaks the regen, never the prose.
 STABILITY_DIR = ROOT / "docs" / "results" / "matrix-714" / "stability"
 SESSION2_DIR = STABILITY_DIR / "session2-2026-08-18"
+SESSION3_DIR = STABILITY_DIR / "session3-2026-08-19"
 STABILITY_POINTER = "docs/results/matrix-714/stability/"
 STABILITY_CELLS = (
     "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072",
     "gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072",
     "gguf-vulkan-udq4kxl-auto-base-c1-ctx131072",
 )
+VULKAN_MTP1_ID = "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"
+HIP_MTP1_ID = "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072"
+HIP_MTP1_S3 = HIP_MTP1_ID  # session-3 receipt name == the corpus cell id
 
 
 def _c1_stream_tok_s(cell: dict) -> float:
@@ -420,6 +478,14 @@ def _c1_stream_tok_s(cell: dict) -> float:
                if s.get("ok") and s.get("tpot_ms") and s["tpot_ms"] > 0
                and (s.get("completion_tokens") or 0) >= 2]
     return statistics.median(1000.0 / s["tpot_ms"] for s in healthy)
+
+
+def _c1_ttft_s(cell: dict) -> float:
+    """Exact (unrounded) TTFT seconds of a c1 cell's ok stream (the v0.1.4
+    TTFT observation: session-3 vulkan TTFT vs the 2026-08-18 sessions)."""
+    ttfts = [s["ttft_ms"] for s in cell["client"]["streams"]
+             if s.get("ok") and s.get("ttft_ms") is not None]
+    return statistics.median(ttfts) / 1000.0
 
 
 def _load_stability_evidence() -> dict:
@@ -447,6 +513,97 @@ def _load_stability_evidence() -> dict:
         "second_half_2dp": round(second, 2),
         "settle_pct": round((second / first - 1) * 100, 1),
     }
+
+    # ---- session 3 (2026-08-19): cross-day re-runs + the clean d1 pairing
+    s3_cells = {}
+    for cid in STABILITY_CELLS:
+        c3 = json.loads((SESSION3_DIR / f"{cid}.json").read_text())
+        s3_cells[cid] = {
+            "s3": _c1_stream_tok_s(c3),
+            "s3_2dp": round(_c1_stream_tok_s(c3), 2),
+            "agg_2dp": round(c3["client"]["aggregate"]["tok_per_s"], 2),
+            "ttft_s_2dp": round(_c1_ttft_s(c3), 2),
+            "anchor_ok": bool(c3.get("anchor", {}).get("ok")),
+        }
+    hip3 = json.loads((SESSION3_DIR / f"{HIP_MTP1_S3}.json").read_text())
+    hip3_v = _c1_stream_tok_s(hip3)
+    hip1_corpus = json.loads((CELLS_DIR / f"{HIP_MTP1_ID}.json").read_text())
+    hip1_corpus_v = _c1_stream_tok_s(hip1_corpus)
+    ev["session3"] = {
+        "hip_mtp1": {
+            "s3": hip3_v, "s3_2dp": round(hip3_v, 2),
+            "agg_2dp": round(hip3["client"]["aggregate"]["tok_per_s"], 2),
+            "ttft_s_2dp": round(_c1_ttft_s(hip3), 2),
+            "anchor_ok": bool(hip3.get("anchor", {}).get("ok")),
+            # corpus 2026-08-16 receipt: implicit depth 3, TTFT historical.
+            # The d1-vs-implicit-d3 delta is exact-basis, 2dp display
+            # (+6.61%, matching the committed stability README) —
+            # day-confounded, and always labeled as such where quoted.
+            "corpus_2dp": round(hip1_corpus_v, 2),
+            "corpus_ttft_s_2dp": round(_c1_ttft_s(hip1_corpus), 2),
+            "corpus_delta_pct": _pct2(hip3_v, hip1_corpus_v),
+        },
+        "cells": s3_cells,
+    }
+
+    # Cross-day variance: s3 vs s1/s2 + the max spread over the three
+    # exact session medians (both exact-basis, 2dp display — the committed
+    # stability README convention).
+    ev["crossday"] = {}
+    for cid in STABILITY_CELLS:
+        e = ev["cells"][cid]
+        vals = (e["s1"], e["s2"], s3_cells[cid]["s3"])
+        ev["crossday"][cid] = {
+            "vs_s1_pct": _pct2(s3_cells[cid]["s3"], e["s1"]),
+            "vs_s2_pct": _pct2(s3_cells[cid]["s3"], e["s2"]),
+            "spread_pct": round((max(vals) / min(vals) - 1) * 100, 2),
+        }
+
+    # The clean d1/d1 pairing (both sides explicit depth 1, same session,
+    # same pin/model/prompts/harness): single-stream AND aggregate basis.
+    vk3 = s3_cells[VULKAN_MTP1_ID]
+    hip3m = ev["session3"]["hip_mtp1"]
+    ev["clean_pairing"] = {
+        "date": "2026-08-19",
+        "vk_2dp": vk3["s3_2dp"], "hip_2dp": hip3m["s3_2dp"],
+        "gap_2dp": round(vk3["s3"] - hip3_v, 2),
+        "pct_2dp": f"{(vk3['s3'] / hip3_v - 1) * 100:+.2f}%",
+        "vk": vk3["s3"], "hip": hip3_v,          # exact, for assertions
+        "vk_agg_2dp": vk3["agg_2dp"], "hip_agg_2dp": hip3m["agg_2dp"],
+        "agg_pct_2dp": f"{(vk3['agg_2dp'] / hip3m['agg_2dp'] - 1) * 100:+.2f}%",
+    }
+
+    # TTFT observation (aggregate flip is TTFT-driven): vulkan s3 range vs
+    # the 2026-08-18 sessions' range, and hip s3 vs its corpus receipt.
+    vk_ttfts_12 = [
+        _c1_ttft_s(json.loads(path.read_text()))
+        for path in [*(CELLS_DIR / f"{cid}.json" for cid in STABILITY_CELLS),
+                     *(SESSION2_DIR / f"{cid}.json" for cid in STABILITY_CELLS)]]
+    vk_ttfts_3 = [s3_cells[cid]["ttft_s_2dp"] for cid in STABILITY_CELLS]
+    ev["ttft"] = {
+        "vk_s12_range": (round(min(vk_ttfts_12), 2), round(max(vk_ttfts_12), 2)),
+        "vk_s3_range": (min(vk_ttfts_3), max(vk_ttfts_3)),
+        "hip_s3_2dp": hip3m["ttft_s_2dp"],
+        "hip_corpus_2dp": hip3m["corpus_ttft_s_2dp"],
+    }
+
+    # Cross-session anchor tally: the re-measured cell runs s1/s2/s3 (3+3+4
+    # receipts) plus the soak's post-load anchor — the "pit does NOT
+    # reproduce on vulkan" evidence the supersession note restates.
+    cell_runs = [json.loads((CELLS_DIR / f"{cid}.json").read_text())
+                 for cid in STABILITY_CELLS]
+    cell_runs += [json.loads((SESSION2_DIR / f"{cid}.json").read_text())
+                  for cid in STABILITY_CELLS]
+    cell_runs += [hip3] + [json.loads((SESSION3_DIR / f"{cid}.json").read_text())
+                           for cid in STABILITY_CELLS]
+    ev["anchors"] = {
+        "cell_runs_ok": sum(1 for c in cell_runs
+                            if c.get("anchor", {}).get("ok")),
+        "cell_runs_total": len(cell_runs),
+        "with_soak_ok": sum(1 for c in cell_runs if c.get("anchor", {}).get("ok"))
+        + (1 if soak.get("anchor", {}).get("ok") else 0),
+        "with_soak_total": len(cell_runs) + 1,
+    }
     return ev
 
 
@@ -456,9 +613,10 @@ _STABILITY_EVIDENCE: dict | None = None
 def stability_evidence() -> dict:
     """Memoized stability-evidence loader (lazy — importing this module,
     e.g. from the tests, must stay side-effect-free). Missing receipts
-    raise FileNotFoundError on purpose: the v0.1.3 ruling note quotes this
-    evidence, so regenerating without it must fail loudly rather than
-    silently regress to pre-v0.1.3 wording."""
+    raise FileNotFoundError on purpose: the v0.1.3/v0.1.4 ruling notes
+    quote this evidence, so regenerating without it must fail loudly
+    rather than silently regress to pre-v0.1.3/v0.1.4 wording. Covers
+    session 2 (+ soak) since v0.1.3 and session 3 since v0.1.4."""
     global _STABILITY_EVIDENCE
     if _STABILITY_EVIDENCE is None:
         _STABILITY_EVIDENCE = _load_stability_evidence()
@@ -467,8 +625,9 @@ def stability_evidence() -> dict:
 
 def v012_ruling_note(cid: str, all_metrics: dict | None,
                      unified_cell: dict | None = None) -> str | None:
-    """Per-cell controller-2026-08-18 review/ruling prose. Numbers are
-    interpolated from the raw-cell metrics so the notes can never drift
+    """Controller ruling-layer prose (v0.1.2 review; v0.1.4 supersession on
+    the vulkan mtp-c1 mapping cell). Numbers are interpolated from the
+    raw-cell metrics + stability receipts so the notes can never drift
     from the receipts (same convention as the review prose above)."""
     if cid not in V012_CELLS or not all_metrics:
         return None
@@ -492,56 +651,86 @@ def v012_ruling_note(cid: str, all_metrics: dict | None,
     if cid == "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072":
         ev = stability_evidence()
         c1 = ev["cells"]
+        s3 = ev["session3"]["cells"]
+        hip3 = ev["session3"]["hip_mtp1"]
+        cp = ev["clean_pairing"]
+        cd = ev["crossday"]
+        an = ev["anchors"]
+        tf = ev["ttft"]
         m1 = c1["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]
         m4 = c1["gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072"]
         b1 = c1["gguf-vulkan-udq4kxl-auto-base-c1-ctx131072"]
-        soak = ev["soak"]
-        hip1_2dp = round(hip_mtp1["per_stream_tok_s_median"], 2)
-        hip4_2dp = round(hip_mtp41["per_stream_tok_s_median"], 2)
-        # The no-flip arithmetic uses the corpus 2dp convention (the same
-        # numbers every surface prints): 16.25 vs 13.00 is EXACTLY +25.0%.
-        headline2 = f"{(m1['s2_2dp'] / hip1_2dp - 1) * 100:+.1f}%"
-        same_depth2 = f"{(m4['s2_2dp'] / hip4_2dp - 1) * 100:+.1f}%"
-        return (f"Controller ruling 2026-08-18 (v0.1.2, plan outcome (a) — "
-                f"pre-registered rule triggered; stability wording upgraded "
-                f"same day, v0.1.3): promoted in the gguf-quickstart echo "
-                f"as the recommended OPT-IN for best single-stream tok/s "
-                f"({fmt(vk_mtp1['per_stream_tok_s_median'])} vs hip mtp-c1 "
-                f"{fmt(hip_mtp1['per_stream_tok_s_median'])} tok/s, "
-                f"{headline}); the quickstart DEFAULT stays hip and the "
-                f"'experimental, see verdicts' label is kept. Stability "
-                f"evidence ({ev['pointer']}): two independent measurement "
-                f"sessions (2026-08-18, hours apart, independent server "
-                f"boots) + 30-min sustained soak ({soak['cycles']} cycles, "
-                f"{soak['settle_pct']:+.1f}% settle) — session-2 reproduced "
-                f"every c1 cell (mtp {m1['s1_2dp']:.2f}→{m1['s2_2dp']:.2f} "
-                f"{m1['delta_pct']}, mtp4 {m4['s1_2dp']:.2f}→"
-                f"{m4['s2_2dp']:.2f} {m4['delta_pct']}, base "
-                f"{b1['s1_2dp']:.2f}→{b1['s2_2dp']:.2f} {b1['delta_pct']}), "
-                f"soak {soak['ok_cycles']}/{soak['cycles']} cycles clean "
-                f"with zero health flaps and a clean post-soak anchor, "
-                f"anchors 7/7 across all runs; remaining limits unchanged: "
-                f"single host (gfx1151), single ICD (RADV 25.2.8), same-day "
-                f"sessions, boot-per-cell — the soak covers sustained load "
-                f"only. NO default flip, read the arithmetic (recorded so "
-                f"{headline2} is never misread as a trigger): the "
-                f"pre-registered flip rule requires >25% AND stability — "
-                f"the session-2 headline {m1['s2_2dp']:.2f} vs hip "
-                f"{hip1_2dp:.2f} tok/s is exactly {headline2} (NOT >25%), "
-                f"and the headline is still MIXED-DEPTH; the clean "
-                f"same-depth d4 pairing on session-2 numbers is "
-                f"{m4['s2_2dp']:.2f} vs {hip4_2dp:.2f} tok/s, "
-                f"{same_depth2}. Cross-depth caveat: the {headline} "
-                f"headline is MIXED-DEPTH — {CROSS_DEPTH_CAVEAT}; the clean "
-                f"same-depth cross-backend pairing is depth 4 — vulkan mtp4 "
-                f"{fmt(vk_mtp41['per_stream_tok_s_median'])} vs hip mtp4 "
-                f"{fmt(hip_mtp41['per_stream_tok_s_median'])} tok/s "
-                f"({same_depth}, both explicit depth 4, same day). "
-                f"Anchor-clean trigger met ({n_ok}-of-{n_vk} vulkan anchors "
-                f"byte-identical — the hip greedy pit does not reproduce on "
-                f"this backend). mtp (depth 1) stays the recommended "
-                f"variant: depth 4 never beats it on either backend.")
+        m1d = cd["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]
+        m4d = cd["gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072"]
+        b1d = cd["gguf-vulkan-udq4kxl-auto-base-c1-ctx131072"]
+        clean_gap_pct = (cp["vk"] / cp["hip"] - 1) * 100.0
+        return (f"Controller ruling {MAPPING_RULING_DATE} (v0.1.4) "
+                f"SUPERSEDES the controller ruling 2026-08-18 (the v0.1.2 "
+                f"promotion + the v0.1.3 two-session/soak wording; both "
+                f"preserved in CHANGELOG.md): the promotion rested on a "
+                f"MIXED-DEPTH headline — vulkan d1 "
+                f"{fmt(vk_mtp1['per_stream_tok_s_median'], 2)} vs hip "
+                f"implicit-d3 {fmt(hip_mtp1['per_stream_tok_s_median'], 2)} "
+                f"tok/s ({headline}, cross-depth caveat: "
+                f"{CROSS_DEPTH_CAVEAT}) — the hip side of that pairing was "
+                f"depth-confounded. The CLEAN same-day d1/d1 pairing "
+                f"(session 3, {cp['date']}: both backends explicit "
+                f"--spec-draft-n-max 1, same pin/model/prompts/harness; "
+                f"receipts {ev['pointer']}session3-{cp['date']}/) measures "
+                f"vulkan {cp['vk_2dp']:.2f} vs hip {cp['hip_2dp']:.2f} "
+                f"tok/s = {cp['pct_2dp']} single-stream median (gap "
+                f"+{cp['gap_2dp']:.2f}), and the AGGREGATE basis flips: "
+                f"hip {cp['hip_agg_2dp']:.2f} vs vulkan "
+                f"{cp['vk_agg_2dp']:.2f} tok/s ({cp['agg_pct_2dp']}, "
+                f"TTFT-driven — vulkan TTFT {tf['vk_s3_range'][0]:.2f}–"
+                f"{tf['vk_s3_range'][1]:.2f} s this session vs "
+                f"{tf['vk_s12_range'][0]:.2f}–{tf['vk_s12_range'][1]:.2f} s "
+                f"across the 2026-08-18 sessions; hip TTFT "
+                f"{tf['hip_s3_2dp']:.2f} s this session vs "
+                f"{tf['hip_corpus_2dp']:.2f} s on its corpus receipt). "
+                f"Cross-day variance (s3 {cp['date']} vs s1/s2 2026-08-18, "
+                f"same cells): mtp {m1['s1_2dp']:.2f}/{m1['s2_2dp']:.2f}→"
+                f"{s3['gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072']['s3_2dp']:.2f} "
+                f"({m1d['vs_s1_pct']}/{m1d['vs_s2_pct']}, max spread "
+                f"{m1d['spread_pct']:.2f}%), mtp4 {m4['s1_2dp']:.2f}/"
+                f"{m4['s2_2dp']:.2f}→"
+                f"{s3['gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072']['s3_2dp']:.2f} "
+                f"({m4d['vs_s1_pct']}/{m4d['vs_s2_pct']}, spread "
+                f"{m4d['spread_pct']:.2f}%), base {b1['s1_2dp']:.2f}/"
+                f"{b1['s2_2dp']:.2f}→"
+                f"{s3['gguf-vulkan-udq4kxl-auto-base-c1-ctx131072']['s3_2dp']:.2f} "
+                f"({b1d['vs_s1_pct']}/{b1d['vs_s2_pct']}, spread "
+                f"{b1d['spread_pct']:.2f}%); hip is same-session stable "
+                f"(d1 {cp['hip_2dp']:.2f} vs implicit-d3 "
+                f"{hip3['corpus_2dp']:.2f} tok/s = "
+                f"{hip3['corpus_delta_pct']} is DAY-confounded — labeled, "
+                f"not a depth claim). The host-level cause of the vulkan "
+                f"cross-day drop is NOT recorded — the receipts carry "
+                f"VRAM/GTT only, no clock/thermal telemetry (known harness "
+                f"debt). MAPPING, per the {MAPPING_RULING_DATE} ruling: the "
+                f"quickstart downgrades BACKEND=vulkan from 'recommended "
+                f"opt-in' to an AVAILABLE experimental opt-in (mechanism "
+                f"unchanged, 'experimental, see verdicts/stability' framing "
+                f"kept — no recommendation language), and hip WITH_MTP=1 is "
+                f"BOTH the default backend AND the recommended path; this "
+                f"cell's MECHANICAL verdict (recommended) is unchanged — "
+                f"what changed is the quickstart recommendation-mapping "
+                f"layer. No-flip closed on the clean basis, arithmetic "
+                f"recorded: {cp['vk_2dp']:.2f} vs {cp['hip_2dp']:.2f} "
+                f"tok/s is {cp['pct_2dp']} << the >25% pre-registered flip "
+                f"threshold (the mixed-depth {headline} and the "
+                f"exactly-+25.0% session-2 headline the v0.1.3 note guarded "
+                f"are both superseded by this clean pairing). Unaffected "
+                f"findings, restated: the greedy pit still does NOT "
+                f"reproduce on vulkan — cell-run anchors "
+                f"{an['cell_runs_ok']}/{an['cell_runs_total']} clean "
+                f"across s1/s2/s3 ({an['with_soak_ok']}/{an['with_soak_total']} "
+                f"with the soak anchor); depth 1 still beats depth 4 on "
+                f"both backends (mtp stays the recommended variant, no "
+                f"mtp4 recommendation; clean-gap exact basis "
+                f"{clean_gap_pct:+.2f}%).")
     if cid == "gguf-vulkan-udq4kxl-auto-base-c1-ctx131072":
+        cp = stability_evidence()["clean_pairing"]
         return (f"Controller review 2026-08-18: mechanical verdict confirmed, "
                 f"no override. Backend alone is a small c1 delta — "
                 f"{fmt(vk_base1['per_stream_tok_s_median'])} vs hip "
@@ -550,8 +739,11 @@ def v012_ruling_note(cid: str, all_metrics: dict | None,
                 f"— the AMD 24.5 tok/s Day-0 anchor gap is not a pure "
                 f"backend effect; the biggest single-stream lever measured on "
                 f"this host is Vulkan+MTP "
-                f"({fmt(vk_mtp1['per_stream_tok_s_median'])} tok/s, the "
-                f"recommended opt-in). {n_ok}-of-{n_vk} vulkan anchors clean "
+                f"({fmt(vk_mtp1['per_stream_tok_s_median'])} tok/s in this "
+                f"v0.1.2 cell) — downgraded {MAPPING_RULING_DATE} from "
+                f"recommended to an AVAILABLE experimental opt-in (see the "
+                f"mtp-c1 supersession note: the clean d1 pairing is "
+                f"{cp['pct_2dp']}). {n_ok}-of-{n_vk} vulkan anchors clean "
                 f"— the hip greedy pit does not reproduce on this backend.")
     if cid == "gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072":
         return (f"Controller review 2026-08-18: depth 4 does NOT beat depth 1 "
@@ -951,7 +1143,7 @@ def build_verdicts(root: Path = ROOT) -> dict:
     # (additionalProperties: false) — provenance stays in this generator's
     # docstring and in the rendered docs, not in the JSON.
     return {
-        "checked_at": CONTROLLER_REVIEW_DATE,
+        "checked_at": MAPPING_RULING_DATE,
         "reviewed_by": REVIEWED_BY,
         "cells": out_cells,
     }

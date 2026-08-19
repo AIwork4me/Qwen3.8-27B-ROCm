@@ -16,11 +16,13 @@ Three guarantees under test, all CPU-safe:
    config the user-facing scripts reference by default maps to the verdict
    the controller ruling of 2026-08-17 recorded — gguf defaults + WITH_MTP
    recommended; vllm serve confs caution WITH non-empty conditions — and,
-   since the controller ruling of 2026-08-18 (v0.1.2), the BACKEND=vulkan
-   opt-in maps to a recommended, anchor-clean cell while the DEFAULT stays
-   hip. If a future measurement changes that, this test fails and the
-   controller must either change the quickstart default or record a new
-   justified ruling.
+   since the controller ruling of 2026-08-19 (v0.1.4, SUPERSEDING the
+   2026-08-18 promotion on the clean d1 pairing), the BACKEND=vulkan
+   opt-in maps to an anchor-clean recommended CELL while being presented
+   as an AVAILABLE experimental opt-in, NOT a recommendation; the default
+   stays hip and hip WITH_MTP=1 is the recommended path. If a future
+   measurement changes that, this test fails and the controller must
+   either change the quickstart mapping or record a new justified ruling.
 """
 
 import importlib.util
@@ -435,10 +437,13 @@ def test_quickstart_configs_are_recommended():
     invalidates this mapping, this test FAILS and the controller must change
     the quickstart default or record a justified new ruling.
 
-    CONTROLLER RULING (2026-08-18, binding, v0.1.2): `BACKEND=vulkan` is the
-    recommended OPT-IN for best single-stream tok/s — the opt-in cell must
-    be recommended AND anchor-clean, while the default-boot cells stay hip
-    (the script's BACKEND default is pinned by test_gguf_quickstart_ux.py).
+    CONTROLLER RULING (2026-08-19, binding, v0.1.4 — SUPERSEDES the
+    2026-08-18 promotion): hip WITH_MTP=1 is BOTH the default backend's
+    recommended path AND the quickstart recommendation; `BACKEND=vulkan`
+    remains an available EXPERIMENTAL opt-in — its CELL verdict stays
+    `recommended` (mechanical, unchanged, anchor-clean), but the quickstart
+    must NOT recommend it (the clean d1 pairing is +4.81%, aggregate
+    −13.31%; the 2026-08-18 promotion basis was mixed-depth).
     """
     gguf, ctx, mtp_opt_in = quickstart_defaults()
     assert "UD-Q4_K_XL" in gguf, "quickstart default must stay the validated quant"
@@ -449,20 +454,33 @@ def test_quickstart_configs_are_recommended():
     cell = verdict_of("gguf-hip-udq4kxl-auto-base-c1-ctx131072")
     assert cell["verdict"] == "recommended"
 
-    # WITH_MTP=1 -> gguf mtp c1 @131072 must be recommended (13.0 tok/s).
+    # WITH_MTP=1 -> gguf mtp c1 @131072 must be recommended (13.0 tok/s) —
+    # the recommended path on the (hip) default backend.
     cell = verdict_of("gguf-hip-udq4kxl-auto-mtp-c1-ctx131072")
     assert cell["verdict"] == "recommended"
     assert cell["metrics"]["per_stream_tok_s_median"] > 13.0 - 0.05
+    src = QUICKSTART.read_text()
+    assert "default AND recommended path" in src, (
+        "the quickstart echo must name hip WITH_MTP=1 as the recommended "
+        "path (ruling 2026-08-19)")
 
-    # BACKEND=vulkan + WITH_MTP=1 (the 2026-08-18 recommended opt-in) ->
-    # the vulkan mtp c1 cell must be recommended and anchor-clean, and must
-    # beat the hip default recommendation it is promoted against.
+    # BACKEND=vulkan + WITH_MTP=1 -> the cell keeps its MECHANICAL verdict
+    # (recommended, anchor-clean), but the quickstart maps it as an
+    # AVAILABLE experimental opt-in, NOT a recommendation.
     vk = verdict_of("gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072")
-    assert vk["verdict"] == "recommended"
+    assert vk["verdict"] == "recommended"  # mechanical — unchanged by v0.1.4
     assert vk["metrics"]["anchor_ok"], (
-        "the promoted opt-in must be anchor-clean (ruling trigger)")
-    assert (vk["metrics"]["per_stream_tok_s_median"]
-            > cell["metrics"]["per_stream_tok_s_median"])
+        "the opt-in cell is anchor-clean (the pit does not reproduce on "
+        "vulkan — that finding stands)")
+    assert "AVAILABLE experimental opt-in" in src
+    assert "NOT recommended" in src
+    assert "RECOMMENDED OPT-IN" not in src and \
+        "recommended OPT-IN" not in src, (
+            "the 2026-08-18 promotion wording must be gone from the "
+            "quickstart (superseded 2026-08-19)")
+    assert "2026-08-19" in src and "2026-08-18" in src, (
+        "both ruling dates stay visible in the quickstart (dated "
+        "supersession, not a silent rewrite)")
 
     # vLLM serve confs -> the validated 262144 cells: caution WITH conditions
     # (the ruling above); never a bare pass, never avoid (the path is the
@@ -484,9 +502,52 @@ def test_quickstart_configs_are_recommended():
     assert cell.get("conditions", "").strip()
 
 
+def test_no_flip_closed_on_the_clean_pairing_arithmetic_v014():
+    """v0.1.4 (S5): the no-flip question is closed DECISIVELY on the clean
+    basis — the pre-registered flip rule needs >25%, and the clean d1/d1
+    pairing gap is +4.81% (exact basis from the session-3 receipts). The
+    arithmetic is recomputed here from stability_evidence() so the pinned
+    strings can never drift from the receipts."""
+    ev = gv.stability_evidence()
+    cp = ev["clean_pairing"]
+    assert cp["date"] == "2026-08-19"
+    assert cp["vk_2dp"] == 14.53 and cp["hip_2dp"] == 13.86
+    assert cp["gap_2dp"] == 0.67
+    # Exact-basis: (vk/hip - 1) * 100 rounds to +4.81 at 2dp — and is
+    # nowhere near the >25% flip threshold.
+    gap_pct = (cp["vk"] / cp["hip"] - 1) * 100
+    assert round(gap_pct, 2) == 4.81, (
+        f"clean-pairing gap must be +4.81% (exact basis), got {gap_pct:+.4f}%")
+    assert 4.81 < 25.0, "+4.81% << 25% — no-flip closed on the clean basis"
+    assert cp["pct_2dp"] == "+4.81%"
+    # The aggregate basis flips to −13.31% (hip leads).
+    assert cp["vk_agg_2dp"] == 9.31 and cp["hip_agg_2dp"] == 10.74
+    assert cp["agg_pct_2dp"] == "-13.31%"
+    # The cross-day variance the ruling cites (3 cells × spreads).
+    cd = ev["crossday"]
+    assert cd["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"] == {
+        "vs_s1_pct": "-9.21%", "vs_s2_pct": "-10.56%", "spread_pct": 11.81}
+    assert cd["gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072"] == {
+        "vs_s1_pct": "-22.49%", "vs_s2_pct": "-23.49%", "spread_pct": 30.70}
+    assert cd["gguf-vulkan-udq4kxl-auto-base-c1-ctx131072"] == {
+        "vs_s1_pct": "-3.35%", "vs_s2_pct": "-5.72%", "spread_pct": 6.07}
+    # Hip: same-session stable; the d1-vs-implicit-d3 delta is labeled
+    # day-confounded, never a depth claim.
+    hip = ev["session3"]["hip_mtp1"]
+    assert hip["s3_2dp"] == 13.86 and hip["corpus_2dp"] == 13.00
+    assert hip["corpus_delta_pct"] == "+6.61%"
+    # The TTFT observation behind the aggregate flip.
+    assert ev["ttft"]["vk_s3_range"] == (9.94, 12.21)
+    assert ev["ttft"]["vk_s12_range"] == (8.36, 8.83)
+    assert ev["ttft"]["hip_s3_2dp"] == 5.43 and ev["ttft"]["hip_corpus_2dp"] == 5.47
+    # The cross-session anchor tally (the pit non-reproduction stands).
+    assert ev["anchors"] == {"cell_runs_ok": 10, "cell_runs_total": 10,
+                             "with_soak_ok": 11, "with_soak_total": 11}
+
+
 def test_no_quickstart_referenced_config_is_avoid():
-    # 2026-08-18: the promoted BACKEND=vulkan opt-in joins the protected
-    # set — the recommended opt-in path must never be a pit/avoid cell.
+    # The BACKEND=vulkan opt-in stays in the protected set even downgraded —
+    # an available opt-in path must never be a pit/avoid cell.
     for cid in ("gguf-hip-udq4kxl-auto-base-c1-ctx131072",
                 "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072",
                 "gguf-vulkan-udq4kxl-auto-base-c1-ctx131072",
@@ -703,6 +764,13 @@ def test_declared_v012_cells_are_measured_and_verdicted():
 # rider is measured-with-caveat. Recorded per cell — metrics.reviewed_by
 # plus the ruling prose in each reason (the frozen 2026-08-17 review keeps
 # governing the 20 migrated cells, which carry no per-cell field).
+#
+# v0.1.4 (2026-08-19, S5): the quickstart mapping is SUPERSEDED — the clean
+# d1/d1 pairing (+4.81%, aggregate −13.31%, cross-day variance) removed the
+# recommendation basis: vulkan is an AVAILABLE experimental opt-in, hip
+# WITH_MTP=1 is both the default and the recommended path. The per-cell
+# review records and every mechanical verdict are UNCHANGED; the superseded
+# ruling stays visible (dated supersession, never a silent rewrite).
 
 V012_IDS = {
     "gguf-vulkan-udq4kxl-auto-base-c1-ctx131072",
@@ -730,102 +798,104 @@ def test_v012_cells_have_verdicts_and_the_ruling_recorded():
             f"{cid}: v0.1.2 cells are rule-correct, zero overrides")
         assert "2026-08-18" in cell["reason"], (
             f"{cid}: the ruling/review note is missing from the reason")
-    # Corpus attribution: the 2026-08-18 review produced this file state;
-    # exactly the 8 v0.1.2 cells carry a per-cell reviewed_by (the 20
-    # migrated cells stay governed by the frozen 2026-08-17 review).
-    assert v["reviewed_by"] == "controller-2026-08-18"
+    # Corpus attribution (updated v0.1.4): the 2026-08-19 supersession
+    # ruling is the ruling of record for THIS file state; exactly the 8
+    # v0.1.2 cells carry a per-cell reviewed_by (their MECHANICAL review —
+    # unchanged by the mapping-layer supersession), while the 20 migrated
+    # cells stay governed by the frozen controller-2026-08-17 review.
+    assert v["reviewed_by"] == "controller-2026-08-19"
+    assert v["checked_at"] == "2026-08-19"
     per_cell = [c for c in v["cells"] if c["metrics"].get("reviewed_by")]
     assert len(per_cell) == 8
 
 
-def test_ruling_vulkan_optin_trigger_and_default_stays_hip():
-    """The ruling is justified by the receipts AND recorded where it binds:
-    >=15% single-stream win, anchor-clean, quickstart opt-in promoted,
-    default hip unchanged, cross-depth caveat stated with the clean
-    same-depth pairing. Updated 2026-08-18 (v0.1.3, S2): the
-    'single-session' caveat is upgraded to the two-session + soak wording
-    with the evidence pointer — the default-stays-hip rationale now cites
-    the flip-rule arithmetic, not a single-session limitation."""
+def test_ruling_supersession_2026_08_19_recorded_and_quickstart_matches():
+    """The dated supersession is recorded where it binds AND the quickstart
+    matches it. Ruling 2026-08-18 (promotion, mixed-depth basis) SUPERSEDED
+    by ruling 2026-08-19 (clean-pairing basis) — both dates visible in the
+    generated note; the mapping: vulkan = available experimental opt-in,
+    hip WITH_MTP=1 = default AND recommended path; the pit non-reproduction
+    finding stands; the cross-day cause is honestly 'not recorded'."""
     by_id = {c["id"]: c for c in load(VERDICTS)["cells"]}
     vk = by_id["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]
-    hip = by_id["gguf-hip-udq4kxl-auto-mtp-c1-ctx131072"]
-    # Trigger: >=15% win AND anchor-clean (plan outcome (a)).
-    assert (vk["metrics"]["per_stream_tok_s_median"]
-            >= 1.15 * hip["metrics"]["per_stream_tok_s_median"]), (
-        "the opt-in promotion requires the >=15% trigger")
-    assert vk["metrics"]["anchor_ok"]
-    assert vk["verdict"] == "recommended"
-    # The recorded rationale on the promoted cell.
+    # Both dates visible in the supersession note (never a silent rewrite).
     r = vk["reason"]
-    assert "recommended OPT-IN" in r
-    assert "DEFAULT stays hip" in r
-    assert "two independent measurement sessions" in r
-    assert "docs/results/matrix-714/stability/" in r
-    assert "RADV 25.2.8" in r
-    assert "single-session" not in r
-    assert "MIXED-DEPTH" in r and "implicit --spec-draft-n-max default 3" in r
-    assert "depth 4" in r and "explicit depth 4" in r  # same-depth pairing
-    # The quickstart binds: opt-in promoted in the echo, DEFAULT unchanged.
+    assert "Controller ruling 2026-08-19" in r
+    assert "SUPERSEDES the controller ruling 2026-08-18" in r
+    # The clean-pairing basis, with numbers.
+    assert "14.53" in r and "13.86" in r and "+4.81%" in r
+    assert "10.74" in r and "9.31" in r and "-13.31%" in r
+    assert "depth-confounded" in r
+    # The cross-day variance and the honest telemetry gap.
+    assert "11.81%" in r and "30.70%" in r and "6.07%" in r
+    assert "NOT recorded" in r and "no clock/thermal telemetry" in r
+    # The mapping downgrade + the mechanical-verdict carve-out.
+    assert "AVAILABLE experimental opt-in" in r
+    assert "hip WITH_MTP=1 is BOTH the default backend AND the recommended path" in r
+    assert "MECHANICAL verdict (recommended) is unchanged" in r
+    # No-flip closed on the clean arithmetic.
+    assert "+4.81% << the >25% pre-registered flip threshold" in r
+    # The unaffected pit finding, restated.
+    assert "does NOT reproduce on vulkan" in r
+    assert "10/10" in r and "11/11" in r
+    # The mechanical verdicts stand (8/14/6 distribution unchanged).
+    assert vk["verdict"] == "recommended"
+    # The quickstart binds the same story: default hip, downgraded opt-in.
     src = QUICKSTART.read_text()
     assert 'BACKEND="${BACKEND:-hip}"' in src, "default must stay hip"
-    assert "RECOMMENDED OPT-IN" in src
-    assert "BACKEND=vulkan WITH_MTP=1" in src
-    assert "16.0" in src
+    assert "AVAILABLE experimental opt-in" in src
+    assert "NOT recommended" in src
+    assert "RECOMMENDED OPT-IN" not in src
+    assert "default AND recommended path" in src
+    assert "2026-08-19" in src and "2026-08-18" in src
 
 
 def test_ruling_no_flip_arithmetic_recorded_v013():
-    """v0.1.3 (S2): the two-session evidence upgraded the WORDING but did
-    NOT flip the default — and the arithmetic is recorded in the ruling
-    note so the session-2 headline (+25.0% exactly) is never misread as
-    the >25% flip trigger. The session-2/soak numbers interpolate from the
-    committed receipts via gen-verdicts.stability_evidence() (receipts-only:
-    they never enter the 28-cell matrix)."""
+    """v0.1.3 (S2) history note: the two-session evidence recorded the
+    no-flip arithmetic so the exactly-+25.0% session-2 headline was never
+    misread as the >25% flip trigger. v0.1.4 SUPERSEDES that guard with the
+    clean pairing (+4.81% — see
+    test_no_flip_closed_on_the_clean_pairing_arithmetic_v014); these pins
+    keep the session-2/soak evidence loading from the committed receipts
+    (receipts-only: they never enter the 28-cell matrix)."""
     ev = gv.stability_evidence()
     assert ev, ("stability receipts failed to load from "
                 "docs/results/matrix-714/stability/")
     by_id = {c["id"]: c for c in load(VERDICTS)["cells"]}
-    hip_mtp1 = by_id["gguf-hip-udq4kxl-auto-mtp-c1-ctx131072"][
-        "metrics"]["per_stream_tok_s_median"]
     hip_mtp4 = by_id["gguf-hip-udq4kxl-auto-mtp4-c1-ctx131072"][
         "metrics"]["per_stream_tok_s_median"]
     m1 = ev["cells"]["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]
     m4 = ev["cells"]["gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072"]
-    # The headline arithmetic itself, at the corpus 2dp convention:
-    # 16.25 vs 13.00 is EXACTLY +25.0% — i.e. NOT > 25% (the flip rule).
-    assert m1["s2_2dp"] == 16.25 and hip_mtp1 == 13.0
-    headline2 = (m1["s2_2dp"] / hip_mtp1 - 1) * 100
-    assert round(headline2, 1) == 25.0, (
-        f"session-2 headline must be exactly +25.0%, got {headline2:+.1f}%")
-    assert not headline2 > 25.0, "exactly +25.0% must never read as >25%"
-    # The clean same-depth d4 pairing: 15.25 vs 12.76 = +19.5%.
-    assert m4["s2_2dp"] == 15.25 and hip_mtp4 == 12.76
-    assert round((m4["s2_2dp"] / hip_mtp4 - 1) * 100, 1) == 19.5
-    # Session-2 reproduction deltas (exact-receipt basis): +1.5/+1.3/+2.5%.
+    # Session-2 evidence still loads with the same shape (the supersession
+    # note quotes the 16.25 headline it retires).
+    assert m1["s2_2dp"] == 16.25 and round(m1["s1"], 2) == 16.00
+    assert m4["s2_2dp"] == 15.25 and round(m4["s1"], 2) == 15.05
     assert m1["delta_pct"] == "+1.5%"
     assert m4["delta_pct"] == "+1.3%"
     assert ev["cells"]["gguf-vulkan-udq4kxl-auto-base-c1-ctx131072"][
         "delta_pct"] == "+2.5%"
-    # The soak stats the wording quotes: 108 cycles, -2.6% settle.
+    # The soak stats: 108 cycles, -2.6% settle.
     assert ev["soak"]["cycles"] == 108 and ev["soak"]["ok_cycles"] == 108
     assert ev["soak"]["settle_pct"] == -2.6
-    # All of it is recorded in the promoted cell's ruling note...
+    assert hip_mtp4 == 12.76
+    # The v0.1.4 supersession note references the retired guard inline.
     r = by_id["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]["reason"]
-    assert "exactly +25.0%" in r and "NOT >25%" in r
-    assert ">25% AND stability" in r
-    assert "MIXED-DEPTH" in r  # the caveat the headline still carries
-    assert "+19.5%" in r and "15.25 vs 12.76" in r
-    assert "108 cycles, -2.6% settle" in r
+    assert "exactly-+25.0% session-2 headline" in r
+    assert "superseded by this clean pairing" in r
     # ...and the default is still hip everywhere the quickstart binds.
     assert 'BACKEND="${BACKEND:-hip}"' in QUICKSTART.read_text()
-    # The generated surfaces carry the two-session wording, never the old
-    # "single-session" caveat.
+    # The generated surfaces carry the dated supersession, never the old
+    # "single-session" caveat or a standing promotion.
     for surface in (BENCH_MD, README):
         text = surface.read_text()
         assert "single-session" not in text, (
             f"{surface.name}: stale single-session caveat survived")
-        if surface is BENCH_MD:
-            assert "two independent measurement sessions" in text
-            assert "exactly +25.0%" in text
+        assert "2026-08-19" in text and "2026-08-18" in text, (
+            f"{surface.name}: the supersession dates must both be visible")
+        assert "SUPERSEDES" in text, (
+            f"{surface.name}: the dated supersession is missing")
+    assert "recommended OPT-IN" not in BENCH_MD.read_text(), (
+        "benchmark.md still carries the retired promotion wording")
 
 
 def test_ruling_mtp_depth1_beats_depth4_on_both_backends():
