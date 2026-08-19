@@ -1,0 +1,95 @@
+{
+  "id": "gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072",
+  "label": "gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072",
+  "base_url": "http://127.0.0.1:8080",
+  "started_utc": "2026-08-19T00:58:44Z",
+  "server_flags": {
+    "backend": "vulkan",
+    "ctx_size": 131072,
+    "concurrency_np": 1,
+    "with_mtp": true,
+    "mtp_part": "mtp4",
+    "spec_depth": 4,
+    "slots": "default",
+    "extra_args": "",
+    "port": 8080,
+    "kv_semantics_expected": "unified (default boot: auto n_parallel=4, shared ctx pool)",
+    "quickstart": "scripts/gguf-quickstart.sh",
+    "llama_server_flags": [
+      "--ctx-size",
+      "131072",
+      "-ngl",
+      "99",
+      "--jinja",
+      "--spec-type",
+      "draft-mtp",
+      "--spec-draft-n-max",
+      "4"
+    ]
+  },
+  "slot_info": {
+    "n_slots": 4,
+    "n_ctx_slot": 131072,
+    "kv_unified": "true",
+    "log_line": "n_slots = 4, n_ctx_slot = 131072, kv_unified = 'true'"
+  },
+  "load": {
+    "vram_mib": 31285,
+    "gtt_mib": 1217
+  },
+  "boot": {
+    "ok": true,
+    "health_wall_s": 6
+  },
+  "client": {
+    "label": "gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072",
+    "concurrency": 1,
+    "started_utc": "2026-08-19T00:58:53.330772+00:00",
+    "streams": [
+      {
+        "ttft_ms": 12206.685187993571,
+        "tpot_ms": 85.70378245511914,
+        "completion_tokens": 256,
+        "prompt_tokens": 1412,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      }
+    ],
+    "aggregate": {
+      "tok_per_s": 7.515838963719439,
+      "wall_s": 34.06140036205761,
+      "ok_streams": 1,
+      "failed_streams": 0
+    }
+  },
+  "anchor": {
+    "ok": true,
+    "content_tail": "OK"
+  },
+  "log_excerpt": [
+    "llama-server : /home/amd/Desktop/Qwen3.8-27B-ROCm/third_party/llama.cpp/build-714-vk/bin/llama-server (version: 0.1.0-dev (build 1, commit 4df29be4f))",
+    "model        : models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf (17G)",
+    "ctx-size     : 131072  (override: CTX_SIZE=<n>)",
+    "gpu layers   : 99 (all)",
+    "mmproj       : models/Qwen3.8-27B-GGUF/mmproj-F16.gguf",
+    "speculative  : draft-mtp (MTP head from the same GGUF, depth 4 via --spec-draft-n-max)",
+    "extra args   : none",
+    "Serving on http://127.0.0.1:8080 ...",
+    "0.00.028.292 W srv  llama_server: -----------------",
+    "0.00.028.294 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set",
+    "0.00.028.295 W srv  llama_server: this can be a security risk (cross-origin attacks)",
+    "0.00.028.295 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655",
+    "0.00.028.295 W srv  llama_server: -----------------",
+    "0.03.914.374 I common_speculative_init_result: creating MTP draft context against the target model 'models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf'",
+    "0.03.964.568 W load_hparams: Qwen-VL models require at minimum 1024 image tokens to function correctly on grounding tasks",
+    "0.03.964.571 W load_hparams: if you encounter problems with accuracy, try adding --image-min-tokens 1024",
+    "0.03.964.572 W load_hparams: more info: https://github.com/ggml-org/llama.cpp/issues/16842",
+    "0.04.650.339 I srv    load_model: initializing, n_slots = 4, n_ctx_slot = 131072, kv_unified = 'true'",
+    "0.04.696.588 W srv  llama_server: NOTICE: server default port will be changed to :9931 in a future release",
+    "0.04.696.588 W srv  llama_server:         ref: https://github.com/ggml-org/llama.cpp/pull/26508"
+  ],
+  "degraded": false,
+  "degraded_reason": null
+}
