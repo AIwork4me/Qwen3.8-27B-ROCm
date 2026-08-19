@@ -56,6 +56,28 @@ own receipts stand; only the mapping-layer prose changed. The pit finding
 (vulkan anchor-clean) is unaffected and stays stated. The host-level cause
 of the vulkan cross-day drop is NOT recorded — receipts carry VRAM/GTT
 only, no clock/thermal telemetry (stated honestly; known harness debt).
+
+2026-08-19 variance root-cause R2 (v0.1.6): session 4 (the R1 telemetry
+harness + controlled runs: two warm vulkan boots, two hip controls, one
+cache-aside arm; receipts session4-2026-08-19/ per-run subdirs) EXPLAINS
+the v0.1.4 cross-day variance as Mesa shader-cache state dependence —
+cold→warm swing +38% on identical config/flags/pin, s3's 14.53 sitting
+between cold (12.38) and warm (17.03 mean) → partial-cold state
+consistent, TRIGGER of the partial-cold state unidentified (no Mesa
+upgrade, no reboot — host up since 2026-08-12, no cache-clear found). The
+v0.1.6 ruling note is a DATED SUPERSESSION of the v0.1.4 "cause not
+recorded" sentence (which stays visible in the note for history) plus the
+floor/ceiling RELABELS of the pairings: the +4.81% clean pairing =
+conservative floor case (vk measured partial-cold; arithmetic and the
+no-flip conclusion unchanged); the warm same-day boot-paired pairings
+(+15.9%/+20.6%) = warm-cache ceiling context. Recommendation layer
+UNCHANGED (controller ruling 2026-08-19: vulkan stays
+available-experimental-not-recommended; hip WITH_MTP=1 SPEC_DEPTH=1 stays
+default AND recommended); a one-line warmup guidance lands in the
+quickstart echo + adaptation, and the "re-recommend vulkan?" question is
+recorded as OPEN for the human owner in the README roadmap. Zero
+metric/verdict changes: the 8/14/6 distribution is untouched; the only
+verdicts-JSON delta is the vulkan mtp-c1 ruling note.
 """
 
 from __future__ import annotations
@@ -459,6 +481,7 @@ def _pct(this: float, other: float) -> str:
 STABILITY_DIR = ROOT / "docs" / "results" / "matrix-714" / "stability"
 SESSION2_DIR = STABILITY_DIR / "session2-2026-08-18"
 SESSION3_DIR = STABILITY_DIR / "session3-2026-08-19"
+SESSION4_DIR = STABILITY_DIR / "session4-2026-08-19"
 STABILITY_POINTER = "docs/results/matrix-714/stability/"
 STABILITY_CELLS = (
     "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072",
@@ -468,6 +491,21 @@ STABILITY_CELLS = (
 VULKAN_MTP1_ID = "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"
 HIP_MTP1_ID = "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072"
 HIP_MTP1_S3 = HIP_MTP1_ID  # session-3 receipt name == the corpus cell id
+
+# Session 4 (R1, 2026-08-19): the same cell id is measured more than once,
+# so each run writes into its OWN subdirectory — the loader reads exact
+# paths (fail-loud, no globs), same convention as session2/3. Fixed run
+# order by design: vk boot1 → hip ctrl1 → vk boot2 → hip ctrl2 → the
+# cache-aside arm (orchestrated outside the runner — see the stability
+# README's orchestration note; the receipt is runner-shaped regardless).
+SESSION4_RUNS = (
+    ("run1-vk-boot1", "vulkan"),
+    ("run2-hip-ctrl1", "hip"),
+    ("run3-vk-boot2", "vulkan"),
+    ("run4-hip-ctrl2", "hip"),
+    ("run5-vk-cacheaside", "vulkan"),
+)
+SESSION4_DATE = "2026-08-19"
 
 
 def _c1_stream_tok_s(cell: dict) -> float:
@@ -573,8 +611,107 @@ def _load_stability_evidence() -> dict:
         "agg_pct_2dp": f"{(vk3['agg_2dp'] / hip3m['agg_2dp'] - 1) * 100:+.2f}%",
     }
 
+    # ---- session 4 (2026-08-19, R1): cross-boot / cache-arm root cause (R2)
+    #
+    # Five controlled runs under the R1 telemetry harness (clock/power/temp
+    # at load AND post-bench + mesa_shader_cache stats on the vulkan
+    # receipts). Exact-path reads per run subdirectory — fail-loud, no
+    # globs; the v0.1.6 ruling note quotes this evidence so a moved/edited
+    # session-4 receipt breaks the regen, never the prose.
+    s4 = {}
+    s4_boot_times = set()
+    for run, backend in SESSION4_RUNS:
+        path = (SESSION4_DIR / run /
+                f"gguf-{backend}-udq4kxl-auto-mtp-c1-ctx131072.json")
+        c4 = json.loads(path.read_text())
+        tel = (c4.get("post_bench") or {}).get("telemetry") or {}
+        env = ((c4.get("load") or {}).get("telemetry") or {}).get("env") or {}
+        s4_boot_times.add(env.get("boot_time"))
+        mc = (((c4.get("load") or {}).get("telemetry") or {})
+              .get("mesa_cache")) or {}
+        s4[run] = {
+            "tok_s": _c1_stream_tok_s(c4),
+            "tok_s_2dp": round(_c1_stream_tok_s(c4), 2),
+            "ttft_s_2dp": round(_c1_ttft_s(c4), 2),
+            "anchor_ok": bool(c4.get("anchor", {}).get("ok")),
+            "post_sclk_mhz": tel.get("sclk_mhz"),
+            "post_power_w": tel.get("power_w"),
+            "post_temp_c": tel.get("temp_edge_c"),
+            "mesa_cache": mc,
+        }
+    vk1, vk2 = s4["run1-vk-boot1"], s4["run3-vk-boot2"]
+    h1, h2 = s4["run2-hip-ctrl1"], s4["run4-hip-ctrl2"]
+    aside = s4["run5-vk-cacheaside"]
+    warm_mean = (vk1["tok_s"] + vk2["tok_s"]) / 2.0
+
+    def _tel_range(runs, key):
+        vals = [s4[r][key] for r in runs if s4[r][key] is not None]
+        return (min(vals), max(vals)) if vals else (None, None)
+
+    vk_runs, hip_runs = ("run1-vk-boot1", "run3-vk-boot2",
+                         "run5-vk-cacheaside"), ("run2-hip-ctrl1",
+                                                 "run4-hip-ctrl2")
+    warm_cache = (vk2["mesa_cache"] or {}).get("before_boot") or {}
+    aside_cache = (aside["mesa_cache"] or {}).get("after_teardown") or {}
+    ev["session4"] = {
+        "date": SESSION4_DATE,
+        "runs": {r: {"tok_s_2dp": s4[r]["tok_s_2dp"],
+                     "ttft_s_2dp": s4[r]["ttft_s_2dp"],
+                     "anchor_ok": s4[r]["anchor_ok"]} for r in s4},
+        # Warm vulkan boots (cache present) + within-day cross-boot delta.
+        "vk_boot1_2dp": vk1["tok_s_2dp"], "vk_boot2_2dp": vk2["tok_s_2dp"],
+        "vk_crossboot_pct_2dp": f"{(vk2['tok_s'] / vk1['tok_s'] - 1) * 100:+.2f}%",
+        # Hip controls + their cross-boot spread (near-deterministic, ±5%).
+        "hip_ctrl1_2dp": h1["tok_s_2dp"], "hip_ctrl2_2dp": h2["tok_s_2dp"],
+        "hip_crossboot_pct_1dp": f"{(h2['tok_s'] / h1['tok_s'] - 1) * 100:+.1f}%",
+        # Cache-aside arm (cold cache) vs the warm mean — and the swing.
+        "aside_2dp": aside["tok_s_2dp"],
+        "aside_ttft_s_2dp": aside["ttft_s_2dp"],
+        "warm_mean_2dp": round(warm_mean, 2),
+        "warm_mean": warm_mean,                     # exact, for assertions
+        "warm_ttft_range": tuple(sorted((vk1["ttft_s_2dp"], vk2["ttft_s_2dp"]))),
+        "aside": aside["tok_s"],                    # exact, for assertions
+        "aside_vs_warm_pct_1dp": f"{(aside['tok_s'] / warm_mean - 1) * 100:+.1f}%",
+        "swing_pct_0dp": f"{(warm_mean / aside['tok_s'] - 1) * 100:+.0f}%",
+        # The floor/ceiling relabels (v0.1.6): warm-cache, boot-paired,
+        # same-day pairings vs the hip controls of the SAME session.
+        "warm_pairings": {
+            "label": "warm-cache, boot-paired",
+            "date": SESSION4_DATE,
+            "boot1_pct_1dp": f"{(vk1['tok_s'] / h1['tok_s'] - 1) * 100:+.1f}%",
+            "boot2_pct_1dp": f"{(vk2['tok_s'] / h2['tok_s'] - 1) * 100:+.1f}%",
+            "boot1": (vk1["tok_s"], h1["tok_s"]),   # exact, for assertions
+            "boot2": (vk2["tok_s"], h2["tok_s"]),
+        },
+        # Telemetry envelopes (post-bench snapshots): each backend sits in
+        # its own normal envelope — no thermal/power anomaly to explain
+        # the cold/warm gap.
+        "telemetry": {
+            "vk_post_sclk_range": _tel_range(vk_runs, "post_sclk_mhz"),
+            "vk_post_power_range": _tel_range(vk_runs, "post_power_w"),
+            "vk_post_temp_range": _tel_range(vk_runs, "post_temp_c"),
+            "hip_post_sclk_range": _tel_range(hip_runs, "post_sclk_mhz"),
+            "hip_post_power_range": _tel_range(hip_runs, "post_power_w"),
+            "hip_post_temp_range": _tel_range(hip_runs, "post_temp_c"),
+        },
+        # Mesa cache state, receipt-derived: the warm cache is stable across
+        # runs (run3 touched nothing), the aside arm rebuilt a fresh cache
+        # mid-run.
+        "cache": {
+            "warm_du_kib": warm_cache.get("du_kib"),
+            "warm_files": warm_cache.get("files"),
+            "aside_built_du_kib": aside_cache.get("du_kib"),
+            "aside_built_files": aside_cache.get("files"),
+        },
+        # Host state: no reboot between s1 and session 4 (same boot since
+        # 2026-08-12) — one common boot_time across all five receipts.
+        "host_boot_time": (s4_boot_times.pop() if len(s4_boot_times) == 1
+                           else sorted(t for t in s4_boot_times if t)),
+        "anchors_ok": sum(1 for r in s4.values() if r["anchor_ok"]),
+        "anchors_total": len(s4),
+    }
+
     # TTFT observation (aggregate flip is TTFT-driven): vulkan s3 range vs
-    # the 2026-08-18 sessions' range, and hip s3 vs its corpus receipt.
     vk_ttfts_12 = [
         _c1_ttft_s(json.loads(path.read_text()))
         for path in [*(CELLS_DIR / f"{cid}.json" for cid in STABILITY_CELLS),
@@ -588,14 +725,19 @@ def _load_stability_evidence() -> dict:
     }
 
     # Cross-session anchor tally: the re-measured cell runs s1/s2/s3 (3+3+4
-    # receipts) plus the soak's post-load anchor — the "pit does NOT
-    # reproduce on vulkan" evidence the supersession note restates.
+    # receipts), the five session-4 runs (R2), plus the soak's post-load
+    # anchor — the "pit does NOT reproduce on vulkan" evidence the
+    # supersession note restates.
     cell_runs = [json.loads((CELLS_DIR / f"{cid}.json").read_text())
                  for cid in STABILITY_CELLS]
     cell_runs += [json.loads((SESSION2_DIR / f"{cid}.json").read_text())
                   for cid in STABILITY_CELLS]
     cell_runs += [hip3] + [json.loads((SESSION3_DIR / f"{cid}.json").read_text())
                            for cid in STABILITY_CELLS]
+    cell_runs += [json.loads((SESSION4_DIR / run /
+                              f"gguf-{backend}-udq4kxl-auto-mtp-c1-"
+                              f"ctx131072.json").read_text())
+                  for run, backend in SESSION4_RUNS]
     ev["anchors"] = {
         "cell_runs_ok": sum(1 for c in cell_runs
                             if c.get("anchor", {}).get("ok")),
@@ -613,10 +755,11 @@ _STABILITY_EVIDENCE: dict | None = None
 def stability_evidence() -> dict:
     """Memoized stability-evidence loader (lazy — importing this module,
     e.g. from the tests, must stay side-effect-free). Missing receipts
-    raise FileNotFoundError on purpose: the v0.1.3/v0.1.4 ruling notes
-    quote this evidence, so regenerating without it must fail loudly
-    rather than silently regress to pre-v0.1.3/v0.1.4 wording. Covers
-    session 2 (+ soak) since v0.1.3 and session 3 since v0.1.4."""
+    raise FileNotFoundError on purpose: the v0.1.3/v0.1.4/v0.1.6 ruling
+    notes quote this evidence, so regenerating without it must fail loudly
+    rather than silently regress to pre-v0.1.3/v0.1.4/v0.1.6 wording.
+    Covers session 2 (+ soak) since v0.1.3, session 3 since v0.1.4, and
+    session 4 (per-run subdirectories, exact paths) since v0.1.6."""
     global _STABILITY_EVIDENCE
     if _STABILITY_EVIDENCE is None:
         _STABILITY_EVIDENCE = _load_stability_evidence()
@@ -664,6 +807,26 @@ def v012_ruling_note(cid: str, all_metrics: dict | None,
         m4d = cd["gguf-vulkan-udq4kxl-auto-mtp4-c1-ctx131072"]
         b1d = cd["gguf-vulkan-udq4kxl-auto-base-c1-ctx131072"]
         clean_gap_pct = (cp["vk"] / cp["hip"] - 1) * 100.0
+        # Session-4 evidence (R2, v0.1.6): cache-state bounds, the warm
+        # boot-paired relabels, the telemetry envelopes, and the cache
+        # receipts — every number in the R2 paragraph interpolates from
+        # these, never a hand literal.
+        s4 = ev["session4"]
+        s3vk_2dp = s3["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]["s3_2dp"]
+        wp = s4["warm_pairings"]
+        ch = s4["cache"]
+        t4 = s4["telemetry"]
+
+        def _rng(pair) -> str:
+            """Envelope display: '1433–1533 MHz'; a single value prints
+            once ('58 °C'), never '58–58'."""
+            return (f"{pair[0]:.0f}" if pair[0] == pair[1]
+                    else f"{pair[0]:.0f}–{pair[1]:.0f}")
+
+        t4v = (_rng(t4["vk_post_sclk_range"]), _rng(t4["vk_post_power_range"]),
+               _rng(t4["vk_post_temp_range"]))
+        t4h = (_rng(t4["hip_post_sclk_range"]),
+               _rng(t4["hip_post_power_range"]), _rng(t4["hip_post_temp_range"]))
         return (f"Controller ruling {MAPPING_RULING_DATE} (v0.1.4) "
                 f"SUPERSEDES the controller ruling 2026-08-18 (the v0.1.2 "
                 f"promotion + the v0.1.3 two-session/soak wording; both "
@@ -707,7 +870,9 @@ def v012_ruling_note(cid: str, all_metrics: dict | None,
                 f"not a depth claim). The host-level cause of the vulkan "
                 f"cross-day drop is NOT recorded — the receipts carry "
                 f"VRAM/GTT only, no clock/thermal telemetry (known harness "
-                f"debt). MAPPING, per the {MAPPING_RULING_DATE} ruling: the "
+                f"debt) — that cause statement is itself SUPERSEDED the "
+                f"same day by the R2 note below. MAPPING, per the "
+                f"{MAPPING_RULING_DATE} ruling: the "
                 f"quickstart downgrades BACKEND=vulkan from 'recommended "
                 f"opt-in' to an AVAILABLE experimental opt-in (mechanism "
                 f"unchanged, 'experimental, see verdicts/stability' framing "
@@ -720,11 +885,70 @@ def v012_ruling_note(cid: str, all_metrics: dict | None,
                 f"tok/s is {cp['pct_2dp']} << the >25% pre-registered flip "
                 f"threshold (the mixed-depth {headline} and the "
                 f"exactly-+25.0% session-2 headline the v0.1.3 note guarded "
-                f"are both superseded by this clean pairing). Unaffected "
+                f"are both superseded by this clean pairing). R2 "
+                f"ROOT-CAUSE (2026-08-19, v0.1.6) SUPERSEDES the cause "
+                f"statement above — dated, history visible: session 4 "
+                f"(5 controlled runs under the telemetry harness, receipts "
+                f"{ev['pointer']}session4-2026-08-19/, per-run "
+                f"subdirectories) EXPLAINS the cross-day variance as Mesa "
+                f"shader-cache state dependence. Bounds, identical "
+                f"config/flags/pin: warm boots "
+                f"{s4['vk_boot1_2dp']:.2f}/{s4['vk_boot2_2dp']:.2f} tok/s "
+                f"(cross-boot {s4['vk_crossboot_pct_2dp']}, warm mean "
+                f"{s4['warm_mean_2dp']:.2f}, warm TTFT "
+                f"{s4['warm_ttft_range'][0]:.2f}–"
+                f"{s4['warm_ttft_range'][1]:.2f} s); cache-aside arm "
+                f"{s4['aside_2dp']:.2f} tok/s / TTFT "
+                f"{s4['aside_ttft_s_2dp']:.2f} s "
+                f"({s4['aside_vs_warm_pct_1dp']} vs the warm mean — "
+                f"reproduces and exceeds the s3 slow signature "
+                f"{s3vk_2dp:.2f}/{tf['vk_s3_range'][0]:.2f} s TTFT; the "
+                f"run rebuilt {ch['aside_built_du_kib']} KiB/"
+                f"{ch['aside_built_files']} cache files mid-run while the "
+                f"warm cache stayed stable at {ch['warm_du_kib']} KiB/"
+                f"{ch['warm_files']} files across runs, one run touching "
+                f"nothing): a cold→warm swing of {s4['swing_pct_0dp']}. "
+                f"s3's {s3vk_2dp:.2f} sits BETWEEN cold "
+                f"({s4['aside_2dp']:.2f}) and warm "
+                f"({s4['warm_mean_2dp']:.2f}) → a PARTIAL-COLD cache "
+                f"state is consistent with the s3 drop; the s3 TRIGGER "
+                f"remains UNIDENTIFIED (no Mesa upgrade, no reboot — host "
+                f"up since {s4['host_boot_time'][:10]}, no cache-clear "
+                f"found — stated honestly). RELABELS, arithmetic "
+                f"unchanged: the clean pairing {cp['pct_2dp']} is the "
+                f"CONSERVATIVE FLOOR CASE (vk measured in a partial-cold "
+                f"state; the no-flip conclusion stands, "
+                f"{cp['pct_2dp']} << the >25% threshold); the warm "
+                f"same-day boot-paired pairings are "
+                f"{wp['boot1_pct_1dp']} ({s4['vk_boot1_2dp']:.2f} vs "
+                f"{s4['hip_ctrl1_2dp']:.2f}) and {wp['boot2_pct_1dp']} "
+                f"({s4['vk_boot2_2dp']:.2f} vs "
+                f"{s4['hip_ctrl2_2dp']:.2f}) — label: {wp['label']}, "
+                f"{wp['date']} (warm-cache ceiling context, a single warm "
+                f"session; hip cross-boot "
+                f"{s4['hip_crossboot_pct_1dp']} — near-deterministic, "
+                f"within ±5%). Telemetry shows NO thermal/power anomaly "
+                f"(vk post-bench {t4v[0]} MHz / "
+                f"{t4v[1]} W / "
+                f"{t4v[2]} °C; hip "
+                f"{t4h[0]} MHz / "
+                f"{t4h[1]} W / "
+                f"{t4h[2]} °C — each backend in "
+                f"its own normal envelope). RECOMMENDATION UNCHANGED "
+                f"(controller ruling 2026-08-19, recorded, not "
+                f"re-deliberated): vulkan stays an AVAILABLE experimental "
+                f"opt-in, NOT recommended; hip WITH_MTP=1 SPEC_DEPTH=1 "
+                f"stays BOTH the default AND the recommended path — "
+                f"rationale: one warm session; the trigger is unknown "
+                f"(users cannot be guaranteed to stay warm); the "
+                f"warm/cold swing is a user-facing UX risk (first boot "
+                f"after a cache clear: ~12.4 tok/s / ~12.5 s TTFT until "
+                f"warm). The re-recommendation question is recorded as "
+                f"OPEN for the human owner (README roadmap). Unaffected "
                 f"findings, restated: the greedy pit still does NOT "
                 f"reproduce on vulkan — cell-run anchors "
                 f"{an['cell_runs_ok']}/{an['cell_runs_total']} clean "
-                f"across s1/s2/s3 ({an['with_soak_ok']}/{an['with_soak_total']} "
+                f"across s1/s2/s3/s4 ({an['with_soak_ok']}/{an['with_soak_total']} "
                 f"with the soak anchor); depth 1 still beats depth 4 on "
                 f"both backends (mtp stays the recommended variant, no "
                 f"mtp4 recommendation; clean-gap exact basis "

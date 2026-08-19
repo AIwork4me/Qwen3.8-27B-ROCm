@@ -8,6 +8,78 @@ receipts [`docs/results/matrix-714/cells/`](docs/results/matrix-714/cells/),
 and the rehearsal receipt
 [`docs/results/rocm-7.14/one-pass-rehearsal.md`](docs/results/rocm-7.14/one-pass-rehearsal.md).
 
+## v0.1.6 — 2026-08-19
+
+Variance root-cause release (R2): the session-4 controlled runs
+([`docs/results/matrix-714/stability/session4-2026-08-19/`](docs/results/matrix-714/stability/session4-2026-08-19/)
+— two warm vulkan boots, two hip controls, one cache-aside arm, under the
+R1 clock/power/temp + mesa-cache telemetry harness) **explain the v0.1.4
+cross-day variance**: root-cause class is **Mesa shader-cache state
+dependence**. **No corpus data changed**: the 28 cells, `matrix.json`,
+every cell verdict, and the 8/14/6 distribution are untouched; the only
+verdicts-JSON delta is the vulkan mtp-c1 cell's ruling note. **The
+recommendation layer is UNCHANGED** (controller ruling 2026-08-19,
+recorded, not re-deliberated).
+
+### The finding (dated supersession of "cause not recorded")
+
+- **Bounds, identical config/flags/pin:** warm vulkan mtp-c1 boots
+  **17.10 / 16.96 tok/s** (cross-boot −0.79%, warm mean 17.03, warm
+  TTFT 8.37–8.50 s); the cache-aside arm (cache moved aside) measures
+  **12.38 tok/s / TTFT 12.45 s** (−27.3% vs the warm mean — reproducing
+  and exceeding the s3 slow signature 14.53 / 9.94 s) and rebuilt
+  **2136 KiB / 100 cache files** mid-run while the warm cache stayed
+  stable at **7884 KiB / 867 files** across runs (one run touched
+  nothing). **Cold→warm swing +38%.**
+- **s3 explained:** 14.53 sits between cold (12.38) and warm (17.03) →
+  a **partial-cold cache state is consistent**; the s3 **TRIGGER is
+  unknown** (no Mesa upgrade, no reboot — host up since 2026-08-12, no
+  cache-clear found) — stated honestly. The v0.1.4 "cause not recorded"
+  sentence stays visible in the ruling note, marked superseded
+  (2026-08-19 R2).
+- **Telemetry rules out thermal/power:** post-bench envelopes vk
+  1433–1533 MHz / 30–32 W / 54–57 °C, hip 1910–1929 MHz / 52–53 W /
+  58 °C — each backend in its own normal envelope. Hip controls
+  14.76 / 14.06 tok/s (cross-boot −4.7% — near-deterministic). Cell-run
+  anchors now 15/15 across s1–s4 (16/16 with the soak anchor) — the
+  pit non-reproduction finding is unaffected.
+- **Floor/ceiling relabels (arithmetic unchanged):** the v0.1.4 clean
+  d1 pairing **+4.81%** (aggregate −13.31%) gains the label
+  **conservative floor case (vk measured in a partial-cold state)** —
+  its arithmetic and the no-flip conclusion stand unchanged; the
+  warm-cache, boot-paired, same-day pairings are recorded as
+  **+15.9%** (17.10 vs 14.76) and **+20.6%** (16.96 vs 14.06), labeled
+  warm-cache ceiling context from a single warm session.
+
+### Recommendation unchanged + practical guidance
+
+- **Mapping unchanged:** vulkan stays an **available experimental
+  opt-in, NOT recommended**; hip `WITH_MTP=1 SPEC_DEPTH=1` stays
+  **default AND recommended**. Recorded rationale: single warm session;
+  trigger unknown (users cannot be guaranteed to stay warm); the
+  warm/cold swing is a user-facing UX risk (first boot after a cache
+  clear: ~12.4 tok/s / ~12.5 s TTFT until warm).
+- **Warmup guidance (one line, non-recomminding):** the quickstart's
+  vulkan echo and [`docs/adaptation.md`](docs/adaptation.md) §Vulkan
+  now say — if vulkan feels slow, first-run cache warmup is the first
+  suspect; re-run before concluding. Boot logic and defaults are
+  byte-identical.
+- **Open question for the human owner:** "re-recommend vulkan?" is
+  recorded as OPEN in the README roadmap with the warm/cold numbers —
+  no recommendation language either way.
+- **Surfaces updated:** the vulkan mtp-c1 ruling note
+  (`configs/benchmark-verdicts.json`), the generated README blocks +
+  [`docs/results/benchmark.md`](docs/results/benchmark.md) variance
+  statements, [`docs/adaptation.md`](docs/adaptation.md) §Vulkan
+  (root-cause paragraph + warm/cold table), and the stability README's
+  session-4 disclosures (run-5 mclk-null snippet provenance: pre-final
+  parser revision, value unaffected, receipt immutable; hip cross-boot
+  spread corrected −4.8% → −4.7%). `CITATION.cff` 0.1.6. Tests: the
+  "cause not recorded" pins replaced by the cache-state story; new test
+  pinning the cold/warm/floor/ceiling arithmetic recomputed from the
+  session-4 loader; the quickstart-mapping test still asserts vulkan
+  NOT recommended.
+
 ## v0.1.5 — 2026-08-19
 
 Docs-accuracy & reproducibility release: fixes from three independent

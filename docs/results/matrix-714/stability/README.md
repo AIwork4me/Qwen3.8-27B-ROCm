@@ -185,6 +185,24 @@ own subdirectory — receipts never overwrite):
 [run4-hip-ctrl2](session4-2026-08-19/run4-hip-ctrl2/gguf-hip-udq4kxl-auto-mtp-c1-ctx131072.json),
 [run5-vk-cacheaside](session4-2026-08-19/run5-vk-cacheaside/gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072.json).
 
+Disclosures (R2, 2026-08-19): (1) run 5's `mclk_mhz: null` diagnostic
+snippet (the `"--showclocks: no rocm-smi output captured"` message text in
+`post_bench.telemetry.errors`) was produced by a PRE-FINAL parser revision
+— the committed parser (`scripts/run-cell-gguf.sh`) would label that raw
+output (sclk line present, no mclk line) "pattern not found"; the recorded
+VALUE (null) and the receipt are unaffected and stay immutable. (2) The
+hip cross-boot spread printed in the narrative below was corrected
+−4.8% → **−4.7%** (exact-basis `(14.06/14.76 − 1)` at 1dp; the −4.8%
+was a rounding slip, corrected here — the receipts were always exact).
+
+This README is the numbers index for the sessions — interpretation of
+session 4 (the Mesa shader-cache state-dependence root-cause class, the
+warm/cold bounds, the floor/ceiling relabels of the pairings, and the
+recommendation ruling) lives in the generated ruling note of
+[`configs/benchmark-verdicts.json`](../../../../configs/benchmark-verdicts.json)
+(the vulkan mtp-c1 cell) and in
+[`docs/adaptation.md`](../../../adaptation.md) §Vulkan.
+
 ### Per-run table
 
 c1 cells have a single stream, so the per-run median is that stream's value
@@ -206,9 +224,10 @@ Load memory: run1/run3/run5 VRAM 29080/29080/29082 MiB with GTT
 28058/28062 MiB (hip splits). Run 4's stream finished at 253 tokens with
 `finish_reason=stop`; every other session-4 stream hit the 256-token cap
 (`finish_reason=length`). Within-run deltas: vk boot #1 vs boot #2
-(≈2 min apart, separate server processes) 17.10 vs 16.96 (−0.8%); hip
-control #1 vs #2 14.76 vs 14.06 (−4.8%); cache-aside vs the mean of the
-two warm vk runs 12.38 vs 17.03 (−27.3%), TTFT 12.45 s vs 8.37/8.50 s.
+(≈2 min apart, separate server processes) 17.10 vs 16.96 (−0.8%);
+hip control #1 vs #2 14.76 vs 14.06 (−4.7%, corrected per the
+disclosure above); cache-aside vs the mean of the two warm vk runs
+12.38 vs 17.03 (−27.3%), TTFT 12.45 s vs 8.37/8.50 s.
 
 ### Reference values (same two cells, prior sessions)
 
