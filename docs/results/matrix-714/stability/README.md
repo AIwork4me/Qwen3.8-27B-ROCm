@@ -302,4 +302,4 @@ Exact-basis deltas from the receipts: vulkan vs the two s4 warm runs
 +11.81%; hip vs the two s4 runs −8.17% / −3.66% (vs their mean −5.97%), vs
 the s3 d1 value −2.26%. Same-session pairing (both this session, warm cache):
 vulkan − hip = +2.70 tok/s = +19.90% of hip; aggregate basis hip 10.47 vs
-vulkan 10.58 (gap +0.11, +1.05% of hip).
+vulkan 10.58 (gap +0.11, +1.07% of hip).

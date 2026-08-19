@@ -252,9 +252,10 @@ cache reads by s3**; the mtime evidence above is unaffected by this limitation.
 **Cache growth note (pre-session-5 reading, 2026-08-19 23:20:21 local):**
 7884 KiB / 867 files — identical to session-4 morning; **zero new compiles
 landed in the cache today** before session 5, and session 5's runs left it
-unchanged as well (run receipts: before 7884/867 newest 2026-08-19T06:32:54Z →
-after 7884/867 newest 2026-08-19T06:32:54Z — the warm-run "no write" pattern
-already seen in session-4 run 3).
+unchanged as well (run1-vk's receipt — the cache field is vulkan-only, so
+run2-hip carries no cache reading: before 7884/867 newest
+2026-08-19T06:32:54Z → after 7884/867 newest 2026-08-19T06:32:54Z — the
+warm-run "no write" pattern already seen in session-4 run 3).
 
 ## 5. Package activity INSIDE the window — one unattended-upgrade transaction
 
@@ -287,35 +288,96 @@ man-db trigger. No mesa/vulkan/amdgpu/llvm package appears in dpkg.log since
 25.2.8 ICD recorded in every session). The journal shows the same transaction:
 apt-daily-upgrade.service `Starting`/`Finished` 06:20:45–06:20:50 local.
 
-## 6. Clock events INSIDE the window (recorded verbatim, cause not established)
+## 6. Clock-stepping events — CHRONIC condition, not a window-localized burst
+
+> **Correction (2026-08-19 ~23:47 local, H1 fix wave after independent
+> verification).** This section first published "Eight clock-change detections
+> 23:20:10–23:28:47 local, inside the window". That was an artifact of
+> sampling only the 10 minutes 23:20–23:30 (and the excerpt even dropped
+> lines inside that sample). The corrected, window-wide and whole-boot
+> counts are below; they materially change the scope (chronic, present
+> during fast sessions too) while leaving all other sections untouched.
+
+Window-wide truth (commands and counts verbatim):
+
+```console
+$ journalctl --since "2026-08-18 20:01:21" --until "2026-08-19 08:56:51" --no-pager | grep -c "Clock change detected"
+113
+$ journalctl --since "2026-08-18 20:01:21" --until "2026-08-19 08:56:51" --no-pager | grep -c "Time jumped"
+1
+$ journalctl --since "2026-08-18 20:01:21" --until "2026-08-19 08:56:51" --no-pager | grep -iE "clock change|time jump" | head -3
+8月 18 20:09:23 amd-HP-ZBook-Ultra systemd-resolved[1101]: Clock change detected. Flushing caches.
+8月 18 20:09:58 amd-HP-ZBook-Ultra systemd-resolved[1101]: Clock change detected. Flushing caches.
+8月 18 20:10:30 amd-HP-ZBook-Ultra systemd-resolved[1101]: Clock change detected. Flushing caches.
+$ journalctl --since "2026-08-18 20:01:21" --until "2026-08-19 08:56:51" --no-pager | grep -iE "clock change|time jump" | tail -3
+8月 19 01:10:19 amd-HP-ZBook-Ultra systemd-resolved[1101]: Clock change detected. Flushing caches.
+8月 19 01:10:53 amd-HP-ZBook-Ultra systemd-resolved[1101]: Clock change detected. Flushing caches.
+8月 19 01:11:25 amd-HP-ZBook-Ultra systemd-resolved[1101]: Clock change detected. Flushing caches.
+$ grep -E '^2026-08-18T2[0-3]|^2026-08-19T0[0-8]' /var/log/syslog | grep -icE "clock change|time jump"
+114        # syslog corroboration (113 resolved + the journald line)
+```
+
+So the causal window holds **113 `Clock change detected` (systemd-resolved)
+events + 1 journald `Time jumped backwards, rotating.`**, first at 08-18
+20:09:23 local, last at 08-19 01:11:25 local. Cadence: they arrive in bursts
+with consecutive events ~30–90 s apart (e.g. 20:09:23→20:09:58→20:10:30, and
+01:10:19→01:10:53→01:11:25) separated by quiet gaps of a few minutes to tens
+of minutes; no events occurred between 01:11:25 and the window end 08:56:51.
+
+This is **chronic for the whole boot**, not specific to the window:
+
+```console
+$ journalctl -b 0 --no-pager | grep -c "Clock change detected"
+887        # since 2026-08-12 boot, counted at the fix re-run (~23:45 local 08-19); still accruing
+$ journalctl -b 0 --no-pager | grep -c "Time jumped"
+7
+$ journalctl --since "2026-08-18 00:00:00" --until "2026-08-19 00:00:00" --no-pager | grep -c "Clock change detected"
+140        # all of 2026-08-18
+$ journalctl -b 0 --no-pager -o short-iso | grep -i "clock change" | cut -c1-10 | sort | uniq -c
+     23 2026-08-12
+    101 2026-08-13
+    208 2026-08-14
+     92 2026-08-15
+      1 2026-08-16
+    140 2026-08-18
+    326 2026-08-19   # partial day at the fix re-run
+```
+
+Overlap with measurement-run spans (facts; the runs' local times from the
+receipts):
+
+- s1 (08-18 13:41–13:48 local): **2 events** inside the span.
+- s2 soak (08-18 19:28–20:01 local): **1 event** inside —
+  `8月 18 19:50:48 ... Clock change detected. Flushing caches.`
+- s3 (08-19 08:56:51–08:59:59 local): **0 events** — the only session span of
+  these with none.
+- s5 (08-19 23:20:34–23:22:46 local): **3 events during the runs**
+  (23:20:49, 23:21:22, 23:22:32) plus one more at 23:23:05 immediately after
+  teardown.
+
+The original 10-minute sample, re-run verbatim (kept as the erratum record —
+12 lines, 11 of them `Clock change detected`; the first publication showed
+only 9 and called them "eight"):
 
 ```console
 $ journalctl --since "2026-08-18 23:20:00" --until "2026-08-18 23:30:00" --no-pager | grep -iE "time jump|clock|ntp|chrony|timedate"
-8月 18 23:20:10 amd-HP-ZBook-Ultra systemd-resolved[1101]: Clock change detected. Flushing caches.
-8月 18 23:21:54 ... (same, repeated)
-8月 18 23:23:02 ...
-8月 18 23:23:35 ...
-8月 18 23:24:10 ...
-8月 18 23:24:48 ...
-8月 18 23:25:22 ...
-8月 18 23:25:55 amd-HP-ZBook-Ultra systemd-resolved[1101]: Clock change detected. Flushing caches.
-8月 18 23:25:55 amd-HP-ZBook-Ultra systemd-journald[550]: Time jumped backwards, rotating.
-8月 18 23:28:47 ... (one more resolved flush)
+8月 18 23:20:10 ... 8月 18 23:29:55 — 11 systemd-resolved "Clock change detected" lines
+                                                + 8月 18 23:25:55 systemd-journald[550]: Time jumped backwards, rotating.
 ```
 
-Eight `Clock change detected` flushes 23:20:10–23:28:47 local 08-18 (inside the
-window) and one journald backwards-jump rotation. systemd-timesyncd (the active
-NTP service, running since boot) logged **no entries** in the window, so the
-stepping source is not identified in any readable log. Receipt UTC stamps on
-both sides of the window remain mutually consistent and NTP is currently
-synchronized (`timedatectl`: `System clock synchronized: yes`).
+systemd-timesyncd (the active NTP service, running since boot) logged **no
+entries** in the window, so the stepping source is not identified in any
+readable log. Receipt UTC stamps on both sides of the window remain mutually
+consistent and NTP is currently synchronized (`timedatectl`: `System clock
+synchronized: yes`). No causal claim is made here — H2 interprets.
 
 ## 7. What the window actually contains (characterization)
 
 4250 system-journal lines inside the window, dominated by background noise
-(top units by line count: clash-verge-service 3100, systemd 468, cron 296,
-systemd-resolved 117, rtkit-daemon 66, dbus-daemon 60, fcitx5 50,
-NetworkManager 28, anacron 17, gnome-shell 10). Specifics recorded:
+(top units by line count: clash-verge-service 3100, systemd 468, cron 296
+(cron.service lines), systemd-resolved 117, rtkit-daemon 66, dbus-daemon 60,
+fcitx5 50, NetworkManager 28, anacron 17, gnome-shell 10). Specifics
+recorded:
 
 - No user login/session start in the window (`last -F --since 2026-08-18` →
   no entries since 08-18; the only pam session lines are root's cron jobs).
@@ -346,9 +408,16 @@ NetworkManager 28, anacron 17, gnome-shell 10). Specifics recorded:
 6. The ONLY host state change found inside the window: unattended-upgrade at
    08-19 06:20:48–49 local upgrading `linux-libc-dev` and
    `linux-tools-common` (6.8.0-137→138); no graphics/GPU packages involved.
-7. Eight clock-change detections + one backwards time jump (23:20–23:28 local
-   08-18, inside the window); cause not present in readable logs; timesyncd
-   silent, currently synchronized.
+7. Clock-stepping is a CHRONIC common-mode condition, not a window-localized
+   burst: 113 `Clock change detected` events + 1 journald backwards jump
+   inside the causal window (first 08-18 20:09:23, last 08-19 01:11:25 local;
+   bursts with consecutive events ~30–90 s apart, none 01:11→08:56), 140
+   events on all of 08-18, and 887 since the 08-12 boot (fix-run count,
+   still accruing). Events fall inside s1's run span (×2), the s2 soak
+   (19:50:48), and the s5 runs (×3 during, +1 right after teardown) — and
+   NONE inside s3's 08:56–08:59 run span. timesyncd logged nothing; the
+   clock is currently synchronized. (Section 6 carries a dated correction:
+   this item first published the stepping as "8 events, 23:20–23:28".)
 8. Log readability: journalctl YES (adm), dmesg NO (dmesg_restrict=1),
    kern.log/syslog/dpkg/apt logs YES — all agreeing sources tell the same
    story.
