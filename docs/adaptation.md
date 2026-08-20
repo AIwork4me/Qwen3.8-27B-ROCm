@@ -46,7 +46,7 @@ The model-facing wiring is platform-agnostic and needed no patches:
 | 7 | Kernel floor | N/A on servers | Strix Halo UMA needs kernel ≥ 6.16.9 (muse-rocm heritage finding; enforced by the env check) | host-class | [`configs/validated-stack.json`](../configs/validated-stack.json), [troubleshooting](troubleshooting.md#uma-bug) |
 | 8 | Output packaging | DeepSeek-style `reasoning_content` everywhere | llama.cpp emits `message.reasoning_content`; the vLLM `qwen3` parser at `4d2a68d` emits `message.reasoning` (generation identical) | pin-local | [`results/rocm-7.14/gguf-validation.md`](results/rocm-7.14/gguf-validation.md), [`results/rocm-7.14/vllm-validation.md`](results/rocm-7.14/vllm-validation.md), [troubleshooting](troubleshooting.md#reasoning-field) |
 
-## Vulkan backend × MTP depth (v0.1.2, measured 2026-08-18; re-based v0.1.4, cross-day variance root-caused v0.1.6, refined v0.1.7)
+## Vulkan backend × MTP depth (v0.1.2, measured 2026-08-18; re-based v0.1.4, cross-day variance root-caused v0.1.6, refined v0.1.7, decision closed v0.1.8)
 
 The second llama.cpp backend measured on the same host, model, prompts, and
 harness (8 cells; plan
@@ -62,6 +62,8 @@ v0.1.7 refinement (2026-08-20): the trigger-hunt forensics
 ([`results/matrix-714/stability/trigger-hunt-2026-08-19.md`](results/matrix-714/stability/trigger-hunt-2026-08-19.md))
 plus the session-5/6 series decompose the variance picture further
 (the cross-day bullet below) — dated supersession #3, history visible.
+The v0.1.8 closeout (2026-08-20): the repository owner DECIDED the
+"re-recommend vulkan?" question — NO ("Choosing the backend" below).
 
 - **Build** — the same llama.cpp pin as the HIP build (`4df29be4`), separate
   tree `third_party/llama.cpp/build-714-vk` via
@@ -249,12 +251,39 @@ plus the session-5/6 series decompose the variance picture further
   median only). The warm/cold swing remains a user-facing UX risk
   (~12.4 tok/s / ~12.5 s TTFT after a cache clear, until warm) — so
   the mapping layer does not move; the "re-recommend vulkan?" question
-  is explicitly OPEN for the human owner (README roadmap). Recorded
-  per cell in
+  was explicitly OPEN for the human owner (README roadmap) until the
+  owner ruling 2026-08-20 closed it — NO (the "Choosing the backend"
+  bullet below). Recorded per cell in
   [`configs/benchmark-verdicts.json`](../configs/benchmark-verdicts.json)
-  (the vulkan mtp-c1 ruling note carries all three dated supersessions;
-  the cell's mechanical verdict is unchanged — what changed is the
-  mapping layer).
+  (the vulkan mtp-c1 ruling note carries all three dated supersessions
+  plus the dated OWNER DECISION addendum; the cell's mechanical verdict
+  is unchanged — what changed is the mapping layer).
+- **Choosing the backend (owner ruling 2026-08-20, v0.1.8 — the OPEN
+  question closed: NO)** — NOT re-recommending `BACKEND=vulkan`; the
+  guidance below is self-selection criteria, never promotion. The
+  end-to-end arithmetic, from the s4/s5/s6 warm pairings: vulkan's warm
+  streaming gain (band +15.88/+20.61/+19.90/+15.93%) is repaid only on
+  LONG replies because its first token is ~3 s slower (TTFT vk
+  8.49–8.54 s vs hip 5.49–5.63 s on s5/s6) — at a 256-token reply the
+  end-to-end delta is within **±0.6 s** (s4 +0.54 s vk-slower, s5
+  −0.28 s vk-faster, s6 +0.55 s vk-slower), and the derived crossover
+  is **≈230–310 tokens (derived)** — TTFT gap ÷ per-token gain:
+  2.91/0.00927≈314, 2.86/0.01227≈233, 3.05/0.00978≈312 — arithmetic
+  over the receipts, labeled derived, not a measurement. Power
+  (session-4 post-bench package telemetry): vk **~30–32 W** vs hip
+  **~52–53 W** — the real power/heat/noise argument for vk. Cold
+  start (the state a recommendation would systematically deliver to
+  new users first): **12.38 tok/s, TTFT 12.45 s** — worse than default
+  hip on both. **Guidance (self-selection, non-recommending):**
+  self-select the vk opt-in for long outputs (≳300-token replies, the
+  derived crossover) or power-sensitive setups; short-reply
+  interactive users get no end-to-end benefit and a slower first
+  token. **Pre-registered promotion criteria — ALL four must hold
+  before any future upgrade to conditional-recommended:**
+  (1) a daily warm series of at least 7 days with ZERO slow-state recurrence;
+  (2) the vk c8/c16 cells measured with anchors clean (pit coverage — currently unmeasured);
+  (3) at least one independent host/ICD replication (a community submission is ideal);
+  (4) the TTFT gap stated as an applicability condition (long-generation only), not a footnote.
 - **Stability (v0.1.3, measured 2026-08-18)** — a second, independent
   measurement session (hours after the v0.1.2 session, independent server
   boots, same host/pin/harness) reproduced every Vulkan c1 cell: mtp-c1

@@ -68,6 +68,21 @@ to s1–s6 (19/19). The recommendation layer is STILL not touched by this
 renderer — mapping unchanged (controller ruling 2026-08-20, recorded,
 not re-deliberated); the OPEN question's both-ways restatement lives in
 the hand-written README roadmap.
+
+2026-08-20 decision closeout (v0.1.8): the repository owner DECIDED the
+OPEN question — NO (owner ruling 2026-08-20, recorded, not
+re-deliberated): vulkan stays an available experimental opt-in, NOT
+recommended; hip WITH_MTP=1 SPEC_DEPTH=1 stays default AND recommended
+(the hand-written README roadmap entry is now the CLOSED decision, with
+the four pre-registered promotion criteria). This renderer adds the
+one-sentence SELECTION GUIDANCE (self-selection criteria, never
+promotion) where the opt-in is presented in the generated blocks — the
+known-good vulkan bullet and the benchmark.md quickstart-mapping row —
+and dates the ruling-paragraph/verdict-rule-application closures.
+Numbers interpolate from the same stability_evidence() loader (s5/s6
+TTFTs, the warm band, the session-4 power envelopes); the derived
+crossover prints as "≈230–310 tokens (derived)" (arithmetic over the
+s4/s5/s6 receipts, labeled — never a measurement).
 """
 
 from __future__ import annotations
@@ -124,6 +139,14 @@ def mark(verdict: str) -> str:
 
 def fmt(x, nd=1):
     return f"{x:.{nd}f}" if x is not None else "—"
+
+
+def env_range(pair) -> str:
+    """Envelope display: '30–32'; a single value prints once, never
+    '58–58' (v0.1.8: used for the selection-guidance power figures,
+    interpolated from the session-4 telemetry envelopes)."""
+    return (f"{pair[0]:.0f}" if pair[0] == pair[1]
+            else f"{pair[0]:.0f}–{pair[1]:.0f}")
 
 
 def backend_of(cid: str) -> str:
@@ -496,6 +519,7 @@ def render_known_good_bad(data: dict) -> str:
     s5 = ev["session5"]
     s6 = ev["session6"]
     wb = ev["warm_band"]
+    t4 = s4["telemetry"]
     lines = [
         "**Known good** (verdict receipts in `configs/benchmark-verdicts.json`):",
         "",
@@ -562,7 +586,23 @@ def render_known_good_bad(data: dict) -> str:
         "default and the recommended path (recommendation unchanged by "
         "every refinement). "
         f"Evidence: `{ev['pointer']}`; one host / one ICD (RADV 25.2.8) "
-        "remain the limits.",
+        "remain the limits. Selection guidance (owner ruling 2026-08-20 "
+        "— self-selection criteria, NOT a recommendation): self-select "
+        "the opt-in for long outputs (≳300-token replies; crossover "
+        "≈230–310 tokens (derived) — where the warm streaming band "
+        f"({'/'.join(wb['pcts_2dp'])}) repays the ~3 s slower first "
+        "token: TTFT vk "
+        f"{min(s5['vk_ttft_s_2dp'], s6['vk_ttft_s_2dp']):.2f}–"
+        f"{max(s5['vk_ttft_s_2dp'], s6['vk_ttft_s_2dp']):.2f} vs hip "
+        f"{min(s5['hip_ttft_s_2dp'], s6['hip_ttft_s_2dp']):.2f}–"
+        f"{max(s5['hip_ttft_s_2dp'], s6['hip_ttft_s_2dp']):.2f} s) or "
+        "power-sensitive setups (package power ~"
+        f"{env_range(t4['vk_post_power_range'])} W vs ~"
+        f"{env_range(t4['hip_post_power_range'])} W on hip); short-reply "
+        "interactive users get no end-to-end benefit and a slower first "
+        "token — see `docs/adaptation.md` §Vulkan (the four "
+        "pre-registered promotion criteria: README roadmap decision "
+        "entry).",
         "- ✅ **Boot reliability** — every declared-priority cell booted (GGUF "
         "4–6 s warm; vLLM 171/226 s); zero failed streams across all "
         f"{len(cells)} cells.",
@@ -728,7 +768,10 @@ def render_benchmark_md(data: dict) -> str:
              "measures ~13.86, `matrix-714/stability/session3-2026-08-19/`)",
              "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072"),
             ("`BACKEND=vulkan` + `WITH_MTP=1` opt-in — available, "
-             "experimental, NOT recommended (downgraded 2026-08-19)",
+             "experimental, NOT recommended (downgraded 2026-08-19; "
+             "owner ruling 2026-08-20: stays NOT recommended — "
+             "self-select for long outputs (≳300-token replies) or "
+             "power-sensitive setups; see `docs/adaptation.md` §Vulkan)",
              "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"),
             ("`scripts/03-serve-vllm.sh` (`serve-args.conf`, 262144)",
              "vllm-bf16-auto-base-c1-ctx262144"),
@@ -898,7 +941,12 @@ def render_benchmark_md(data: dict) -> str:
         "warm band + proven overnight persistence; AGAINST: s3 trigger "
         "more mysterious with the cache ruled out, P(vk-specific slow "
         "state) unquantified, aggregate/TTFT hip-favored) — not decided "
-        "here. Unaffected: the greedy pit still "
+        "here — DECIDED 2026-08-20 (owner ruling, v0.1.8): NO (see the "
+        "OWNER DECISION addendum in the vulkan mtp-c1 ruling note, "
+        "`configs/benchmark-verdicts.json`; selection guidance + the "
+        "four pre-registered promotion criteria: README roadmap "
+        "decision entry + `docs/adaptation.md` §Vulkan). Unaffected: "
+        "the greedy pit still "
         "does NOT reproduce on vulkan (cell-run anchors "
         f"{an['cell_runs_ok']}/{an['cell_runs_total']} across s1–s6, "
         f"{an['with_soak_ok']}/{an['with_soak_total']} with the soak "
@@ -1062,7 +1110,25 @@ def render_benchmark_md(data: dict) -> str:
         "verdict/metric changes; anchor tally now "
         f"{an['cell_runs_ok']}/{an['cell_runs_total']} across s1–s6 "
         f"({an['with_soak_ok']}/{an['with_soak_total']} with the soak "
-        "anchor).\n")
+        "anchor).\n"
+        "- Owner ruling 2026-08-20 (v0.1.8, DECISION — recorded, not "
+        "re-deliberated): the OPEN re-recommendation question is CLOSED "
+        "— NO. NOT re-recommending `BACKEND=vulkan` (stays an available "
+        "experimental opt-in, NOT recommended; hip `WITH_MTP=1 "
+        "SPEC_DEPTH=1` stays default AND recommended — the mapping of "
+        "record is confirmed, not changed). Rationale (verifier-locked): "
+        "end-to-end latency parity at typical reply lengths (vk TTFT "
+        "consistently ~3 s higher, offsetting the warm streaming band; "
+        "derived crossover ≈230–310 tokens (derived)); the cold-cache "
+        "first boot is what a recommendation would deliver to new users "
+        "first; 1-of-7 runs hit the unexplained slow state; "
+        "single-host/single-ICD/2-days evidence base. Selection guidance "
+        "(self-selection, never promotion) added where the opt-in is "
+        "presented; the four pre-registered promotion criteria (ALL "
+        "four must hold before any future upgrade to "
+        "conditional-recommended) are recorded in the README roadmap "
+        "decision entry and docs/adaptation.md §Vulkan. Zero "
+        "verdict/metric changes; the 8/14/6 distribution stands.\n")
     out.append(reasoning_moot_mark(data["cells"]) + "\n")
     out.append("\n## Raw receipts\n")
     out.append("Every cell links from the tables above; the declaration "

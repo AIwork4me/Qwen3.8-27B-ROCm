@@ -8,6 +8,74 @@ receipts [`docs/results/matrix-714/cells/`](docs/results/matrix-714/cells/),
 and the rehearsal receipt
 [`docs/results/rocm-7.14/one-pass-rehearsal.md`](docs/results/rocm-7.14/one-pass-rehearsal.md).
 
+## v0.1.8 — 2026-08-20
+
+Decision release (closeout D1): the repository owner **DECIDED the OPEN
+"re-recommend `BACKEND=vulkan`?" question — NO** (owner ruling
+2026-08-20, recorded, not re-deliberated). Vulkan stays an **available
+experimental opt-in, NOT recommended**; hip `WITH_MTP=1 SPEC_DEPTH=1`
+stays **both the default and the recommended path** — the mapping of
+record is confirmed, not changed. **No corpus data changed**: the 28
+cells, `matrix.json`, every cell verdict, every metric, and the 8/14/6
+distribution are untouched; the verdicts-JSON delta is the vulkan
+mtp-c1 ruling note (dated OWNER DECISION addendum — resolution #4; the
+v0.1.6/v0.1.7 "OPEN for the owner" phrasings stay visible, marked
+resolved).
+
+### The decision and its evidence
+
+- **Rationale (all verifier-locked):** (1) end-to-end latency **parity
+  at typical reply lengths** — vk's TTFT is consistently ~3 s higher
+  (8.4–8.6 vs 5.4–5.6 s), offsetting the warm streaming gain
+  (+15.88/+20.61/+19.90/+15.93% across 4 sessions); derived crossover
+  **≈230–310 tokens (derived — arithmetic over the s4/s5/s6 receipts:
+  2.91/0.00927≈314, 2.86/0.01227≈233, 3.05/0.00978≈312; labeled
+  derived, not a measurement; at a 256-token reply the end-to-end delta
+  is within ±0.6 s); (2) a cold-cache first boot (12.38 tok/s, TTFT
+  12.45 s — worse than default hip on both) is the state a
+  recommendation would systematically deliver to new users first;
+  (3) 1-of-7 vk runs hit the unexplained slow state (s3 14.53, trigger
+  unidentified after forensics); (4) the evidence base is
+  single-host / single-ICD (RADV 25.2.8) / single-Mesa-point /
+  2-days.
+- **Selection guidance (user-facing, non-recommending — self-selection
+  criteria, never promotion):** users generating long outputs
+  (≳300-token replies, the derived crossover) or sensitive to GPU
+  power/heat/noise (vk ~30–32 W vs hip ~52–53 W package) may
+  reasonably self-select the vk opt-in; short-reply interactive users
+  get no end-to-end benefit and a slower first token.
+- **Pre-registered promotion criteria — ALL four must hold before any
+  future upgrade to conditional-recommended:** (1) a daily warm series
+  of at least 7 days with ZERO slow-state recurrence; (2) the vk c8/c16
+  cells measured with anchors clean (pit coverage — currently
+  unmeasured); (3) at least one independent host/ICD replication (a
+  community submission is ideal); (4) the TTFT gap stated as an
+  applicability condition (long-generation only), not a footnote.
+
+### Surfaces
+
+- `configs/benchmark-verdicts.json` — regenerated: the vulkan mtp-c1
+  ruling note gains the dated OWNER DECISION addendum (selection
+  guidance + promotion criteria included); zero metric/verdict
+  changes; distribution 8/14/6 unchanged.
+- `README.md` — the roadmap OPEN question becomes the **CLOSED decision
+  entry** ("DECIDED 2026-08-20: NO") with the compact rationale pointer
+  and the four criteria; the generated known-good vulkan bullet gains
+  the one-sentence selection guidance (numbers interpolated from the
+  stability loader); current release → v0.1.8.
+- `docs/results/benchmark.md` — the quickstart-mapping row carries the
+  guidance pointer; the ruling paragraph and the verdict-rule list
+  carry the dated decision bullet.
+- `scripts/gguf-quickstart.sh` — ONE new echo line (`selection    :`)
+  in the vulkan branch; boot logic and defaults byte-identical; the
+  "NOT recommended" framing unchanged.
+- `docs/adaptation.md` §Vulkan — new **"Choosing the backend (owner
+  ruling 2026-08-20)"** subsection: the end-to-end arithmetic
+  (256-token parity ±0.6 s; crossover derived), power figures,
+  cold-start facts, the guidance sentence, and the four criteria as the
+  enumerated path to any future upgrade.
+- `CITATION.cff` — 0.1.7 → 0.1.8.
+
 ## v0.1.7 — 2026-08-20
 
 Evidence-integration release (H2): the trigger-hunt forensics

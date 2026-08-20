@@ -96,6 +96,26 @@ def test_quickstart_backend_vulkan_opt_in_is_downgraded_2026_08_19():
     assert 'BACKEND="${BACKEND:-hip}"' in src
 
 
+def test_quickstart_vulkan_selection_guideline_2026_08_20():
+    # OWNER RULING (2026-08-20, v0.1.8): the "re-recommend vulkan?"
+    # question is DECIDED — NO. The vulkan branch gains ONE echo line
+    # carrying the selection guidance (self-selection criteria, never a
+    # recommendation): long outputs (>=300-token replies, derived
+    # crossover) or power-sensitive setups. Boot logic and the default
+    # are untouched; the NOT-recommended framing is kept.
+    src = SCRIPT.read_text()
+    assert "self-select this opt-in for long outputs" in src
+    assert ">=300-token replies" in src
+    assert "derived" in src
+    assert "power-sensitive setups" in src
+    assert "owner ruling 2026-08-20" in src
+    assert "still NOT recommended" in src
+    assert "docs/adaptation.md" in src
+    # The decision changed no boot semantics.
+    assert 'BACKEND="${BACKEND:-hip}"' in src
+    assert "AVAILABLE experimental opt-in" in src
+
+
 def test_quickstart_spec_depth_passthrough():
     # SPEC_DEPTH=<n> maps to the depth flag discovered at the pin
     # (--spec-draft-n-max; see configs/validated-stack.json

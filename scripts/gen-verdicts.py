@@ -108,6 +108,26 @@ verdicts-JSON delta is the vulkan mtp-c1 ruling note plus the top-level
 ruling-of-record attribution date (controller-2026-08-20 — the H2
 refinement is the latest ruling of record; the mapping layer it leaves
 unchanged remains the 2026-08-19 ruling, quoted as such in the prose).
+
+2026-08-20 decision closeout (v0.1.8): the repository owner DECIDED the
+OPEN re-recommendation question — NO (owner ruling 2026-08-20, recorded
+verbatim in substance, never re-deliberated here): NOT re-recommending
+BACKEND=vulkan; it stays an available experimental opt-in, NOT
+recommended; hip WITH_MTP=1 SPEC_DEPTH=1 stays default AND recommended
+(the mapping of record is CONFIRMED, not changed). The vulkan mtp-c1
+ruling note gains the dated OWNER DECISION addendum — resolution #4,
+with the two earlier "OPEN for the owner" phrasings (v0.1.6/v0.1.7
+layers) kept visible and marked resolved, consistent with the three
+supersession layers. Every rationale number interpolates from the same
+loaders (s4/s5/s6 TTFTs, the warm band, the cold-arm figures, the
+session-4 power envelopes); the crossover prints as "≈230–310 tokens"
+explicitly labeled DERIVED (arithmetic over three sessions' receipts,
+never a measurement). The addendum also records the SELECTION GUIDANCE
+(self-selection criteria, never promotion) and the four PRE-REGISTERED
+promotion criteria (all four must hold before any future upgrade to
+conditional-recommended). Zero metric/verdict changes: the 8/14/6
+distribution and every cell verdict stand; the verdicts-JSON delta is
+the one ruling note.
 """
 
 from __future__ import annotations
@@ -1119,7 +1139,8 @@ def v012_ruling_note(cid: str, all_metrics: dict | None,
                 f"warm/cold swing is a user-facing UX risk (first boot "
                 f"after a cache clear: ~12.4 tok/s / ~12.5 s TTFT until "
                 f"warm). The re-recommendation question is recorded as "
-                f"OPEN for the human owner (README roadmap). H2 "
+                f"OPEN for the human owner (README roadmap) — RESOLVED "
+                f"2026-08-20 by the OWNER DECISION addendum below (NO). H2 "
                 f"REFINEMENT (2026-08-20, v0.1.7) SUPERSEDES the v0.1.6 "
                 f"partial-cold reading of s3 — dated supersession #3, "
                 f"history visible above: the trigger-hunt cache forensics "
@@ -1185,7 +1206,9 @@ def v012_ruling_note(cid: str, all_metrics: dict | None,
                 f"sessions and overnight persistence is proven; AGAINST — "
                 f"the s3 trigger is MORE mysterious (cache ruled out), "
                 f"P(vk-specific slow state) is unquantified, and "
-                f"aggregate/TTFT stay hip-favored. Not decided here. "
+                f"aggregate/TTFT stay hip-favored. Not decided here — "
+                f"DECIDED 2026-08-20 (owner ruling, v0.1.8): NO, see the "
+                f"OWNER DECISION addendum below. "
                 f"Unaffected "
                 f"findings, restated: the greedy pit still does NOT "
                 f"reproduce on vulkan — cell-run anchors "
@@ -1194,7 +1217,62 @@ def v012_ruling_note(cid: str, all_metrics: dict | None,
                 f"with the soak anchor); depth 1 still beats depth 4 on "
                 f"both backends (mtp stays the recommended variant, no "
                 f"mtp4 recommendation; clean-gap exact basis "
-                f"{clean_gap_pct:+.2f}%).")
+                f"{clean_gap_pct:+.2f}%). "
+                # v0.1.8 (2026-08-20): the OWNER DECISION addendum —
+                # resolution #4. Every number interpolates from the same
+                # loaders as the layers above (s4/s5/s6 TTFTs, the warm
+                # band, the cold-arm figures, the session-4 telemetry
+                # envelopes t4v/t4h); the crossover is arithmetic over
+                # three sessions' receipts and prints labeled DERIVED.
+                f"OWNER DECISION (2026-08-20, v0.1.8) RESOLVES the OPEN "
+                f"re-recommendation question — dated resolution #4, "
+                f"history visible above: NO. The repository owner rules "
+                f"— recorded, not re-deliberated — NOT re-recommending "
+                f"BACKEND=vulkan: it stays an AVAILABLE experimental "
+                f"opt-in, NOT recommended, and hip WITH_MTP=1 "
+                f"SPEC_DEPTH=1 stays BOTH the default AND the recommended "
+                f"path (the mapping of record is CONFIRMED, not changed). "
+                f"Rationale, from the verifier-locked evidence above: "
+                f"(1) end-to-end latency PARITY at typical reply lengths "
+                f"— vk's TTFT is consistently ~3 s higher (s5/s6 "
+                f"{s5['vk_ttft_s_2dp']:.2f}/{s6['vk_ttft_s_2dp']:.2f} vs "
+                f"hip {s5['hip_ttft_s_2dp']:.2f}/"
+                f"{s6['hip_ttft_s_2dp']:.2f} s), offsetting the warm "
+                f"streaming gain (4-session band "
+                f"{'/'.join(wb['pcts_2dp'])}); the crossover where vk's "
+                f"streaming gain repays the slower first token is "
+                f"≈230–310 tokens (DERIVED from the s4/s5/s6 receipts — "
+                f"arithmetic over three sessions, not a measurement: "
+                f"2.91/0.00927≈314, 2.86/0.01227≈233, 3.05/0.00978≈312); "
+                f"(2) a cold-cache first boot ({s4['aside_2dp']:.2f} "
+                f"tok/s, TTFT {s4['aside_ttft_s_2dp']:.2f} s — worse "
+                f"than default hip on both) is the state a "
+                f"recommendation would systematically deliver to new "
+                f"users first; (3) 1-of-7 vk runs hit the unexplained "
+                f"slow state (s3 {s3vk_2dp:.2f}, trigger UNIDENTIFIED "
+                f"after forensics); (4) the evidence base is "
+                f"single-host / single-ICD (RADV 25.2.8) / "
+                f"single-Mesa-point / 2-days. SELECTION GUIDANCE "
+                f"(user-facing, NON-recommending — self-selection "
+                f"criteria, never promotion; mirrored in the README "
+                f"roadmap decision entry, the quickstart echo, and "
+                f"docs/adaptation.md §Vulkan): users generating LONG "
+                f"outputs (≳300-token replies, the derived crossover) or "
+                f"sensitive to GPU power/heat/noise (package ~{t4v[1]} W "
+                f"vs ~{t4h[1]} W hip) may reasonably SELF-SELECT the vk "
+                f"opt-in; short-reply interactive users get no "
+                f"end-to-end benefit and a slower first token. "
+                f"PRE-REGISTERED PROMOTION CRITERIA — ALL four must hold "
+                f"before any future upgrade to conditional-recommended: "
+                f"(1) a daily warm series of at least 7 days with ZERO "
+                f"slow-state recurrence; (2) the vk c8/c16 cells measured "
+                f"with anchors clean (pit coverage — currently "
+                f"unmeasured); (3) at least one independent host/ICD "
+                f"replication (a community submission is ideal); (4) the "
+                f"TTFT gap stated as an applicability condition "
+                f"(long-generation only), not a footnote. Zero "
+                f"metric/verdict changes — the 8/14/6 distribution "
+                f"stands.")
     if cid == "gguf-vulkan-udq4kxl-auto-base-c1-ctx131072":
         cp = stability_evidence()["clean_pairing"]
         return (f"Controller review 2026-08-18: mechanical verdict confirmed, "

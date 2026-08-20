@@ -305,6 +305,7 @@ fi
 echo "llama-server : $SERVER ($("$SERVER" --version 2>&1 | head -n1))"
 if [ "$BACKEND" = "vulkan" ]; then
     echo "backend      : $BACKEND (AVAILABLE experimental opt-in — NOT recommended; project ruling 2026-08-19 supersedes the 2026-08-18 promotion: the clean depth-1 same-day pairing is 14.53 vs 13.86 tok/s = +4.81% single-stream, aggregate basis -13.31%; cross-day re-runs dropped every vulkan cell — see benchmark verdicts and docs/results/matrix-714/stability/)"
+    echo "selection    : self-select this opt-in for long outputs (>=300-token replies — crossover ~230-310 tokens, derived) or power-sensitive setups (~30-32 W vs ~52-53 W package on hip); short replies get no end-to-end benefit and a slower first token (owner ruling 2026-08-20 — still NOT recommended; docs/adaptation.md Vulkan section)"
     echo "warmup note : if this vulkan run feels slow, a cold Mesa shader cache is the first suspect (~12.4 tok/s / ~12.5 s TTFT cold vs ~17.0 tok/s warm, +38% swing — v0.1.6 root cause) — re-run before concluding; the experimental-opt-in status above is unchanged"
 else
     echo "backend      : $BACKEND (default AND recommended path — run WITH_MTP=1 for the recommended interactive config, 13.0 tok/s per stream)"
