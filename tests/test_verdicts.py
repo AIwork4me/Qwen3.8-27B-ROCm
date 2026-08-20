@@ -658,9 +658,12 @@ def test_cache_state_story_on_user_facing_surfaces_v016():
     assert "first-run cache warmup is the first suspect" in adaptation
     assert "conservative floor case" in adaptation.lower()
     readme = README.read_text()
-    assert "Re-recommend `BACKEND=vulkan`?" in readme, (
-        "the OPEN re-recommendation question is missing from the roadmap")
-    assert "OPEN decision for the repository" in readme
+    # v0.1.8: the OPEN question is closed — DECIDED 2026-08-20: NO.
+    assert ("Re-recommend `BACKEND=vulkan`? — DECIDED 2026-08-20: NO"
+            in readme), (
+        "the roadmap decision entry (DECIDED 2026-08-20: NO) is missing")
+    assert "OPEN decision for the repository" not in readme, (
+        "the roadmap must no longer present the question as OPEN")
     # No recommendation drift on any surface: vulkan stays NOT recommended
     # (benchmark.md words it "NO recommendation").
     assert "NOT recommended" in readme
@@ -769,6 +772,115 @@ def test_trigger_hunt_note_is_committed_and_untouched_class():
     # H2's — recorded in the note's own preamble).
     assert "Facts + verbatim command output only" in text
     assert "No causal claim is made here" in text
+
+
+# ------------- 6e. v0.1.8 D1 — the owner decision closes the question
+#
+# Owner ruling 2026-08-20 (DECIDED, recorded, not re-deliberated): NOT
+# re-recommending BACKEND=vulkan. The README roadmap OPEN question is
+# now a CLOSED decision entry carrying the four pre-registered
+# promotion criteria verbatim; the ruling note gains the dated OWNER
+# DECISION resolution (history visible — the earlier OPEN phrasings
+# stay, marked resolved); selection guidance (self-selection, never
+# promotion) lands on every surface that presents the opt-in; the
+# mapping layer is untouched (vulkan still NOT recommended).
+
+V018_CRITERIA = (
+    "a daily warm series of at least 7 days with ZERO slow-state "
+    "recurrence",
+    "the vk c8/c16 cells measured with anchors clean (pit coverage — "
+    "currently unmeasured)",
+    "at least one independent host/ICD replication (a community "
+    "submission is ideal)",
+    "the TTFT gap stated as an applicability condition (long-generation "
+    "only), not a footnote",
+)
+
+
+def test_owner_decision_closes_the_rerecommendation_question_v018():
+    readme = README.read_text()
+    roadmap = readme.split("## Status & roadmap", 1)[1]
+    # The decision entry: DECIDED ... NO, stays experimental opt-in.
+    assert "DECIDED 2026-08-20: NO" in roadmap, (
+        "the roadmap decision entry verdict is missing")
+    assert "owner" in roadmap and "ruling; stays experimental opt-in" in roadmap
+    assert "NOT re-recommending vulkan" in roadmap
+    # All four promotion criteria, VERBATIM, as the pre-registered path
+    # to any future yes — and only as a future path (ALL four, no
+    # upgrade now).
+    for criterion in V018_CRITERIA:
+        assert criterion in roadmap, (
+            f"roadmap decision entry lost the criterion {criterion!r}")
+    assert "ALL four must hold" in roadmap
+    assert "conditional-recommended" in roadmap
+    # The guidance reads as self-selection, never promotion; derived
+    # numbers are labeled derived.
+    assert "self-select" in roadmap
+    assert "≈230–310 tokens (derived" in roadmap
+    assert "power-sensitive setups" in roadmap
+    # The ruling note carries the dated resolution; the v0.1.6/v0.1.7
+    # OPEN phrasings stay visible, marked resolved (history intact).
+    r = {c["id"]: c for c in load(VERDICTS)["cells"]}[
+        "gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072"]["reason"]
+    for fragment in ("OWNER DECISION (2026-08-20, v0.1.8)",
+                     "RESOLVES the OPEN re-recommendation question",
+                     "dated resolution #4",
+                     "NOT re-recommending BACKEND=vulkan",
+                     "mapping of record is CONFIRMED, not changed",
+                     "≈230–310 tokens (DERIVED",
+                     "not a measurement",
+                     "12.38 tok/s, TTFT 12.45 s",
+                     "1-of-7 vk runs",
+                     "ZERO slow-state recurrence",
+                     "RESOLVED 2026-08-20 by the OWNER DECISION addendum "
+                     "below (NO)",
+                     "DECIDED 2026-08-20 (owner ruling, v0.1.8): NO",
+                     "OPEN for the human owner"):
+        assert fragment in r, (
+            f"ruling note lost the v0.1.8 resolution fragment {fragment!r}")
+    # Zero metric/verdict changes rode along with the decision.
+    dist = {}
+    for c in load(VERDICTS)["cells"]:
+        dist[c["verdict"]] = dist.get(c["verdict"], 0) + 1
+    assert dist == {"recommended": 8, "caution": 14, "avoid": 6}
+
+
+def test_selection_guidance_on_every_optin_surface_v018():
+    """The owner-ruling selection guidance (self-selection criteria,
+    never promotion) is present wherever the opt-in is presented: the
+    quickstart echo (one new line, boot logic untouched), the README
+    generated known-good bullet, the benchmark.md quickstart-mapping
+    row, and adaptation.md §Vulkan — and the mapping still asserts
+    vulkan NOT recommended everywhere."""
+    src = QUICKSTART.read_text()
+    assert "self-select this opt-in for long outputs" in src, (
+        "the quickstart vulkan echo lost the selection-guidance line")
+    assert "power-sensitive setups" in src
+    assert "still NOT recommended" in src
+    assert "owner ruling 2026-08-20" in src
+    # Boot logic untouched: default hip, opt-in framing unchanged.
+    assert 'BACKEND="${BACKEND:-hip}"' in src
+    assert "AVAILABLE experimental opt-in" in src
+    assert "RECOMMENDED OPT-IN" not in src
+    readme = README.read_text()
+    kg = readme.split("BEGIN GENERATED: known-good-bad", 1)[1]
+    assert "Selection guidance (owner ruling 2026-08-20" in kg, (
+        "the generated known-good bullet lost the guidance sentence")
+    assert "≈230–310 tokens (derived)" in kg
+    assert "package power ~30–32 W vs ~52–53 W" in kg
+    bench = BENCH_MD.read_text()
+    assert "self-select for long outputs (≳300-token replies)" in bench, (
+        "the benchmark.md quickstart-mapping row lost the guidance")
+    assert "Owner ruling 2026-08-20 (v0.1.8, DECISION" in bench
+    adaptation = (ROOT / "docs" / "adaptation.md").read_text()
+    assert "Choosing the backend (owner ruling 2026-08-20" in adaptation
+    for criterion in V018_CRITERIA:
+        assert criterion in adaptation, (
+            f"adaptation.md §Vulkan lost the criterion {criterion!r}")
+    assert "±0.6 s" in adaptation and "≈230–310 tokens (derived)" in adaptation
+    # The guidance never promotes: vulkan stays NOT recommended.
+    assert "NOT recommended" in readme
+    assert "NO recommendation" in bench
 
 
 def test_no_quickstart_referenced_config_is_avoid():

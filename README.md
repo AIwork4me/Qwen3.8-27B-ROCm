@@ -160,7 +160,7 @@ Boot ladder (S3) + deep-prompt retrieval smoke — GGUF path, needle sentence at
 
 - ✅ **GGUF interactive at c1** — hip: all three ctx tiers recommended, default boot (10.1 tok/s per stream) and `WITH_MTP=1` (13.0 tok/s, +28% per-stream) — the recommended path; vulkan (experimental opt-in): base 10.7 and mtp 16.0 tok/s in the 2026-08-18 cells (see the Vulkan bullet for the downgraded mapping).
 - ✅ **vLLM path anchor-clean in all 8 cells** — including anchors run immediately after 16-stream benches: the GGUF greedy-degradation pit does NOT reproduce here; the honest choice for 262144 context, vision, and batch throughput (38.6 tok/s aggregate @base-c16).
-- ✅ **Vulkan backend (v0.1.2 cells; opt-in downgraded v0.1.4, variance decomposed v0.1.7)** — anchor-clean in all 6 measured vulkan cells (the hip greedy pit does NOT reproduce on this backend; cell-run anchors now 19/19 across s1–s6). `BACKEND=vulkan WITH_MTP=1` is an AVAILABLE experimental opt-in, NOT a recommendation — project ruling 2026-08-19 SUPERSEDES the 2026-08-18 promotion (mixed-depth basis): the clean d1 pairing (2026-08-19) is 14.53 vs 13.86 tok/s = +4.81% single-stream (the conservative FLOOR case — vk measured in the unidentified slow state), aggregate flips to -13.31% (vulkan TTFT 9.94–12.21 s vs 8.36–8.83 s on 08-18), and cross-day re-runs dropped every vulkan cell (spreads 11.81%/30.70%/6.07% mtp/mtp4/base) — v0.1.6 root-caused that class to Mesa shader-cache state (identical config/flags/pin measures cold 12.38 with the cache aside / warm 16.96–17.10 tok/s, mean 17.03 = a +38% cold→warm swing), and v0.1.7's trigger-hunt forensics refine it (dated supersession #3): the cache was forensically INTACT at s3 (`matrix-714/stability/trigger-hunt-2026-08-19.md` — 866 files pre-window / 0 written inside the causal window / 1 post), so the partial-cold reading is retired: s3 ran slow with a warm untouched cache and its vk-specific TRIGGER is UNIDENTIFIED (no suspend/resume, no amdgpu reset/errors, no power-profile switch in the window; clock-stepping absent during s3's run; the only discrete in-window state change is an unattended-upgrade linux-libc-dev/linux-tools-common 6.8.0-137→138 — fact recorded, no mechanism claimed); clock-stepping is a CHRONIC common-mode condition (883+ events since the 08-12 boot, present during fast sessions too — not s3-specific). Session-5/6 series: BOTH backends drift together evening vs morning (vk -4.6%, hip -6.0% vs s4 — common-mode ±5–6%), the warm pairing band is 4 sessions +15.88%/+20.61%/+19.90%/+15.93% (s4 boots 1-2, s5, s6), OVERNIGHT persistence is confirmed (s6 7 h 50 m after s5, cache byte-identical 7884 KiB/867 files / zero writes, pairing in band), and aggregate/TTFT are consistently hip-favored (TTFT vk 8.49–8.54 vs hip 5.49–5.63 s across s5/s6; aggregate s5 +1.07%, s6 -2.39%) — vulkan's edge is the single-stream median only. hip `WITH_MTP=1` is BOTH the default and the recommended path (recommendation unchanged by every refinement). Evidence: `docs/results/matrix-714/stability/`; one host / one ICD (RADV 25.2.8) remain the limits.
+- ✅ **Vulkan backend (v0.1.2 cells; opt-in downgraded v0.1.4, variance decomposed v0.1.7)** — anchor-clean in all 6 measured vulkan cells (the hip greedy pit does NOT reproduce on this backend; cell-run anchors now 19/19 across s1–s6). `BACKEND=vulkan WITH_MTP=1` is an AVAILABLE experimental opt-in, NOT a recommendation — project ruling 2026-08-19 SUPERSEDES the 2026-08-18 promotion (mixed-depth basis): the clean d1 pairing (2026-08-19) is 14.53 vs 13.86 tok/s = +4.81% single-stream (the conservative FLOOR case — vk measured in the unidentified slow state), aggregate flips to -13.31% (vulkan TTFT 9.94–12.21 s vs 8.36–8.83 s on 08-18), and cross-day re-runs dropped every vulkan cell (spreads 11.81%/30.70%/6.07% mtp/mtp4/base) — v0.1.6 root-caused that class to Mesa shader-cache state (identical config/flags/pin measures cold 12.38 with the cache aside / warm 16.96–17.10 tok/s, mean 17.03 = a +38% cold→warm swing), and v0.1.7's trigger-hunt forensics refine it (dated supersession #3): the cache was forensically INTACT at s3 (`matrix-714/stability/trigger-hunt-2026-08-19.md` — 866 files pre-window / 0 written inside the causal window / 1 post), so the partial-cold reading is retired: s3 ran slow with a warm untouched cache and its vk-specific TRIGGER is UNIDENTIFIED (no suspend/resume, no amdgpu reset/errors, no power-profile switch in the window; clock-stepping absent during s3's run; the only discrete in-window state change is an unattended-upgrade linux-libc-dev/linux-tools-common 6.8.0-137→138 — fact recorded, no mechanism claimed); clock-stepping is a CHRONIC common-mode condition (883+ events since the 08-12 boot, present during fast sessions too — not s3-specific). Session-5/6 series: BOTH backends drift together evening vs morning (vk -4.6%, hip -6.0% vs s4 — common-mode ±5–6%), the warm pairing band is 4 sessions +15.88%/+20.61%/+19.90%/+15.93% (s4 boots 1-2, s5, s6), OVERNIGHT persistence is confirmed (s6 7 h 50 m after s5, cache byte-identical 7884 KiB/867 files / zero writes, pairing in band), and aggregate/TTFT are consistently hip-favored (TTFT vk 8.49–8.54 vs hip 5.49–5.63 s across s5/s6; aggregate s5 +1.07%, s6 -2.39%) — vulkan's edge is the single-stream median only. hip `WITH_MTP=1` is BOTH the default and the recommended path (recommendation unchanged by every refinement). Evidence: `docs/results/matrix-714/stability/`; one host / one ICD (RADV 25.2.8) remain the limits. Selection guidance (owner ruling 2026-08-20 — self-selection criteria, NOT a recommendation): self-select the opt-in for long outputs (≳300-token replies; crossover ≈230–310 tokens (derived) — where the warm streaming band (+15.88%/+20.61%/+19.90%/+15.93%) repays the ~3 s slower first token: TTFT vk 8.49–8.54 vs hip 5.49–5.63 s) or power-sensitive setups (package power ~30–32 W vs ~52–53 W on hip); short-reply interactive users get no end-to-end benefit and a slower first token — see `docs/adaptation.md` §Vulkan (the four pre-registered promotion criteria: README roadmap decision entry).
 - ✅ **Boot reliability** — every declared-priority cell booted (GGUF 4–6 s warm; vLLM 171/226 s); zero failed streams across all 28 cells.
 
 **Known bad / pits:**
@@ -196,7 +196,7 @@ Full tables with links to the raw receipts: [docs/results/benchmark.md](docs/res
 
 ## Status & roadmap
 
-Current release: **v0.1.7** — [CHANGELOG](CHANGELOG.md) ·
+Current release: **v0.1.8** — [CHANGELOG](CHANGELOG.md) ·
 [Releases](https://github.com/AIwork4me/Qwen3.8-27B-ROCm/releases).
 
 Roadmap — evidence-gated intentions, not promises; each item lands when its
@@ -226,33 +226,41 @@ receipts do:
   24.5 on an 80 GiB host ([adaptation map](docs/adaptation.md), [benchmark
   tables](docs/results/benchmark.md), [stability
   receipts](docs/results/matrix-714/stability/)).
-- **Re-recommend `BACKEND=vulkan`? — OPEN decision for the repository
-  owner (v0.1.7, explicitly not taken by this release)** — the variance
-  picture after the trigger hunt + overnight series: the cold-cache arm
-  stays the swing BOUND (cold 12.38 / warm mean 17.03 on identical
-  config/flags/pin, +38% class), but s3's cache was forensically INTACT
-  (866/0/1 files around the causal window — [trigger-hunt
-  note](docs/results/matrix-714/stability/trigger-hunt-2026-08-19.md)),
-  so its vk-specific trigger is UNIDENTIFIED and the v0.1.6
-  "partial-cold" reading is retired (dated supersession #3). The
-  pairing numbers, both labeled: clean d1 +4.81% (the conservative
-  floor case — vk measured in the unidentified slow state, hip 13.86)
-  vs the warm pairing band across 4 sessions +15.88% / +20.61% /
-  +19.90% / +15.93% (s4 boots 1-2, s5, s6; overnight persistence
-  CONFIRMED — s6 ran 7 h 50 m after s5 with the cache byte-identical;
-  aggregate/TTFT consistently hip-favored: TTFT vk 8.4–8.6 s vs hip
-  5.4–5.6 s, aggregate s5 +1.07% / s6 −2.39%). The current mapping
-  stands (vulkan = available experimental opt-in, NOT recommended; hip
-  `WITH_MTP=1 SPEC_DEPTH=1` default AND recommended); whether the
-  warm-band evidence should move it is open for the human owner, restated
-  both ways — FOR re-recommending: the warm band is now 4 consistent
-  sessions and overnight persistence is proven; AGAINST: the s3 trigger
-  is MORE mysterious with the cache ruled out, P(vk-specific slow
-  state) is unquantified, and aggregate/TTFT stay hip-favored (vk's
-  edge is the single-stream median only); the warm/cold swing also
-  remains a first-boot UX risk (~12.4 tok/s / ~12.5 s TTFT after a
-  cache clear, until warm). Numbers and links:
-  [adaptation map](docs/adaptation.md) §Vulkan, [stability
+- **Re-recommend `BACKEND=vulkan`? — DECIDED 2026-08-20: NO (owner
+  ruling; stays experimental opt-in)** — the repository owner closed the
+  v0.1.7 OPEN question: NOT re-recommending vulkan; it stays an
+  available experimental opt-in, NOT recommended, and hip
+  `WITH_MTP=1 SPEC_DEPTH=1` stays BOTH the default AND the recommended
+  path (the mapping of record is confirmed, not changed). Rationale
+  (verifier-locked evidence; arithmetic in [adaptation
+  map](docs/adaptation.md) §Vulkan "Choosing the backend"):
+  end-to-end latency parity at typical reply lengths — vk's TTFT is
+  consistently ~3 s higher (8.4–8.6 vs 5.4–5.6 s), offsetting the warm
+  streaming band (+15.88/+20.61/+19.90/+15.93% across 4 sessions);
+  derived crossover ≈230–310 tokens (derived — arithmetic over the
+  s4/s5/s6 receipts, not a measurement); the cold-cache first boot
+  (12.38 tok/s, TTFT 12.45 s — worse than default hip on both) is the
+  state a recommendation would systematically deliver to new users
+  first; 1-of-7 runs hit the unexplained slow state (s3 14.53, trigger
+  unidentified after forensics); single-host / single-ICD (RADV 25.2.8)
+  / single-Mesa-point / 2-days evidence base. Selection guidance
+  (self-selection, not promotion): self-select for long outputs
+  (≳300-token replies) or power-sensitive setups (vk ~30–32 W vs hip
+  ~52–53 W package); short-reply interactive users get no end-to-end
+  benefit and a slower first token. Pre-registered promotion criteria —
+  ALL four must hold before any future upgrade to
+  conditional-recommended:
+  (1) a daily warm series of at least 7 days with ZERO slow-state recurrence;
+  (2) the vk c8/c16 cells measured with anchors clean (pit coverage — currently unmeasured);
+  (3) at least one independent host/ICD replication (a community submission is ideal);
+  (4) the TTFT gap stated as an applicability condition (long-generation only), not a footnote.
+  History: the v0.1.7
+  both-ways restatement (FOR: 4-session warm band + proven overnight
+  persistence; AGAINST: s3 trigger unexplained, aggregate/TTFT
+  hip-favored) stays visible in the ruling note
+  ([verdicts](configs/benchmark-verdicts.json)) and
+  [CHANGELOG](CHANGELOG.md). Numbers and links: [adaptation
+  map](docs/adaptation.md) §Vulkan, [stability
   receipts](docs/results/matrix-714/stability/),
   [verdicts](configs/benchmark-verdicts.json).
 - **The bracketing gap — filled (v0.1.2)** — the unified-default c4@131072
