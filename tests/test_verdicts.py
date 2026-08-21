@@ -1428,3 +1428,15 @@ def test_caution_mtp_sentence_follows_the_actual_numbers():
         else:
             assert "Above the base c" not in r, (
                 f"{cell['id']}: says 'Above base' on a regressing cell")
+
+
+def test_schema_accepts_the_dflash_spec_variant_ids():
+    # v0.1.9: the spec-variant slot gains "dflash" (vllm path only — the
+    # pattern must still refuse gguf dflash and the dropped ctx tiers).
+    s = load(SCHEMA)
+    pat = re.compile(
+        s["properties"]["cells"]["items"]["properties"]["id"]["pattern"])
+    assert pat.match("vllm-bf16-auto-dflash-c1-ctx131072")
+    assert pat.match("vllm-bf16-auto-dflash-c8-ctx131072")
+    assert not pat.match("vllm-bf16-auto-dflash-c1-ctx32768")
+    assert not pat.match("gguf-hip-udq4kxl-auto-dflash-c1-ctx131072")
