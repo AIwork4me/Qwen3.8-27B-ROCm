@@ -61,7 +61,8 @@ c ≤ 4 with DFlash2.
 cell above ran at n-max 7 (the block_size−1 cap and the GGUF README's
 suggested value) — but on gfx1100 the optimum is much lower. n-max 2–4
 measures **40.0–41.6 tok/s** (acceptance 0.71/0.52 vs 0.33 at 7), i.e.
-**+21–27% over n-max 7**, reaching **parity with MTP depth 1** (41.3).
+**+20.6% vs the published n-max-7 cell (+26.5% within-session at n-max
+4)**, reaching **parity with MTP depth 1** (41.3).
 Q4_K_M draft is not faster here. Receipt:
 [`nmax-sweep.json`](nmax-sweep.json); analysis: [experiments.md F8](experiments.md).
 
@@ -112,6 +113,12 @@ Spec: [`docs/superpowers/specs/2026-08-21-dflash2-phase-design.md`](../../superp
 Vendor numbers & other engines (SGLang/vLLM/oMLX):
 [model card](https://huggingface.co/incoai/Qwen3.8-27B-DFlash2) ·
 [blog](https://inco.ai/blog/dflash2/). On this 48 GiB host the vLLM/SGLang
-DFlash2 paths are out of scope (BF16 needs 51.7 GiB of weights; the FP8
-vLLM path is the recorded 47×-slower capacity unlock —
+DFlash2 paths are out of scope *for this host class* (BF16 needs
+51.7 GiB of weights; the FP8 vLLM path is the recorded 47×-slower
+capacity unlock —
 [`docs/results/community-explorations/w7900d-gfx1100/results/spike/fp8-unlock.md`](../community-explorations/w7900d-gfx1100/results/spike/fp8-unlock.md)).
+On the reference host (gfx1151, 80 GiB unified pool) the repo also ships a
+**vLLM-path DFlash2 integration** (`--dflash2`; BF16 weights fit there) —
+see [`../rocm-7.14/dflash2-validation.md`](../rocm-7.14/dflash2-validation.md)
+and the README's DFlash 2 section. Different engine, different host class,
+different memory model — numbers do not transfer between them.

@@ -1149,8 +1149,11 @@ def test_v012_cells_have_verdicts_and_the_ruling_recorded():
     # reviewed_by (their MECHANICAL review — unchanged by every
     # mapping-layer supersession), while the 20 migrated cells stay
     # governed by the frozen controller-2026-08-17 review.
-    assert v["reviewed_by"] == "controller-2026-08-20"
-    assert v["checked_at"] == "2026-08-20"
+    # v0.1.14 (2026-08-21): the evidence-ruling date advances to the dflash
+    # pairing ruling; the frozen per-cell reviews (2026-08-17/18) are
+    # unchanged fields on their own cells.
+    assert v["reviewed_by"] == "controller-2026-08-21"
+    assert v["checked_at"] == "2026-08-21"  # v0.1.14: dflash ruling date
     per_cell = [c for c in v["cells"] if c["metrics"].get("reviewed_by")]
     assert len(per_cell) == 8
 

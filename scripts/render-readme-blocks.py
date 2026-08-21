@@ -1031,7 +1031,7 @@ def render_benchmark_md(data: dict) -> str:
 
     out.append("\n" + gguf_c4_slot_note(data["cells"], v) + "\n")
 
-    out.append("\n## vLLM path (`4d2a68d`, BF16, ctx 262144)\n")
+    out.append("\n## vLLM path (`4d2a68d`, BF16; base/mtp @262144 + DFlash2 @131072)\n")
     kv = parse_kv_line(data["cells"]["vllm-bf16-auto-base-c1-ctx262144"])
     out.append(
         f"Boots: base healthy in 171 s (GTT 75,040 MiB: weights "
@@ -1040,7 +1040,7 @@ def render_benchmark_md(data: dict) -> str:
         f"= {kv.get('concurrency_x')}x the 262,144 max-len); mtp healthy in "
         f"226 s (KV 18.59 GiB = 279,146 tokens = 1.06x). Engine args "
         f"captured verbatim per cell; `max_num_seqs` never overridden (pin "
-        f"default 1024). All 8 greedy anchors `OK` — the GGUF §6 pit does "
+        f"default 1024). All {len(vllm_ids)} greedy anchors `OK` — the GGUF §6 pit does "
         f"not reproduce on this path.\n")
     out.append("| Cell | Verdict | Per-stream med tok/s | min | TPOT med ms "
                "| Aggregate tok/s | TTFT med | Anchor | GTT MiB | auto → final |")

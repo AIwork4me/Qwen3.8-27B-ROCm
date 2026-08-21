@@ -95,6 +95,12 @@ anchor) is the formal check.
   re-tiered to ctx131072 (`gen-matrix.py` NEW_CELLS_V019, reason carries
   these numbers); the corpus base/mtp cells remain the 262144 story
 
+Sibling integration: the GGUF path serves the same drafter via
+`WITH_DFLASH2=1` (llama.cpp PR #27342), measured on a gfx1100-class host —
+see [`../dflash2/`](../dflash2/) and
+[`../../troubleshooting.md`](../../troubleshooting.md) DFlash 2 pits.
+Different engine + host class; numbers do not transfer.
+
 Upstream context (NOT a measurement on this host): the draft repo reports
 up to 3.43x single-stream speedup vs autoregressive on an NVIDIA H200
 (SGLang, FlashAttention 3), beating the built-in MTP head; concurrency

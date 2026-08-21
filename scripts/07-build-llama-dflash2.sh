@@ -21,6 +21,14 @@
 # Idempotent: skips the build if the fingerprint matches.
 # Env: LLAMA_COMMIT (override ref)  ROCM_PREFIX  AMDGPU_TARGETS  MAX_JOBS
 set -euo pipefail
+
+# --help must not start real work (this script otherwise fetches the PR ref
+# and moves the llama.cpp checkout before building anything).
+case "${1:-}" in
+    -h|--help)
+        sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'
+        exit 0 ;;
+esac
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # shellcheck source=scripts/lib/llama_build.sh
 source "$ROOT/scripts/lib/llama_build.sh"

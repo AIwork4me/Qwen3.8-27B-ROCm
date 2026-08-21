@@ -79,7 +79,11 @@ Any FAIL line names its remedy; background for every failure mode is in
 ## Path A — GGUF (interactive chat, llama.cpp HIP)
 
 Three commands; the quickstart serves the validated quant with the pinned,
-fingerprinted build:
+fingerprinted build (DFlash 2 drafter opt-in on this path:
+`WITH_DFLASH2=1 SPEC_DEPTH=4` after
+[scripts/07-build-llama-dflash2.sh](../scripts/07-build-llama-dflash2.sh) +
+`SET=dflash2` — measured on gfx1100; see the README's
+[DFlash 2 section](../README.md#dflash-2-speculative-decoding-opt-in-withwithout-measured)):
 
 ```bash
 bash scripts/05-build-llama.sh              # pinned HIP build @ 4df29be4 for gfx1151 (compile ~7 min; source download on first run)
@@ -148,7 +152,10 @@ bash scripts/03-serve-vllm.sh --mtp         # conf: configs/serve-args-mtp.conf
 DFlash2 variant (v0.1.14 — block-diffusion speculative decoding; 10.2 tok/s
 single-stream, +150.1% vs base / +65.3% vs MTP, same-session 2026-08-21;
 the first vLLM cell at the interactive floor — for pure interactive speed
-the GGUF MTP path at 13.86 tok/s is still faster):
+the GGUF MTP path at 13.86 tok/s is still faster). `MAX_MODEL_LEN=131072`
+below is required, not optional — with the draft loaded the conf's ctx
+262144 exceeds the KV budget and the boot refuses (details under the
+commands):
 
 ```bash
 SET=dflash2-bf16 bash scripts/02-fetch-model.sh  # ~3.6 GiB draft, SHA256-verified (models/Qwen3.8-27B-DFlash2)
@@ -160,15 +167,16 @@ ctx 262144 exceeds the KV budget on the 80 GiB pool (21.63 needed vs
 15.46 GiB available — the boot refuses; receipt
 [`results/rocm-7.14/dflash2-validation.md`](results/rocm-7.14/dflash2-validation.md)).
 The draft needs the upstream PR #52816 patch. A fresh `bash
-scripts/01-build-vllm.sh` applies it with the build; an existing v0.1.8
-install can apply it directly — it is pure Python, no rebuild (the editable
+scripts/01-build-vllm.sh` applies it with the build; an existing install from
+before the GGUF DFlash2 series (v0.1.8 or earlier) can apply it directly — it is pure Python, no rebuild (the editable
 install picks it up):
 
 ```bash
-git -C third_party/vllm apply patches/vllm-dflash2-pr52816.diff
+git -C third_party/vllm apply ../../patches/vllm-dflash2-pr52816.diff   # from the repo root
 ```
 
-Boot ~330 s to first healthy poll (compile + speculator capture).
+Boot ~330 s to first healthy poll on a cold compile cache (the corpus
+cell's warm boot is 258 s — both real, different cache states).
 
 Verify (boot takes ~171 s base / ~226 s MTP to first healthy poll — that is
 measured normal, not a hang):

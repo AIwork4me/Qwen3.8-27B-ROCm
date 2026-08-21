@@ -80,6 +80,13 @@ if [ -n "${MAX_MODEL_LEN:-}" ]; then
     done
     SERVE_ARGS=("${FILTERED_ARGS[@]}" --max-model-len "$MAX_MODEL_LEN")
     echo "MAX_MODEL_LEN override: --max-model-len $MAX_MODEL_LEN (conf value replaced; conf file untouched)"
+elif [ "$CONF_NAME" = "serve-args-dflash2.conf" ]; then
+    # Statically known (boot receipt 2026-08-21): with the draft loaded, the
+    # conf's 262144 tier exceeds the 80 GiB pool's KV budget (21.63 needed
+    # vs 15.46 GiB available) — the boot refuses ~5 min in. Warn now; the
+    # validated tier is 131072. See docs/results/rocm-7.14/dflash2-validation.md.
+    echo "WARNING: --dflash2 at the conf's ctx 262144 is KV-infeasible on the 80 GiB pool (21.63 vs 15.46 GiB; the boot will refuse after model load)." >&2
+    echo "WARNING: boot the validated tier with: MAX_MODEL_LEN=131072 $0 --dflash2 (see docs/troubleshooting.md#dflash2-vllm-kv)" >&2
 fi
 
 # Task 5's validation client talks to http://127.0.0.1:8000/v1/chat/completions;

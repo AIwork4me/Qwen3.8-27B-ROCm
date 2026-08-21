@@ -7,14 +7,16 @@
 The reproducible, evidence-first reference for running
 [Qwen/Qwen3.8-27B](https://modelscope.cn/models/Qwen/Qwen3.8-27B) on AMD
 RDNA GPUs via ROCm — dual serving paths (vLLM + llama.cpp, HIP and Vulkan
-backends), a 28-cell measured benchmark matrix with UX-first ✅/⚠️/❌
+backends), a 30-cell measured benchmark matrix with UX-first ✅/⚠️/❌
 verdicts, and a community hardware-validation protocol.
 ![](./docs/hero.jpg)
 
 Status: both serving paths (vLLM and llama.cpp/GGUF) validated on the
 reference host — AMD Ryzen AI MAX+ PRO 395 / Radeon 8060S (`gfx1151`),
 ROCm 7.14.0. W7900D (`gfx1100`) is community-validated (GGUF path, per the
-hardware matrix below); more platforms are evidence-gated.
+hardware matrix below), and the DFlash 2 GGUF evidence
+([docs/results/dflash2/](docs/results/dflash2/)) was measured on the same
+host class; more platforms are evidence-gated.
 
 [Quick start](#quick-start-interactive-chat-the-gguf-path) ·
 [Serving paths](#serving-paths) · [DFlash 2](#dflash-2-speculative-decoding-opt-in-withwithout-measured) · [Hardware support](#hardware-support) ·
@@ -25,8 +27,9 @@ hardware matrix below); more platforms are evidence-gated.
 
 Prerequisites: a `gfx1151`-class AMD GPU (reference host: Ryzen AI MAX+
 PRO 395 / 8060S), ROCm 7.14.0 (installer script provided), ~20 GiB disk
-for the GGUF path (+~52 GiB for the vLLM BF16 path, +3.6 GiB more for the
-optional DFlash2 draft), git / curl / python3,
+for the GGUF path (+~52 GiB for the vLLM BF16 path; the DFlash2 opt-ins add
++3.6 GiB for the vLLM safetensors draft or +3.0 GiB for the GGUF
+quantized draft set), git / curl / python3,
 and ~26.5 GiB of GPU-visible memory (GTT) for the default boot at ctx
 131072 — measured 26,548 MiB at load, and 29,270 MiB for the recommended
 `WITH_MTP=1` boot (cell receipts `docs/results/matrix-714/cells/`). On
@@ -40,7 +43,8 @@ llama.cpp backends and the vLLM path; verdicts in
 `configs/benchmark-verdicts.json`) puts interactive chat on the GGUF path:
 every GGUF-measured alternative is slower, and on vLLM only the DFlash2
 cell reaches the 10 tok/s interactive floor (10.2 tok/s — still below
-GGUF MTP's 13.86) — project ruling (2026-08-17); see
+GGUF MTP's 13.86) — project ruling (2026-08-17), its all-below-floor
+premise superseded for that cell by the 2026-08-21 dflash pairing; see
 [Performance](#performance).
 
 ```bash
@@ -86,7 +90,7 @@ Which serving path?
 
 | You want | Use | Why |
 |---|---|---|
-| Interactive chat | `WITH_MTP=1 SPEC_DEPTH=1 bash scripts/gguf-quickstart.sh` (port 8080) — hip is both the default and the recommended path (`BACKEND=vulkan` exists as an experimental opt-in, not recommended) | 13.86 tok/s per stream — still the fastest interactive cell measured (the vLLM DFlash2 cell reaches 10.2, the only vLLM cell at the 10 tok/s floor) |
+| Interactive chat | `WITH_MTP=1 SPEC_DEPTH=1 bash scripts/gguf-quickstart.sh` (port 8080) — hip is both the default and the recommended path (`BACKEND=vulkan` exists as an experimental opt-in, not recommended) | 13.86 tok/s per stream — still the fastest interactive cell measured (the vLLM DFlash2 cell reaches 10.2, the only vLLM cell at the 10 tok/s floor — on this host) |
 | vLLM serving, best single-stream | `SET=dflash2-bf16 bash scripts/02-fetch-model.sh` then `MAX_MODEL_LEN=131072 bash scripts/03-serve-vllm.sh --dflash2` (port 8000) | DFlash2 speculative decoding: 10.2 tok/s c1 (+150% vs base, +65% vs MTP, same-session 2026-08-21); needs the PR #52816 patch (applied by `01-build-vllm.sh`) and the 3.6 GiB draft; ctx 262144 is KV-infeasible with the draft loaded |
 | 262144-token context, vision, or aggregate batch throughput (to 38.6 tok/s) | `bash scripts/03-serve-vllm.sh` (port 8000) | the greedy-degradation-free path, but not interactive on this host |
 | Multi-user GGUF loads | Don't (gfx1151) — on gfx1100-class the pit did not reproduce and `WITH_DFLASH2=1` is the measured c4 winner (21.4 vs 17.3 base tok/s) | greedy-degradation pit on hip — see [Known good / known bad](#known-good--known-bad) and [DFlash 2](#dflash-2-speculative-decoding-opt-in-withwithout-measured) |
@@ -180,7 +184,8 @@ workload-intrinsic), and every 8-token verification step costs more here.
 On THIS host class: **single-stream → MTP depth 1** (41.3 tok/s, no
 extra model) or **DFlash2 at `SPEC_DEPTH=4`** — a post-release sweep
 (c1-only, 3-run medians, one host) found n-max 2–4 gives 40.0–41.6 tok/s
-(+21–27% over the n-max-7 cell above; acceptance doubles as blocks
+(+20.6% vs the published n-max-7 cell above, +26.5% within-session at
+n-max 4; acceptance doubles as blocks
 shorten), reaching parity with MTP;
 **2–4 concurrent streams → DFlash 2** (21.4 median vs 17.3 base —
 MTP-d1 inverts to 16.4 at c4). Losslessness is proven either way. Full
@@ -207,9 +212,12 @@ it anyway), mutually exclusive with `WITH_MTP`; the build is an
 `MAX_MODEL_LEN=131072 bash scripts/03-serve-vllm.sh --dflash2` — measured
 on the reference host (gfx1151, 80 GiB unified pool): 10.2 tok/s single-
 stream, the first vLLM cell at the interactive floor there (+150.1% vs
-base, +65.3% vs MTP, same-session pairing). Different engine, different
-host class, different memory model — see the comparison table under
-[Performance](#performance) and
+base, +65.3% vs MTP, same-session pairing). num_speculative_tokens stays
+at the vendor default 7 in the conf — the GGUF-path sweep above found
+draft length 2–4 clearly better on RDNA-class gfx1100, so a vLLM-side
+sweep may lift this number (open follow-up, roadmap). Different engine,
+different host class, different memory model — see the comparison table
+under [Performance](#performance) and
 [`docs/results/rocm-7.14/dflash2-validation.md`](docs/results/rocm-7.14/dflash2-validation.md).
 
 ## Context capacity
@@ -364,7 +372,7 @@ receipts do:
   cell is measured (rider): 6.7 tok/s healthy-stream median vs 7.5
   split-mode — unified default boot degrades interactivity; no config
   change (the Quick start note).
-- **The remaining planned matrix cells** — 20 of the matrix's 56 declared
+- **The remaining planned matrix cells** — 20 of the matrix's 58 declared
   cells are still `planned` (8 more are dropped unsupported tiers);
   `docs/results/matrix-714/matrix.json` is the ledger.
 - **More community platforms** — the invitation is open for any AMD gfx

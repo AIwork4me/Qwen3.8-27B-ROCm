@@ -27,6 +27,8 @@ the full tables in [`results/benchmark.md`](results/benchmark.md).
 | DFlash2 needs the unmerged PR build | `build-714-dflash2` comes from llama.cpp PR #27342, not master; re-pin when it moves | [#dflash2-pr-build](#dflash2-pr-build) |
 | DFlash2 n-max hard cap 7 | above 7 is clamped (block_size 8 − 1); use the measured-optimal 2–4 band, never more | [#dflash2-nmax-cap](#dflash2-nmax-cap) |
 | DFlash2 draft fetch: huggingface.co unreachable | some hosts only reach ModelScope; the `dflash2` manifest set is the remedy | [#dflash2-draft-fetch](#dflash2-draft-fetch) |
+| vLLM DFlash2: unpatched pin refuses `DFlash2DraftModel` | the pinned vLLM has DFlash v1 only; without the repo patch the boot dies at config validation | [#dflash2-vllm-patch](#dflash2-vllm-patch) |
+| vLLM DFlash2 at ctx 262144: KV budget refusal | the draft's 3.6 GiB + non-causal KV group make 262144 infeasible on the 80 GiB pool — boot `MAX_MODEL_LEN=131072` | [#dflash2-vllm-kv](#dflash2-vllm-kv) |
 
 ## llama.cpp HIP greedy degradation (`'////'` tails)
 <a id="greedy-degradation"></a>
@@ -587,3 +589,63 @@ SHA256-verified against the manifest, same path as every other artifact).
 
 **Upstream tracking.** None — network fact, recorded per the repo's
 environment-notes discipline.
+
+## vLLM DFlash2: the unpatched pin refuses `DFlash2DraftModel` at boot
+<a id="dflash2-vllm-patch"></a>
+
+**Symptom.** `bash scripts/03-serve-vllm.sh --dflash2` dies ~40 s into boot
+at config validation, before any model loads:
+
+    pydantic_core._pydantic_core.ValidationError: 1 validation error for SpeculativeConfig
+      Value error, Model architectures ['DFlash2DraftModel'] are not supported for now. Supported architectures: dict_keys([..., 'DFlashDraftModel', ...])
+
+**Reproduction conditions.** Any `--dflash2` boot on a vLLM tree at the
+pin (`4d2a68d`) WITHOUT the DFlash2 patch applied — e.g. an install built
+before v0.1.14, or a fresh clone where `scripts/01-build-vllm.sh` was not
+re-run.
+
+**Root cause / diagnosis state.** The pinned vLLM predates the DFlash2
+architecture (it has DFlash **v1** support only); upstream support is
+vLLM PR #52816, OPEN and unmerged at v0.1.14. The repo carries the port
+as `patches/vllm-dflash2-pr52816.diff` (pure Python — no rebuild needed;
+receipt: [results/rocm-7.14/dflash2-validation.md](results/rocm-7.14/dflash2-validation.md) ## Patch port).
+
+**Workaround.** Apply the patch (from the repo root):
+
+    git -C third_party/vllm apply ../../patches/vllm-dflash2-pr52816.diff
+
+or re-run `bash scripts/01-build-vllm.sh` (applies it idempotently with
+the build). The serve script cannot detect this state itself — the error
+above is the signature.
+
+**Upstream tracking.** vLLM PR
+[#52816](https://github.com/vllm-project/vllm/pull/52816) — re-pin and
+retire the patch when it merges (README roadmap entry).
+
+## vLLM DFlash2 at ctx 262144: the KV budget refuses to boot
+<a id="dflash2-vllm-kv"></a>
+
+**Symptom.** `bash scripts/03-serve-vllm.sh --dflash2` (without
+`MAX_MODEL_LEN`) loads the target + draft (54.84 GiB) and then dies at KV
+sizing:
+
+    ValueError: To serve at least one request with the model's max seq len (262144), 21.63 GiB KV cache is needed, which is larger than the available KV cache memory (15.46 GiB). Based on the available memory, the estimated maximum model length is 181376.
+
+**Reproduction conditions.** Every `--dflash2` boot at the conf's default
+`--max-model-len 262144` on the 80 GiB GTT pool: the draft's 3.6 GiB
+weights + its non-causal KV group both shrink the usable KV (21.63 needed
+vs 15.46 GiB available; the base boot budgets 19.54 GiB at the same tier).
+
+**Root cause / diagnosis state.** Structural, not a bug: raising
+`--gpu-memory-utilization` cannot close a 6+ GiB gap, and the engine's
+own estimate (max len 181376) falls between the declared tiers.
+Receipt: [results/rocm-7.14/dflash2-validation.md](results/rocm-7.14/dflash2-validation.md) ## KV budget.
+
+**Workaround.** Boot the validated tier:
+
+    MAX_MODEL_LEN=131072 bash scripts/03-serve-vllm.sh --dflash2
+
+(KV 15.46 GiB = 174,643 tokens = 1.33x — a single full-depth stream fits.)
+
+**Upstream tracking.** None — memory-budget fact for this model+host
+class, recorded per the repo's environment-notes discipline.

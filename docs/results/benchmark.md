@@ -53,9 +53,9 @@ Per-stream medians over **healthy streams only** (≥2 content tokens — stream
 Note on the `c4` rows (slot semantics, METHODOLOGY §6): `c4` is not one configuration across ctx tiers — ctx 32768: unified default boot (`kv_unified='true'`, per-slot window = full ctx 32768 over one shared KV pool); ctx 131072: split boot (`-np 4` explicit, `kv_unified='false'`, per-slot window 32768 = ctx/4); ctx 262144: unified default boot (`kv_unified='true'`, per-slot window = full ctx 262144 over one shared KV pool). Compare like with like (the unified-default-boot c4@131072 rider is measured: `gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified` — 6.7 tok/s healthy-median / 5.0 aggregate vs split-mode 7.5 / 9.4; unified boot degrades interactivity, 3-of-4 streams early-EOS).
 
 
-## vLLM path (`4d2a68d`, BF16, ctx 262144)
+## vLLM path (`4d2a68d`, BF16; base/mtp @262144 + DFlash2 @131072)
 
-Boots: base healthy in 171 s (GTT 75,040 MiB: weights 51.1 GiB, KV 19.57 GiB, rest activations/buffers — KV = 313,650 tokens = 1.20x the 262,144 max-len); mtp healthy in 226 s (KV 18.59 GiB = 279,146 tokens = 1.06x). Engine args captured verbatim per cell; `max_num_seqs` never overridden (pin default 1024). All 8 greedy anchors `OK` — the GGUF §6 pit does not reproduce on this path.
+Boots: base healthy in 171 s (GTT 75,040 MiB: weights 51.1 GiB, KV 19.57 GiB, rest activations/buffers — KV = 313,650 tokens = 1.20x the 262,144 max-len); mtp healthy in 226 s (KV 18.59 GiB = 279,146 tokens = 1.06x). Engine args captured verbatim per cell; `max_num_seqs` never overridden (pin default 1024). All 10 greedy anchors `OK` — the GGUF §6 pit does not reproduce on this path.
 
 | Cell | Verdict | Per-stream med tok/s | min | TPOT med ms | Aggregate tok/s | TTFT med | Anchor | GTT MiB | auto → final |
 |---|---|---|---|---|---|---|---|---|---|

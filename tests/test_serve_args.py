@@ -96,3 +96,13 @@ def test_serve_script_supports_dflash2_conf_branch():
     src = (ROOT / "scripts" / "03-serve-vllm.sh").read_text()
     assert "--dflash2" in src
     assert "serve-args-dflash2.conf" in src
+
+
+def test_dflash2_boot_warns_when_ctx_override_missing():
+    # The 262144 KV infeasibility with the draft loaded is statically known
+    # (boot receipt 2026-08-21); the serve script must warn loudly when
+    # --dflash2 boots without the MAX_MODEL_LEN=131072 pass-through instead
+    # of letting the user discover it as a raw ValueError ~5 min into boot.
+    src = (ROOT / "scripts" / "03-serve-vllm.sh").read_text()
+    assert "KV-infeasible" in src or "KV budget" in src
+    assert "MAX_MODEL_LEN" in src

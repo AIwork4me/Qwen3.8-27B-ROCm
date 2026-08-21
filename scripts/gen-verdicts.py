@@ -171,7 +171,7 @@ MAPPING_RULING_DATE = "2026-08-19"
 # attribution follows it (the 8 v0.1.2 cells keep their own per-cell
 # controller-2026-08-18 mechanical-review record, unchanged; the 20 migrated
 # cells stay governed by the frozen controller-2026-08-17 review).
-EVIDENCE_RULING_DATE = "2026-08-20"
+EVIDENCE_RULING_DATE = "2026-08-21"
 REVIEWED_BY = f"controller-{EVIDENCE_RULING_DATE}"
 
 

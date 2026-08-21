@@ -6,11 +6,20 @@
 # Manifest-driven: every file is verified against configs/artifact-manifest.json
 # (size + SHA256) after download; verified files are skipped on re-run.
 # Resumable: partial downloads continue with -C -.
-#   SET=bf16|gguf          artifact set to fetch (default bf16)
+#   SET=bf16|gguf|dflash2|dflash2-bf16   artifact set to fetch (default bf16;
+#                          dflash2 = GGUF DFlash2 drafts, dflash2-bf16 = vLLM draft)
 #   MODEL_DEST=/path      override destination
 #   NCONNS=N              parallel shard downloads (default 6)
 #   MS_ENDPOINT=https://modelscope.cn   override mirror
 set -euo pipefail
+
+# --help must not start real work (the v0.1.5 --help trap principle: a bare
+# --help on this script would otherwise begin a multi-GiB download).
+case "${1:-}" in
+    -h|--help)
+        sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'
+        exit 0 ;;
+esac
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"

@@ -380,12 +380,12 @@ def test_changelog_headline_numbers_recompute_from_verdicts() -> None:
     # v0.1.0/v0.1.1 cells + 8 v0.1.2 Vulkan×MTP/unified cells). The count
     # must DERIVE from the verdicts JSON, and the CHANGELOG line below is
     # what stays consistent with it.
-    # v0.1.9 (2026-08-21): 30 measured cells = 9/15/6 (28 + the two
+    # v0.1.14 (2026-08-21): 30 measured cells = 9/15/6 (28 + the two
     # DFlash2 corpus cells — dflash-c1 recommended, dflash-c8 caution).
     assert len(cells) == 30, (
         f"measured-cell count drifted: {len(cells)} (expect 30)")
     assert dist == Counter({"caution": 15, "recommended": 9, "avoid": 6}), (
-        f"verdict distribution drifted from the pinned v0.1.9 shape: {dist}")
+        f"verdict distribution drifted from the pinned v0.1.14 shape: {dist}")
 
     text = CHANGELOG.read_text(encoding="utf-8")
     # The distribution line, verbatim from the generated tables.
@@ -394,6 +394,19 @@ def test_changelog_headline_numbers_recompute_from_verdicts() -> None:
     assert dist_line in text, f"CHANGELOG lacks the recomputed verdict line {dist_line!r}"
     assert dist_line in (ROOT / "docs/results/benchmark.md").read_text(encoding="utf-8"), (
         "docs/results/benchmark.md headline drifted from the verdicts JSON")
+    # v0.1.14 (docs-audit finding M1): the cell count / distribution also
+    # appears on surfaces the generator does not own — pin them so the
+    # "28-cell era" staleness class cannot recur.
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert f"{len(cells)}-cell measured benchmark matrix" in readme, (
+        "README intro cell count drifted from the verdicts JSON")
+    results_index = (ROOT / "docs/results/README.md").read_text(encoding="utf-8")
+    assert dist_line in results_index, (
+        "docs/results/README.md verdict distribution drifted")
+    assert f"{len(cells)}/{len(cells)} measured" in results_index, (
+        "docs/results/README.md measured-cell count drifted")
+    assert f"{len(cells)}-cell" in (ROOT / "CITATION.cff").read_text(encoding="utf-8"), (
+        "CITATION.cff cell count drifted")
 
     def metric(cid: str, key: str) -> float:
         return cells[cid]["metrics"][key]
