@@ -209,6 +209,8 @@ configuration with its verdict:
 
 ## Where to go next
 
+- DFlash 2 speculative decoding (gfx1100/W7900-class evidence, opt-in `WITH_DFLASH2=1`): [`results/dflash2/`](results/dflash2/README.md)
+
 - All receipts, one index: [`results/README.md`](results/README.md)
 - Porting to other MI-series/RDNA setups: [`adaptation.md`](adaptation.md)
 - Adding your GPU as evidence: [`hardware-validation.md`](hardware-validation.md)

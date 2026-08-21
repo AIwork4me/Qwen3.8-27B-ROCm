@@ -72,7 +72,7 @@ tok/s, parity — pick either; the table's 33.2 c1 figure is the n-max-7
 cell, superseded for interactive use by the sweep); 2–4 concurrent
 streams → **DFlash 2** (21.4 median vs 17.3 base at n-max 7 — and MTP-d1
 inverts to 16.4 at c4; an n-max-4 c4 re-pairing is future work).
-DFlash2 costs +6.9 GiB VRAM and ~0.4 s TTFT; its losslessness is proven
+DFlash2 costs +6918 MiB VRAM and ~0.4 s TTFT; its losslessness is proven
 either way. Its case strengthens further on bandwidth-rich,
 acceptance-friendly workloads (see the vendor blog for H200 numbers).
 
@@ -81,7 +81,7 @@ acceptance-friendly workloads (see the vendor blog for H200 numbers).
 ```bash
 bash scripts/07-build-llama-dflash2.sh       # once: PR #27342 HIP build (gfx auto-detected)
 SET=dflash2 bash scripts/02-fetch-model.sh   # once: draft GGUF, SHA256-verified (ModelScope)
-WITH_DFLASH2=1 bash scripts/gguf-quickstart.sh   # serving on :8080, lossless, +13–23%
+WITH_DFLASH2=1 SPEC_DEPTH=4 bash scripts/gguf-quickstart.sh   # serving on :8080 — lossless, ~40–42 tok/s (parity with MTP-d1; SPEC_DEPTH=4 per the sweep — the c4 cells are the n-max-7 default)
 ```
 
 Verify (greedy anchor — must match the no-drafter boot byte-for-byte):
@@ -114,4 +114,4 @@ Vendor numbers & other engines (SGLang/vLLM/oMLX):
 [blog](https://inco.ai/blog/dflash2/). On this 48 GiB host the vLLM/SGLang
 DFlash2 paths are out of scope (BF16 needs 51.7 GiB of weights; the FP8
 vLLM path is the recorded 47×-slower capacity unlock —
-[`docs/results/spike/fp8-unlock.md`](../spike/fp8-unlock.md)).
+[`docs/results/community-explorations/w7900d-gfx1100/results/spike/fp8-unlock.md`](../community-explorations/w7900d-gfx1100/results/spike/fp8-unlock.md)).

@@ -77,7 +77,7 @@ with/without delta is the drafter, not the build.
 
 - Load VRAM per cell: recorded in each `cells/*.json` (`load.vram_mib`):
   base 26 485 / dflash2-c1 33 403 / mtp 28 065 MiB — the drafter costs
-  ≈ +6.9 GiB (weights 2.0 GiB + draft KV + speculative buffers).
+  ≈ +6918 MiB (weights 2.0 GiB + draft KV + speculative buffers).
 - Telemetry blocks (clocks/temp at load and post-bench) are in every
   cell; `powerprofilesctl` is absent on this host (recorded as null per
   the telemetry-tolerant rule; raw rocm-smi output is verbatim).

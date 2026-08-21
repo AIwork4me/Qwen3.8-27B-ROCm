@@ -21,9 +21,10 @@
 #                             scripts/07-build-llama-dflash2.sh; draft GGUF
 #                             fetched by SET=dflash2 scripts/02-fetch-model.sh).
 #                             In this mode SPEC_DEPTH is the draft length,
-#                             --spec-draft-n-max n (default 7 = block_size-1;
-#                             see configs/validated-stack.json
-#                             llama_cpp_dflash2.spec_draft_n_max)
+#                             --spec-draft-n-max n (default 7 = the
+#                             block_size-1 cap; measured optimum on gfx1100
+#                             is the 2-4 band - see
+#                             docs/results/dflash2/nmax-sweep.json)
 #   BACKEND=<hip|vulkan>      llama.cpp build to serve. DEFAULT hip (build-714,
 #                             unchanged) — hip WITH_MTP=1 is BOTH the default
 #                             and the recommended path. vulkan = build-714-vk —
@@ -103,7 +104,9 @@ artifact manifest, never a guess):
                          scripts/07-build-llama-dflash2.sh and the draft
                          from SET=dflash2 scripts/02-fetch-model.sh). In
                          this mode SPEC_DEPTH is the draft length
-                         (default 7 = block_size-1, the checkpoint physics).
+                         (default 7 = the block_size-1 cap; the measured
+                         optimum on gfx1100 is the 2-4 band - SPEC_DEPTH=4
+                         recommended, see docs/results/dflash2/nmax-sweep.json).
   CTX_SIZE=<n>           context size (default 131072 from the validated
                          stack)
   PORT=<n>               port (default 8080)
@@ -419,7 +422,7 @@ echo "ctx-size     : $CTX_SIZE  (override: CTX_SIZE=<n>)"
 echo "gpu layers   : 99 (all)"
 echo "mmproj       : $([ "${WITH_MMPROJ:-1}" != "0" ] && [ -f "$MMPROJ_PATH" ] && echo "$MMPROJ_PATH" || echo "none")"
 if [ "$WITH_DFLASH2" = "1" ]; then
-    echo "speculative  : draft-dflash (DFlash2 block-diffusion drafter $DRAFT_PATH, n-max $DFLASH_N_MAX = block_size-1 via --spec-draft-n-max)"
+    echo "speculative  : draft-dflash (DFlash2 block-diffusion drafter $DRAFT_PATH, n-max $DFLASH_N_MAX of cap 7 via --spec-draft-n-max)"
 elif [ "${WITH_MTP:-0}" = "1" ]; then
     echo "speculative  : draft-mtp (MTP head from the same GGUF, depth ${SPEC_DEPTH:-default 3} via --spec-draft-n-max)"
 else

@@ -25,7 +25,7 @@ the full tables in [`results/benchmark.md`](results/benchmark.md).
 | Dirty llama.cpp checkout | rebuild refuses to discard your uncommitted changes | [#dirty-llama-cpp-checkout](#dirty-llama-cpp-checkout) |
 | Cold `uv sync` loop-fail | 3 small PyPI packages retry forever while ~2 GiB of wheels succeed | [#uv-sync-loop-fail](#uv-sync-loop-fail) |
 | DFlash2 needs the unmerged PR build | `build-714-dflash2` comes from llama.cpp PR #27342, not master; re-pin when it moves | [#dflash2-pr-build](#dflash2-pr-build) |
-| DFlash2 n-max hard cap 7 | `--spec-draft-n-max` above 7 is clamped (block_size 8 − 1); request 7 directly | [#dflash2-nmax-cap](#dflash2-nmax-cap) |
+| DFlash2 n-max hard cap 7 | above 7 is clamped (block_size 8 − 1); use the measured-optimal 2–4 band, never more | [#dflash2-nmax-cap](#dflash2-nmax-cap) |
 | DFlash2 draft fetch: huggingface.co unreachable | some hosts only reach ModelScope; the `dflash2` manifest set is the remedy | [#dflash2-draft-fetch](#dflash2-draft-fetch) |
 
 ## llama.cpp HIP greedy degradation (`'////'` tails)
@@ -555,8 +555,12 @@ This is the same class of finding as muse-rocm's F-18 (DFlash v1 capped at
 `configs/validated-stack.json` (`llama_cpp_dflash2.spec_draft_n_max`) and
 `tests/test_dflash2.py` pins every call site to it.
 
-**Workaround.** Request the effective maximum directly: 7 (the default of
-`WITH_DFLASH2=1`; cells derive `SPEC_DEPTH=7` from the id grammar).
+**Workaround.** Stay within the cap and inside the measured-optimal band:
+`WITH_DFLASH2=1 SPEC_DEPTH=4` (the 2–4 band measures 40.0–41.6 tok/s
+single-stream on gfx1100 — n-max 7 costs 21–27% vs the band; receipt:
+[`docs/results/dflash2/nmax-sweep.json`](results/dflash2/nmax-sweep.json)).
+Values above 7 are refused because upstream clamps to `block_size − 1 = 7`
+anyway; the matrix cells keep `SPEC_DEPTH=7` (grammar-pinned history).
 
 **Upstream tracking.** None — intended behavior; documented so nobody
 "sweeps" into a clamped lie.
