@@ -164,7 +164,15 @@ done
 
 # Fail if tracked modifications extend beyond the manifest-declared patches.
 # (Sort both lists: git diff --name-only is alphabetical, manifest order is not.)
-mapfile -t PATCHED_FILES < <(git -C "$SRC" diff --name-only | sort)
+# Patches may also CREATE files (vllm-dflash2-pr52816.diff adds 3): applied
+# new files are untracked — invisible to git diff --name-only — so the guard
+# also enumerates untracked paths; --exclude-standard keeps build artifacts
+# out via vLLM's own .gitignore.
+mapfile -t PATCHED_FILES < <(
+  { git -C "$SRC" diff --name-only
+    git -C "$SRC" ls-files --others --exclude-standard
+  } | sort
+)
 mapfile -t EXPECTED_FILES < <(printf '%s\n' "${EXPECTED_FILES[@]}" | sort -u)
 if [ "${PATCHED_FILES[*]}" != "${EXPECTED_FILES[*]}" ] ||
    ! git -C "$SRC" diff --cached --quiet; then
