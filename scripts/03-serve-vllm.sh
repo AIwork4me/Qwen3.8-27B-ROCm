@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # Launch vLLM (OpenAI-compatible server) for Qwen3.8-27B on gfx1151.
-# Source of truth for the flags is configs/serve-args.conf (baseline) or
-# configs/serve-args-mtp.conf (--mtp: baseline + MTP speculative decoding);
-# the runtime env is configs/vllm-gfx1151.env. Both are CI-checked by
+# Source of truth for the flags is configs/serve-args.conf (baseline),
+# configs/serve-args-mtp.conf (--mtp: baseline + MTP speculative decoding),
+# or configs/serve-args-dflash2.conf (--dflash2: baseline + DFlash2
+# block-diffusion speculative decoding; draft model fetched via
+# SET=dflash2 scripts/02-fetch-model.sh);
+# the runtime env is configs/vllm-gfx1151.env. All are CI-checked by
 # tests/test_serve_args.py.
 #
 # CRITICAL: uses `uv run --no-sync`. vLLM was source-installed editable
@@ -22,13 +25,21 @@ while [[ $# -gt 0 ]]; do
         --mtp)
             CONF_NAME="serve-args-mtp.conf"
             ;;
+        --dflash2)
+            CONF_NAME="serve-args-dflash2.conf"
+            DRAFT_DIR="$HERE/models/Qwen3.8-27B-DFlash2"
+            if [ ! -f "$DRAFT_DIR/config.json" ]; then
+                echo "ERROR: $DRAFT_DIR/config.json missing — run: SET=dflash2 scripts/02-fetch-model.sh" >&2
+                exit 1
+            fi
+            ;;
         -h|--help)
-            sed -n '2,8p' "$0" >&2
-            echo "Usage: scripts/03-serve-vllm.sh [--mtp]  (env: MODEL_DIR=..., MAX_MODEL_LEN=<override of the conf --max-model-len>)" >&2
+            sed -n '2,9p' "$0" >&2
+            echo "Usage: scripts/03-serve-vllm.sh [--mtp|--dflash2]  (env: MODEL_DIR=..., MAX_MODEL_LEN=<override of the conf --max-model-len>)" >&2
             exit 0
             ;;
         *)
-            echo "ERROR: unknown argument: $1 (only --mtp is supported)" >&2
+            echo "ERROR: unknown argument: $1 (only --mtp and --dflash2 are supported)" >&2
             exit 2
             ;;
     esac

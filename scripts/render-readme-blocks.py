@@ -368,6 +368,39 @@ def render_performance_highlights(data: dict) -> str:
             f"{note} |")
     best_batch = v["vllm-bf16-auto-base-c16-ctx262144"]["metrics"]
     hip_mtp = v["gguf-hip-udq4kxl-auto-mtp-c1-ctx131072"]["metrics"]
+    # v0.1.9 (2026-08-21): the with-vs-without DFlash2 comparison, from the
+    # dflash corpus cells' same-session pairing gains (session receipts
+    # stability/dflash-pairing-2026-08-21/ — the basis field in the gains).
+    d1 = v["vllm-bf16-auto-dflash-c1-ctx131072"]
+    d8 = v["vllm-bf16-auto-dflash-c8-ctx131072"]
+    d1m, d8m = d1["metrics"], d8["metrics"]
+    d1b, d1t = d1m["dflash_gain_vs_base"], d1m["dflash_gain_vs_mtp"]
+    d8b, d8t = d8m["dflash_gain_vs_base"], d8m["dflash_gain_vs_mtp"]
+    lines += [
+        "",
+        "**DFlash2 vs no-DFlash2 (vLLM path, same-session pairing "
+        "2026-08-21 @131072 — `--dflash2` needs the upstream PR #52816 "
+        "patch, and ctx 262144 is KV-infeasible with the draft loaded; "
+        "pairing receipts `matrix-714/stability/dflash-pairing-2026-08-21/`):**",
+        "",
+        "| Config | c1 per-stream | c8 per-stream | c8 aggregate | Verdict |",
+        "|---|---|---|---|---|",
+        f"| base (no speculator) | {fmt(d1b['base_per_stream_tok_s_median'])} tok/s "
+        f"| {fmt(d8b['base_per_stream_tok_s_median'])} tok/s "
+        f"| {fmt(d8b['base_aggregate_tok_s'])} tok/s | the corpus @262144 cells |",
+        f"| MTP (`--mtp`) | {fmt(d1t['mtp_per_stream_tok_s_median'])} tok/s "
+        f"| {fmt(d8t['mtp_per_stream_tok_s_median'])} tok/s "
+        f"| {fmt(d8t['mtp_aggregate_tok_s'])} tok/s | caution (below floor) |",
+        f"| DFlash2 (`--dflash2`) | **{fmt(d1m['per_stream_tok_s_median'])} tok/s "
+        f"(+{d1b['per_stream_pct']}% vs base, +{d1t['per_stream_pct']}% vs MTP)** "
+        f"| {fmt(d8m['per_stream_tok_s_median'])} tok/s "
+        f"(+{d8b['per_stream_pct']}% vs base, +{d8t['per_stream_pct']}% vs MTP) "
+        f"| {fmt(d8m['aggregate_tok_s'])} tok/s (+{d8b['aggregate_pct']}% vs base) "
+        f"| c1 {mark(d1['verdict'])} recommended — the first vLLM cell above "
+        "the 10 tok/s interactive floor on this host; c8 caution (gain "
+        "erodes under concurrency, no regression; single session, one host; "
+        "GGUF hip MTP 13.86 tok/s remains the interactive recommendation) |",
+    ]
     lines += [
         "",
         f"**Honesty clause (aggregate never headlines over UX):** the best "

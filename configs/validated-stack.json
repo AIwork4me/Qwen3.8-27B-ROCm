@@ -29,7 +29,8 @@
     "toolchain": "/home/amd/rocm-7.14.0",
     "patches": [
       "patches/vllm-amdsmi-import.diff",
-      "patches/vllm-torch210-compat.diff"
+      "patches/vllm-torch210-compat.diff",
+      "patches/vllm-dflash2-pr52816.diff"
     ],
     "triton_kernels": "third_party/triton-kernels (ROCm/triton@0f380657dbf3ee86eb57558ff71df24f03b5d4e7 python/triton_kernels/triton_kernels, blob-SHA-verified; consumed via TRITON_KERNELS_SRC_DIR override in scripts/01-build-vllm.sh)",
     "validated": {
@@ -37,7 +38,9 @@
       "mtp": true,
       "vision": true,
       "date": "2026-08-16",
-      "receipt": "docs/results/rocm-7.14/vllm-validation.md"
+      "receipt": "docs/results/rocm-7.14/vllm-validation.md",
+      "dflash": true,
+      "dflash_receipt": "docs/results/rocm-7.14/dflash2-validation.md"
     },
     "reasoning_parser": "qwen3 (serves the native <think> split as message.reasoning at this pin; verified boot+greedy+stream+MTP, see receipt)"
   },

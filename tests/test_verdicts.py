@@ -839,10 +839,12 @@ def test_owner_decision_closes_the_rerecommendation_question_v018():
         assert fragment in r, (
             f"ruling note lost the v0.1.8 resolution fragment {fragment!r}")
     # Zero metric/verdict changes rode along with the decision.
+    # (v0.1.9, 2026-08-21: the two dflash cells shift the distribution to
+    # 9/15/6 — dflash-c1 recommended, dflash-c8 caution.)
     dist = {}
     for c in load(VERDICTS)["cells"]:
         dist[c["verdict"]] = dist.get(c["verdict"], 0) + 1
-    assert dist == {"recommended": 8, "caution": 14, "avoid": 6}
+    assert dist == {"recommended": 9, "caution": 15, "avoid": 6}
 
 
 def test_selection_guidance_on_every_optin_surface_v018():
@@ -981,7 +983,11 @@ def test_verdict_content_is_byte_stable_modulo_the_id_migration():
         "gguf-hip-udq4kxl-auto-mtp4-c1-ctx131072",
         "gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified",
     }
-    assert set(new_cells) - migrated_ids == t3_additions, (
+    assert set(new_cells) - migrated_ids == t3_additions | {
+        # v0.1.9 (2026-08-21): the two measured DFlash2 corpus cells.
+        "vllm-bf16-auto-dflash-c1-ctx131072",
+        "vllm-bf16-auto-dflash-c8-ctx131072",
+    }, (
         "beyond the migrated pre-commit set, only the measured v0.1.2 "
         "cells may carry verdicts")
     # Task 4 (2026-08-18) controller-review prose corrections — the ONLY
@@ -1022,7 +1028,7 @@ def test_measured_matrix_cells_and_verdicts_survived_the_migration():
     Vulkan×MTP/unified cells = 28 (the new cells are all non-degraded)."""
     m = load(MATRIX)
     measured = {c["id"] for c in m["cells"] if c["status"] == "measured"}
-    assert len(measured) == 28
+    assert len(measured) == 30  # v0.1.9: 28 + the 2 dflash cells
     degraded = {c["id"] for c in m["cells"] if c["status"] == "measured"
                 and c.get("degraded")}
     assert len(degraded) == 5
@@ -1428,3 +1434,73 @@ def test_caution_mtp_sentence_follows_the_actual_numbers():
         else:
             assert "Above the base c" not in r, (
                 f"{cell['id']}: says 'Above base' on a regressing cell")
+
+
+def test_schema_accepts_the_dflash_spec_variant_ids():
+    # v0.1.9: the spec-variant slot gains "dflash" (vllm path only — the
+    # pattern must still refuse gguf dflash and the dropped ctx tiers).
+    s = load(SCHEMA)
+    pat = re.compile(
+        s["properties"]["cells"]["items"]["properties"]["id"]["pattern"])
+    assert pat.match("vllm-bf16-auto-dflash-c1-ctx131072")
+    assert pat.match("vllm-bf16-auto-dflash-c8-ctx131072")
+    assert not pat.match("vllm-bf16-auto-dflash-c1-ctx32768")
+    assert not pat.match("gguf-hip-udq4kxl-auto-dflash-c1-ctx131072")
+
+
+def test_dflash_cells_carry_pairing_basis_and_dated_supersession():
+    """v0.1.9 DFlash2 cells (2026-08-21): the corpus dflash cells carry the
+    same-session pairing basis ({base,mtp,dflash} x {c1,c8} @131072, session
+    receipts under matrix-714/stability/dflash-pairing-2026-08-21/ — the
+    corpus base/mtp cells are the 262144 story, so the pairing partners
+    cannot come from the corpus)."""
+    v = load(VERDICTS)
+    by_id = {c["id"]: c for c in v["cells"]}
+    c1 = by_id["vllm-bf16-auto-dflash-c1-ctx131072"]
+    c8 = by_id["vllm-bf16-auto-dflash-c8-ctx131072"]
+
+    # The ladder: c1 crosses the interactive floor (first vLLM cell to);
+    # c8 stays below it at a multi-user tier.
+    assert c1["verdict"] == "recommended"
+    assert c8["verdict"] == "caution"
+
+    # c1 must NOT carry the generic below-floor prose (it is ABOVE the
+    # floor — the 2026-08-17 ruling premise is superseded FOR THIS CELL,
+    # dated, never silently).
+    assert "is below the 10 tok/s interactive floor" not in c1["reason"]
+    assert "10.2 tok/s" in c1["reason"]
+    assert "SUPERSEDED for this cell" in c1["reason"]
+
+    # Gains cite the same-session pairing, both counterparts labeled
+    # (percentages as computed by the generator from its own metric
+    # rounding: +150.1% / +65.3% at c1; +31.5% / +3.3% at c8).
+    c1_l = c1["reason"].lower()
+    for token in ("+150.1%", "+65.3%", "same-session"):
+        assert token in c1_l, f"{token!r} missing from the c1 reason"
+    assert "dflash_gain_vs_base" in c1["metrics"]
+    assert "dflash_gain_vs_mtp" in c1["metrics"]
+
+    # c8: gain erosion stated honestly, no regression, aggregate basis kept.
+    c8_l = c8["reason"].lower()
+    for token in ("+31.5%", "+3.3%", "same-session"):
+        assert token in c8_l, f"{token!r} missing from the c8 reason"
+
+    # The patch + tier caveats ride along (they are applicability
+    # conditions, not footnotes).
+    for cell in (c1, c8):
+        assert "#52816" in cell["reason"] or "#52816" in (cell["conditions"] or "")
+        assert "262144" in cell["reason"] or "262144" in (cell["conditions"] or "")
+
+
+def test_readme_carries_the_dflash2_pairing_comparison_table():
+    """v0.1.9: the with-vs-without DFlash2 comparison is a generated
+    performance-highlights surface — same-session pairing basis, both
+    counterparts (base AND mtp) labeled, the floor-crossing stated, and
+    the applicability caveats (PR #52816 patch, 131072-only) riding along."""
+    text = README.read_text()
+    assert "DFlash2 vs no-DFlash2" in text
+    block = text.split("DFlash2 vs no-DFlash2", 1)[1][:1600]
+    for token in ("10.2", "+150.1%", "+65.3%", "+31.5%", "+3.3%",
+                  "same-session pairing", "#52816", "131072"):
+        assert token in block, f"{token!r} missing from the comparison table"
+    assert "first vLLM cell" in block and "10 tok/s" in block

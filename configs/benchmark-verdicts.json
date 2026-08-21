@@ -826,6 +826,98 @@
       "workaround": "Interactive workloads: serve the GGUF path (scripts/gguf-quickstart.sh, WITH_MTP=1)."
     },
     {
+      "id": "vllm-bf16-auto-dflash-c1-ctx131072",
+      "verdict": "recommended",
+      "reason": "DFlash2 speculative decoding lifts the single-stream vLLM cell to 10.2 tok/s (TPOT 97.8 ms/token) — the first measured vLLM cell at/above the 10 tok/s interactive floor on this host. Same-session pairing @131072: +150.1% vs base (10.2 vs 4.1 tok/s) and +65.3% vs MTP (10.2 vs 6.2 tok/s) — the draft beats both native speculators' single-stream cells. Anchor clean (greedy byte-identity — the lossless claim holds), boot healthy (258 s, GTT 74.8 GiB). Controller ruling 2026-08-21: the 2026-08-17 premise 'all measured vLLM cells are below the 10 tok/s floor' is SUPERSEDED for this cell (dated supersession, never silent); the GGUF hip MTP path (13.86 tok/s, clean d1 pairing) REMAINS the recommended interactive-chat path — dflash-c1 is the vLLM-path single-stream choice. Applicability: single session, one host; needs the upstream PR #52816 patch (patches/vllm-dflash2-pr52816.diff, unmerged at measurement — vLLM pin 4d2a68d has DFlash v1 only); ctx 262144 is KV-infeasible with the draft loaded (21.63 needed vs 15.46 GiB available — 131072 only; boot receipt dflash2-validation.md).",
+      "metrics": {
+        "streams": 1,
+        "ok_streams": 1,
+        "failed_streams": 0,
+        "healthy_streams": 1,
+        "per_stream_tok_s_median": 10.23,
+        "per_stream_tok_s_min": 10.23,
+        "tpot_ms_median": 97.8,
+        "ttft_ms_median": 4117.7,
+        "aggregate_tok_s": 8.81,
+        "wall_s": 29.0,
+        "anchor_ok": true,
+        "boot_ok": true,
+        "gtt_mib": 76566,
+        "vram_mib": 1117,
+        "min_completion_tokens": 256,
+        "capped_streams": 1,
+        "c": 1,
+        "ctx": 131072,
+        "gtt_gib": 74.8,
+        "auto_verdict": "recommended",
+        "auto_rung": "rung4-clean",
+        "avoid_candidate": false,
+        "controller_override": null,
+        "dflash_gain_vs_base": {
+          "per_stream_pct": 150.1,
+          "aggregate_pct": 131.8,
+          "base_per_stream_tok_s_median": 4.09,
+          "base_aggregate_tok_s": 3.8,
+          "basis": "same-session pairing receipt 2026-08-21 @131072 (stability/dflash-pairing-2026-08-21/)"
+        },
+        "dflash_gain_vs_mtp": {
+          "per_stream_pct": 65.3,
+          "aggregate_pct": 62.2,
+          "mtp_per_stream_tok_s_median": 6.19,
+          "mtp_aggregate_tok_s": 5.43,
+          "basis": "same-session pairing receipt 2026-08-21 @131072 (stability/dflash-pairing-2026-08-21/)"
+        }
+      },
+      "conditions": "Single-stream vLLM serving; multi-user tiers erode the gain (see the dflash-c8 caution cell). Concurrency erodes DFlash2's edge (upstream's stated shape, confirmed here at c8). The corpus base/mtp @262144 cells remain the 262144-context/vision/batch reference. Applicability: single session, one host; needs the upstream PR #52816 patch (patches/vllm-dflash2-pr52816.diff, unmerged at measurement — vLLM pin 4d2a68d has DFlash v1 only); ctx 262144 is KV-infeasible with the draft loaded (21.63 needed vs 15.46 GiB available — 131072 only; boot receipt dflash2-validation.md).",
+      "workaround": "Interactive chat stays on the GGUF path (WITH_MTP=1 SPEC_DEPTH=1); serve DFlash2 with scripts/03-serve-vllm.sh --dflash2 (ctx via MAX_MODEL_LEN =131072 or lower)."
+    },
+    {
+      "id": "vllm-bf16-auto-dflash-c8-ctx131072",
+      "verdict": "caution",
+      "reason": "Per-stream median 4.1 tok/s (TPOT 244.6 ms/token) at the multi-user c8 tier — below the 10 tok/s interactive floor. DFlash2's single-stream gain erodes under concurrency (upstream's stated shape, confirmed here): same-session @131072 pairing +31.5% vs base-c8 per-stream (4.1 vs 3.1 tok/s) but only +3.3% vs mtp-c8 (4.1 vs 4.0 tok/s); aggregate 23.2 vs base 19.8 tok/s (+17.2%) — no regression; MTP's beneficial-through-c8 story is unchanged. Anchor clean, boot healthy (258 s, GTT 74.8 GiB). Applicability: single session, one host; needs the upstream PR #52816 patch (patches/vllm-dflash2-pr52816.diff, unmerged at measurement — vLLM pin 4d2a68d has DFlash v1 only); ctx 262144 is KV-infeasible with the draft loaded (21.63 needed vs 15.46 GiB available — 131072 only; boot receipt dflash2-validation.md).",
+      "metrics": {
+        "streams": 8,
+        "ok_streams": 8,
+        "failed_streams": 0,
+        "healthy_streams": 8,
+        "per_stream_tok_s_median": 4.09,
+        "per_stream_tok_s_min": 3.33,
+        "tpot_ms_median": 244.6,
+        "ttft_ms_median": 19330.3,
+        "aggregate_tok_s": 23.22,
+        "wall_s": 85.2,
+        "anchor_ok": true,
+        "boot_ok": true,
+        "gtt_mib": 76566,
+        "vram_mib": 1117,
+        "min_completion_tokens": 186,
+        "capped_streams": 6,
+        "c": 8,
+        "ctx": 131072,
+        "gtt_gib": 74.8,
+        "auto_verdict": "caution",
+        "auto_rung": "rung2-interactive-floor",
+        "avoid_candidate": false,
+        "controller_override": null,
+        "dflash_gain_vs_base": {
+          "per_stream_pct": 31.5,
+          "aggregate_pct": 17.2,
+          "base_per_stream_tok_s_median": 3.11,
+          "base_aggregate_tok_s": 19.81,
+          "basis": "same-session pairing receipt 2026-08-21 @131072 (stability/dflash-pairing-2026-08-21/)"
+        },
+        "dflash_gain_vs_mtp": {
+          "per_stream_pct": 3.3,
+          "aggregate_pct": -0.7,
+          "mtp_per_stream_tok_s_median": 3.96,
+          "mtp_aggregate_tok_s": 23.39,
+          "basis": "same-session pairing receipt 2026-08-21 @131072 (stability/dflash-pairing-2026-08-21/)"
+        }
+      },
+      "conditions": "Multi-user/batch on this path: the corpus base/mtp @262144 cells remain the reference (262144 context, vision, best aggregate); single-stream → the dflash-c1 recommended cell. Applicability: single session, one host; needs the upstream PR #52816 patch (patches/vllm-dflash2-pr52816.diff, unmerged at measurement — vLLM pin 4d2a68d has DFlash v1 only); ctx 262144 is KV-infeasible with the draft loaded (21.63 needed vs 15.46 GiB available — 131072 only; boot receipt dflash2-validation.md).",
+      "workaround": "Single-stream workloads: scripts/03-serve-vllm.sh --dflash2; batch: serve base per the corpus cells."
+    },
+    {
       "id": "vllm-bf16-auto-mtp-c1-ctx262144",
       "verdict": "caution",
       "reason": "Per-stream median 6.5 tok/s (TPOT 153.1 ms/token) is below the 10 tok/s interactive floor on this host — vLLM BF16 is not interactive-grade on this host. MTP lifts per-stream +52.6% (6.5 vs 4.3 tok/s; aggregate basis +45.5% 5.8 vs 4.0 tok/s) — but not to the floor. Anchor clean, boot healthy (226 s, GTT 74.3 GiB). [Controller ruling 2026-08-17: rung 2 proposed avoid (6.5 tok/s < 8 at the S1 tier); disposed CAUTION per the same ruling — MTP is a real +53% per-stream win on this path but still below the floor; conditions carry the redirect.]",
