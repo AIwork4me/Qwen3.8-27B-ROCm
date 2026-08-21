@@ -38,7 +38,9 @@
       "mtp": true,
       "vision": true,
       "date": "2026-08-16",
-      "receipt": "docs/results/rocm-7.14/vllm-validation.md"
+      "receipt": "docs/results/rocm-7.14/vllm-validation.md",
+      "dflash": true,
+      "dflash_receipt": "docs/results/rocm-7.14/dflash2-validation.md"
     },
     "reasoning_parser": "qwen3 (serves the native <think> split as message.reasoning at this pin; verified boot+greedy+stream+MTP, see receipt)"
   },
