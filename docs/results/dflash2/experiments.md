@@ -8,8 +8,8 @@ claim links to its receipt.
 Vendor numbers (H200/SGLang 2.7–3.4× at c1; M5 Pro/llama.cpp 1.81–1.85×;
 [`model card`](https://huggingface.co/incoai/Qwen3.8-27B-DFlash2)) do not
 transfer to W7900/gfx1100. Clean-paired measurement (same PR build both
-arms): 29.4 → 33.2 tok/s at c1 (+12.9%), 17.3 → 21.4 tok/s median at c4
-(+23.4%). Receipts: `cells/gguf-hip-udq4kxl-auto-{base,dflash2}-c{1,4}-ctx131072.json`.
+arms): 29.4 → 33.2 tok/s at c1 (+12.8%), 17.3 → 21.4 tok/s median at c4
+(+23.3%). Receipts: `cells/gguf-hip-udq4kxl-auto-{base,dflash2}-c{1,4}-ctx131072.json`.
 
 Two compounding causes, both measured or derivable:
 
@@ -45,7 +45,7 @@ finish `stop`. The model-card claim is verified, not just repeated.
 ## F3 — c1: MTP depth-1 wins; c4: DFlash 2 wins (the recommendation splits by load shape)
 
 Same clean pairing at c1: `mtp-c1` 41.3 tok/s (+40.5% vs base) vs DFlash2
-33.2 (+12.9%). MTP-d1 verifies 2 tokens per step (batch 2) with no external
+33.2 (+12.8%). MTP-d1 verifies 2 tokens per step (batch 2) with no external
 model; its acceptance/cost ratio suits a compute-limited card better than
 an 8-token block drafter at low batch.
 
@@ -53,7 +53,7 @@ an 8-token block drafter at low batch.
 `mtp-c4` measured **16.4 tok/s median** (−5.0% vs base c4's 17.3;
 aggregate 43.6 vs 45.0) — MTP-d1 INVERTS at c4 on this host (consistent
 with the project's corpus-wide "MTP inverts at high concurrency" ruling),
-while DFlash2 holds **21.4 (+23.4%)**. Final shape on this host class:
+while DFlash2 holds **21.4 (+23.3%)**. Final shape on this host class:
 
 | | base | MTP-d1 | DFlash2 |
 |---|---:|---:|---:|

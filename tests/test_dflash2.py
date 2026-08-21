@@ -203,3 +203,48 @@ def test_acceptance_probe_receipt_is_committed_and_countable():
         assert 0.0 < r[arm]["acceptance"] < 1.0
     assert r["project_bench_sampling"]["sampling"]["top_k"] is None
     assert r["vendor_recommended_sampling"]["sampling"]["top_k"] == 20
+
+
+# ------------------------------------------- headline numbers vs receipts
+
+def _median_tok_s(cell_name):
+    d = json.loads((ROOT / "docs" / "results" / "dflash2" / "cells" /
+                    f"{cell_name}.json").read_text(encoding="utf-8"))
+    toks = [1000 / s["tpot_ms"] for s in d["client"]["streams"]
+            if s.get("tpot_ms")]
+    toks.sort()
+    n = len(toks)
+    return (toks[n // 2] if n % 2 else (toks[n // 2 - 1] + toks[n // 2]) / 2)
+
+
+def test_readme_claims_recompute_from_cell_receipts():
+    """Guard against rounding-propagation drift (v0.1.11 correction): every
+    headline percentage in the two README tables must recompute from the raw
+    cell medians at 1 decimal place — never from the rounded display values."""
+    base = {c: _median_tok_s(f"gguf-hip-udq4kxl-auto-base-{c}-ctx131072")
+            for c in ("c1", "c4")}
+    dflash = {c: _median_tok_s(f"gguf-hip-udq4kxl-auto-dflash2-{c}-ctx131072")
+              for c in ("c1", "c4")}
+    mtp = {c: _median_tok_s(f"gguf-hip-udq4kxl-auto-mtp-{c}-ctx131072")
+           for c in ("c1", "c4")}
+    claims = {
+        "c1": f"{(dflash['c1'] / base['c1'] - 1) * 100:+.1f}%",   # +12.8%
+        "c4": f"{(dflash['c4'] / base['c4'] - 1) * 100:+.1f}%",   # +23.3%
+        "mtp_c1": f"{(mtp['c1'] / base['c1'] - 1) * 100:+.1f}%",  # +40.5%
+        "mtp_c4": f"{(mtp['c4'] / base['c4'] - 1) * 100:+.1f}%",  # -5.0%
+    }
+    for name in ("README.md", "docs/results/dflash2/README.md"):
+        text = (ROOT / name).read_text(encoding="utf-8")
+        # READMEs use the typographic minus (U+2212); normalize before
+        # comparing against the ASCII recomputation.
+        text = text.replace("\u2212", "-")
+        for claim in claims.values():
+            assert claim in text, f"{name}: recomputed claim {claim} missing"
+    # VRAM claims recompute too (mtp-c1 was once labeled with the c4 value).
+    mtp_c1_vram = json.loads(
+        (ROOT / "docs" / "results" / "dflash2" / "cells" /
+         "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072.json").read_text(
+            encoding="utf-8"))["load"]["vram_mib"] / 1024
+    for name in ("README.md", "docs/results/dflash2/README.md"):
+        assert f"{mtp_c1_vram:.1f} GiB" in (ROOT / name).read_text(
+            encoding="utf-8"), f"{name}: mtp-c1 VRAM {mtp_c1_vram:.1f} GiB missing"
