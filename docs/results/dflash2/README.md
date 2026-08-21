@@ -29,8 +29,8 @@ Q8_0 (2.0 GiB); bench: 8-prompt set, 256 tokens, temperature 0.7
 | Boot (one switch) | c=1 per-stream | c=1 delta | c=4 per-stream (median) | c=4 delta | TTFT c=1 | VRAM |
 |---|---:|---:|---:|---:|---:|---:|
 | `bash scripts/gguf-quickstart.sh` (baseline, no drafter) | 29.4 tok/s | — | 17.3 tok/s | — | 1.87 s | 25.9 GiB |
-| `WITH_DFLASH2=1 bash scripts/gguf-quickstart.sh` | 33.2 tok/s | **+12.9%** | 21.4 tok/s | **+23.4%** | 2.29 s | 32.6 GiB |
-| `WITH_MTP=1 SPEC_DEPTH=1 bash scripts/gguf-quickstart.sh` (context arm) | 41.3 tok/s | +40.5% | 16.4 tok/s | −5.0% | 2.06 s | 27.2 GiB |
+| `WITH_DFLASH2=1 bash scripts/gguf-quickstart.sh` | 33.2 tok/s | **+12.8%** | 21.4 tok/s | **+23.3%** | 2.29 s | 32.6 GiB |
+| `WITH_MTP=1 SPEC_DEPTH=1 bash scripts/gguf-quickstart.sh` (context arm) | 41.3 tok/s | +40.5% | 16.4 tok/s | −5.0% | 2.06 s | 27.4 GiB |
 
 Aggregates (total output tokens / wall): c=1 25.7 vs 24.3 tok/s (+5.6%);
 c=4 47.5 vs 45.0 tok/s (+5.7%); MTP c4 aggregate 43.6. The per-stream vs

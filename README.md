@@ -155,8 +155,8 @@ SAME binary served both arms; UD-Q4_K_XL @ ctx 131072):**
 | Boot | c=1 per-stream | c=4 per-stream (median) | TTFT c=1 | VRAM |
 |---|---:|---:|---:|---:|
 | without DFlash2 (baseline) | 29.4 tok/s | 17.3 tok/s | 1.87 s | 25.9 GiB |
-| `WITH_DFLASH2=1` | 33.2 tok/s (**+12.9%**) | 21.4 tok/s (**+23.4%**) | 2.29 s | 32.6 GiB |
-| `WITH_MTP=1 SPEC_DEPTH=1` (context arm) | 41.3 tok/s (+40.5%) | 16.4 tok/s (−5.0%) | 2.06 s | 27.2 GiB |
+| `WITH_DFLASH2=1` | 33.2 tok/s (**+12.8%**) | 21.4 tok/s (**+23.3%**) | 2.29 s | 32.6 GiB |
+| `WITH_MTP=1 SPEC_DEPTH=1` (context arm) | 41.3 tok/s (+40.5%) | 16.4 tok/s (−5.0%) | 2.06 s | 27.4 GiB |
 
 Read this honestly — the recommendation splits by load shape: the vendor
 tables (2.7–3.4× on H200/SGLang, 1.8× on M5 Pro/llama.cpp) did **not**
@@ -244,8 +244,9 @@ Full tables with links to the raw receipts: [docs/results/benchmark.md](docs/res
 
 ## Status & roadmap
 
-Current release: **v0.1.10** — DFlash 2 evidence completed (3-way c4
-table + acceptance probe: sampling ruled out) — [CHANGELOG](CHANGELOG.md) ·
+Current release: **v0.1.11** — docs correction: headline deltas now
+recompute from raw cell medians (c1 +12.8%, c4 +23.3%) with a
+drift-guard test — [CHANGELOG](CHANGELOG.md) ·
 [Releases](https://github.com/AIwork4me/Qwen3.8-27B-ROCm/releases).
 
 Roadmap — evidence-gated intentions, not promises; each item lands when its

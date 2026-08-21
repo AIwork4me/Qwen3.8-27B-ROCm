@@ -8,6 +8,22 @@ receipts [`docs/results/matrix-714/cells/`](docs/results/matrix-714/cells/),
 and the rehearsal receipt
 [`docs/results/rocm-7.14/one-pass-rehearsal.md`](docs/results/rocm-7.14/one-pass-rehearsal.md).
 
+## v0.1.11 — 2026-08-21
+
+Docs correction (no code, no new measurements): the two headline
+with/without deltas are now computed from RAW cell medians, not from
+rounded display values — **c1 +12.8%** (was +12.9%) and **c4 +23.3%**
+(was +23.4%); MTP-c1 VRAM corrected to 27.4 GiB (was the c4 value,
+27.2). The raw receipts were always correct and remain the source of
+truth; the wrong figures lived only in derived prose (README,
+dflash2/README, experiments, matrix notes, the two CHANGELOG sections
+above — all corrected in place). The v0.1.9/v0.1.10 tag annotations and
+commit messages are immutable history and still carry the earlier
+figures. Guard added so this class of drift cannot recur silently:
+`tests/test_dflash2.py` now recomputes the medians from the committed
+cell receipts and asserts the exact claim strings in both READMEs
+(`test_readme_claims_recompute_from_cell_receipts`).
+
 ## v0.1.10 — 2026-08-21
 
 DFlash 2 evidence completion (same-day follow-up to v0.1.9): the 3-way
@@ -18,7 +34,7 @@ comparison table is closed and one hypothesis is retired by measurement.
 - **c4 MTP arm** (`gguf-hip-udq4kxl-auto-mtp-c4-ctx131072`, clean-paired
   on the same PR-27342 binary): **16.4 tok/s median** (−5.0% vs base c4
   17.3; aggregate 43.6) — MTP-d1 inverts at c4 on this host, while
-  DFlash2 holds 21.4 (+23.4%). The recommendation now **splits by load
+  DFlash2 holds 21.4 (+23.3%). The recommendation now **splits by load
   shape**: single-stream → `WITH_MTP=1 SPEC_DEPTH=1`; 2–4 concurrent
   streams → `WITH_DFLASH2=1`. Receipt in
   [`docs/results/dflash2/cells/`](docs/results/dflash2/cells/).
@@ -79,7 +95,7 @@ losslessness proof. Defaults untouched — every boot without
 
 Clean pairing — SAME PR-27342 binary both arms, same day, same prompts —
 on a W7900-class `gfx1100` host (48 GiB, ROCm 7.2.1 serving, UD-Q4_K_XL
-@ ctx 131072): **+12.9% single-stream** (29.4 → 33.2 tok/s), **+23.4%
+@ ctx 131072): **+12.8% single-stream** (29.4 → 33.2 tok/s), **+23.3%
 c4 median** (17.3 → 21.4 tok/s), TTFT +0.42 s, VRAM +6.9 GiB. MTP-d1
 context arm: 41.3 tok/s (+40.5%) — on THIS host class MTP depth 1 stays
 the faster single-stream choice; DFlash2's measured case is c4 and
