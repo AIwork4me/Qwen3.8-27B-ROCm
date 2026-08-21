@@ -92,8 +92,11 @@ HEALTH_TIMEOUT_S="${HEALTH_TIMEOUT_S:-420}"
 BENCH_TIMEOUT_S="${BENCH_TIMEOUT_S:-1800}"
 
 # Cell id grammar (2026-08-18 backend-dimension migration, shared with
-# gen-matrix.py and the verdicts schema — legacy unprefixed ids ARE hip):
-ID_RE='^gguf-(hip|vulkan)-udq4kxl-auto-(base|mtp|mtp4)-c(1|4|8|16)-ctx(32768|131072|262144)(-unified)?$'
+# gen-matrix.py and the verdicts schema — legacy unprefixed ids ARE hip;
+# 2026-08-21 dflash2 phase: the spec part gains `dflash2`, the DFlash 2
+# block-diffusion drafter — those cells boot WITH_DFLASH2=1 against the
+# PR #27342 build and pin SPEC_DEPTH=7 = block_size-1):
+ID_RE='^gguf-(hip|vulkan)-udq4kxl-auto-(base|mtp|mtp4|dflash2)-c(1|4|8|16)-ctx(32768|131072|262144)(-unified)?$'
 
 usage() {
     sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'
@@ -158,7 +161,7 @@ if [[ "$CELL_ID" =~ $ID_RE ]]; then
     UNIFIED="${BASH_REMATCH[5]:-}"      # -unified suffix (c4 rider) or empty
 else
     echo "ERROR: '$CELL_ID' is not a valid gguf cell id." >&2
-    echo "       grammar: gguf-(hip|vulkan)-udq4kxl-auto-{base,mtp,mtp4}-c{1,4,8,16}-ctx{32768,131072,262144}[-unified]" >&2
+    echo "       grammar: gguf-(hip|vulkan)-udq4kxl-auto-{base,mtp,mtp4,dflash2}-c{1,4,8,16}-ctx{32768,131072,262144}[-unified]" >&2
     echo "       (2026-08-18 migration: legacy unprefixed gguf ids are hip; use the explicit tag)" >&2
     exit 2
 fi
@@ -173,10 +176,19 @@ fi
 # are cross-checks for the operator, and a contradiction is REFUSED — a
 # mismatched boot would make the receipt lie about what ran.
 case "$BACKEND" in
-    hip)    LLAMA_BIN="$ROOT/third_party/llama.cpp/build-714/bin/llama-server" ;;
-    vulkan) LLAMA_BIN="$ROOT/third_party/llama.cpp/build-714-vk/bin/llama-server" ;;
+    hip)    LLAMA_BIN="${LLAMA_SERVER:-$ROOT/third_party/llama.cpp/build-714/bin/llama-server}" ;;
+    vulkan) LLAMA_BIN="${LLAMA_SERVER:-$ROOT/third_party/llama.cpp/build-714-vk/bin/llama-server}" ;;
     *)      echo "ERROR: unknown backend '$BACKEND' in id '$CELL_ID' (hip|vulkan)." >&2; exit 2 ;;
 esac
+# LLAMA_SERVER (quickstart's documented top-level override) also redirects
+# this preflight — an evidence run that boots BOTH arms from one binary
+# (the dflash2 clean pairing: baseline and dflash2 cells on the same PR
+# build) must not be refused for build-714 being absent. The binary's actual
+# --version line lands in the cell receipt either way.
+if [ -n "${LLAMA_SERVER:-}" ] && [ "$LLAMA_BIN" != "$LLAMA_SERVER" ]; then
+    echo "NOTE: LLAMA_SERVER=$LLAMA_SERVER overrides the default $BACKEND binary for this cell (recorded by the quickstart boot log)." >&2
+    LLAMA_BIN="$LLAMA_SERVER"
+fi
 if [ -n "${BACKEND_ENV:-}" ] && [ "$BACKEND_ENV" != "$BACKEND" ]; then
     echo "ERROR: backend mismatch: id '$CELL_ID' is $BACKEND but BACKEND=$BACKEND_ENV —" >&2
     echo "       the env knob must agree with the id (the id is the source of truth)." >&2
@@ -190,14 +202,19 @@ fi
 # pin depth 1, mtp4 cells pin depth 4 — the depth is passed EXPLICITLY so the
 # receipt's server_flags say exactly what drafted.
 case "$MTP_PART" in
-    base) SPEC_DEPTH_DERIVED=0 ;;
-    mtp)  SPEC_DEPTH_DERIVED=1 ;;
-    mtp4) SPEC_DEPTH_DERIVED=4 ;;
+    base)    SPEC_DEPTH_DERIVED=0 ;;
+    mtp)     SPEC_DEPTH_DERIVED=1 ;;
+    mtp4)    SPEC_DEPTH_DERIVED=4 ;;
+    # DFlash2 (2026-08-21 phase): SPEC_DEPTH carries the draft length here —
+    # 7 = the checkpoint's block_size 8 minus 1 (the physics cap recorded in
+    # configs/validated-stack.json llama_cpp_dflash2.spec_draft_n_max; the
+    # quickstart refuses anything above it, mirroring muse-rocm's F-18 fix).
+    dflash2) SPEC_DEPTH_DERIVED=7 ;;
     *)    echo "ERROR: unknown mtp part '$MTP_PART'." >&2; exit 2 ;;
 esac
 if [ -n "${SPEC_DEPTH_ENV:-}" ] && [ "$SPEC_DEPTH_ENV" != "$SPEC_DEPTH_DERIVED" ]; then
     echo "ERROR: SPEC_DEPTH mismatch: id '$CELL_ID' derives depth $SPEC_DEPTH_DERIVED but SPEC_DEPTH=$SPEC_DEPTH_ENV —" >&2
-    echo "       mtp => 1, mtp4 => 4; the id suffix decides (the receipt records what actually booted)." >&2
+    echo "       mtp => 1, mtp4 => 4, dflash2 => 7; the id suffix decides (the receipt records what actually booted)." >&2
     exit 2
 fi
 
@@ -217,7 +234,9 @@ fi
 
 # --------------------------------------------------------- server env derive
 WITH_MTP=0
+WITH_DFLASH2=0
 [ "$MTP_PART" != "base" ] && WITH_MTP=1
+[ "$MTP_PART" = "dflash2" ] && { WITH_MTP=0; WITH_DFLASH2=1; }
 SPEC_DEPTH="$SPEC_DEPTH_DERIVED"
 
 EXTRA_ARGS=""
@@ -240,9 +259,12 @@ print_plan() {
     echo "cell          : $CELL_ID (matrix status: $MATRIX_STATUS)"
     echo "backend       : $BACKEND (binary: ${LLAMA_BIN#"$ROOT"/})"
     echo "server        : $QUICKSTART  (PORT=$PORT)"
-    echo "server env    : BACKEND=$BACKEND CTX_SIZE=$CTX WITH_MTP=$WITH_MTP SPEC_DEPTH=$SPEC_DEPTH EXTRA_ARGS='${EXTRA_ARGS}'"
+    echo "server env    : BACKEND=$BACKEND CTX_SIZE=$CTX WITH_MTP=$WITH_MTP WITH_DFLASH2=$WITH_DFLASH2 SPEC_DEPTH=$SPEC_DEPTH EXTRA_ARGS='${EXTRA_ARGS}'"
     if [ "$WITH_MTP" = "1" ]; then
         echo "spec depth    : $SPEC_DEPTH (--spec-draft-n-max $SPEC_DEPTH; id mtp part = $MTP_PART)"
+    fi
+    if [ "$WITH_DFLASH2" = "1" ]; then
+        echo "spec drafter  : DFlash2 (--spec-type draft-dflash, -md Qwen3.8-27B-DFlash2-*.gguf, n-max $SPEC_DEPTH = block_size-1)"
     fi
     echo "kv semantics  : $KV_MODE"
     echo "health poll   : curl $BASE_URL/health (timeout ${HEALTH_TIMEOUT_S}s)"
@@ -560,9 +582,10 @@ if [ "$BACKEND" = "vulkan" ]; then
     echo "mesa cache  : (before boot) $MESA_CACHE_BEFORE_JSON"
 fi
 
-echo "== booting $QUICKSTART (backend $BACKEND, ctx $CTX, mtp $WITH_MTP, depth $SPEC_DEPTH, extra '${EXTRA_ARGS:-none}') =="
+echo "== booting $QUICKSTART (backend $BACKEND, ctx $CTX, mtp $WITH_MTP, dflash2 $WITH_DFLASH2, depth $SPEC_DEPTH, extra '${EXTRA_ARGS:-none}') =="
 STARTED_S=$SECONDS
 PORT="$PORT" BACKEND="$BACKEND" CTX_SIZE="$CTX" WITH_MTP="$WITH_MTP" \
+    WITH_DFLASH2="$WITH_DFLASH2" \
     SPEC_DEPTH="$SPEC_DEPTH" EXTRA_ARGS="$EXTRA_ARGS" \
     nohup bash "$QUICKSTART" >"$LOG" 2>&1 &
 SERVER_PID=$!
@@ -750,7 +773,7 @@ fi
 CELL_TMP="/tmp/matrix-cell-${CELL_ID}.assembled.json"
 STARTED_UTC="$STARTED_UTC" CELL_ID="$CELL_ID" BASE_URL="$BASE_URL" CTX="$CTX" \
 CONC="$CONC" BACKEND="$BACKEND" SPEC_DEPTH="$SPEC_DEPTH" MTP_PART="$MTP_PART" \
-UNIFIED="${UNIFIED}" WITH_MTP="$WITH_MTP" EXTRA_ARGS="${EXTRA_ARGS}" KV_MODE="$KV_MODE" \
+UNIFIED="${UNIFIED}" WITH_MTP="$WITH_MTP" WITH_DFLASH2="$WITH_DFLASH2" EXTRA_ARGS="${EXTRA_ARGS}" KV_MODE="$KV_MODE" \
 SLOT_INFO_JSON="$SLOT_INFO_JSON" LOAD_JSON="$LOAD_JSON" BOOT_OK="$BOOT_OK" \
 BOOT_WALL="$BOOT_WALL" BENCH_JSON="$BENCH_JSON" ANCHOR_OK="$ANCHOR_OK" \
 ANCHOR_TAIL="$ANCHOR_TAIL" LOG_EXCERPT_JSON="$LOG_EXCERPT_JSON" DEGRADED="$DEGRADED" \
@@ -774,6 +797,7 @@ cell = {
         "ctx_size": int(env["CTX"]),
         "concurrency_np": int(env["CONC"]),
         "with_mtp": env["WITH_MTP"] == "1",
+        "with_dflash2": env.get("WITH_DFLASH2", "0") == "1",
         "mtp_part": env["MTP_PART"],
         "spec_depth": int(env["SPEC_DEPTH"]) or None,
         "slots": "unified-rider" if env["UNIFIED"] else "default",
@@ -783,8 +807,12 @@ cell = {
         "quickstart": "scripts/gguf-quickstart.sh",
         "llama_server_flags": ["--ctx-size", env["CTX"], "-ngl", "99", "--jinja"]
                               + (["--spec-type", "draft-mtp"] if env["WITH_MTP"] == "1" else [])
+                              + (["--spec-type", "draft-dflash",
+                                  "-md", "<dflash2-draft-gguf>"]
+                                 if env.get("WITH_DFLASH2", "0") == "1" else [])
                               + (["--spec-draft-n-max", env["SPEC_DEPTH"]]
-                                 if env["WITH_MTP"] == "1" and int(env["SPEC_DEPTH"]) > 0 else [])
+                                 if (env["WITH_MTP"] == "1" or env.get("WITH_DFLASH2", "0") == "1")
+                                 and int(env["SPEC_DEPTH"]) > 0 else [])
                               + (env["EXTRA_ARGS"].split() if env["EXTRA_ARGS"] else []),
     },
     "slot_info": json.loads(env["SLOT_INFO_JSON"]),

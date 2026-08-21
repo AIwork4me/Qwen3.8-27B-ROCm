@@ -24,8 +24,9 @@ CELLS_DIR = ROOT / "docs" / "results" / "matrix-714" / "cells"
 BRANCH_BASE = "2bb00ba"
 
 # Cell id grammar, shared with gen-matrix.py and the verdicts schema
-# (2026-08-18 backend-dimension migration: gguf ids carry -hip-|-vulkan-).
-ID_RE_PARTS = ("gguf", "(hip|vulkan)", "udq4kxl", "auto", "{base|mtp|mtp4}",
+# (2026-08-18 backend-dimension migration: gguf ids carry -hip-|-vulkan-;
+# 2026-08-21 dflash2 phase: the spec part gains the DFlash 2 drafter).
+ID_RE_PARTS = ("gguf", "(hip|vulkan)", "udq4kxl", "auto", "{base|mtp|mtp4|dflash2}",
                "c{1,4,8,16}", "ctx{32768|131072|262144}")
 
 
@@ -55,8 +56,9 @@ def test_runner_script_exists_and_names_the_contract():
 
 def test_runner_enforces_id_format():
     src = SCRIPT.read_text()
-    # The id grammar is asserted by the runner itself, not just by convention.
-    for part in ("gguf-(hip|vulkan)-udq4kxl-auto-", "(base|mtp|mtp4)",
+    # The id grammar is asserted by the runner itself, not just by convention
+    # (2026-08-21: the spec part includes the DFlash 2 drafter).
+    for part in ("gguf-(hip|vulkan)-udq4kxl-auto-", "(base|mtp|mtp4|dflash2)",
                  "c(1|4|8|16)", "ctx(32768|131072|262144)"):
         assert part in src, f"runner must encode id grammar part {part!r}"
 

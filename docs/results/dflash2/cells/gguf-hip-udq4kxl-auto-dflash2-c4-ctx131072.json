@@ -1,0 +1,198 @@
+{
+  "id": "gguf-hip-udq4kxl-auto-dflash2-c4-ctx131072",
+  "label": "gguf-hip-udq4kxl-auto-dflash2-c4-ctx131072",
+  "base_url": "http://127.0.0.1:8080",
+  "started_utc": "2026-08-21T02:01:23Z",
+  "server_flags": {
+    "backend": "hip",
+    "ctx_size": 131072,
+    "concurrency_np": 4,
+    "with_mtp": false,
+    "with_dflash2": true,
+    "mtp_part": "dflash2",
+    "spec_depth": 7,
+    "slots": "default",
+    "extra_args": "-np 4",
+    "port": 8080,
+    "kv_semantics_expected": "split (explicit -np 4: per-slot window = 131072/4 = 32768, kv_unified=false)",
+    "quickstart": "scripts/gguf-quickstart.sh",
+    "llama_server_flags": [
+      "--ctx-size",
+      "131072",
+      "-ngl",
+      "99",
+      "--jinja",
+      "--spec-type",
+      "draft-dflash",
+      "-md",
+      "<dflash2-draft-gguf>",
+      "--spec-draft-n-max",
+      "7",
+      "-np",
+      "4"
+    ]
+  },
+  "slot_info": {
+    "n_slots": 4,
+    "n_ctx_slot": 32768,
+    "kv_unified": "false",
+    "log_line": "n_slots = 4, n_ctx_slot = 32768, kv_unified = 'false'"
+  },
+  "load": {
+    "vram_mib": 33337,
+    "gtt_mib": 21,
+    "telemetry": {
+      "sclk_mhz": 1.0,
+      "mclk_mhz": 456.0,
+      "power_w": null,
+      "temp_edge_c": 35.0,
+      "errors": {
+        "power_w": "--showpower: pattern not found in --showpower output",
+        "power_profile": "FileNotFoundError: [Errno 2] No such file or directory: 'powerprofilesctl'"
+      },
+      "raw": {
+        "showclocks": {
+          "rc": 0,
+          "stdout": "\n\n============================ ROCm System Management Interface ============================\n=============================== Current clock frequencies ================================\nGPU[0]\t\t: dcefclk clock level: 0: (145Mhz)\nGPU[0]\t\t: fclk clock level: 0: (601Mhz)\nGPU[0]\t\t: mclk clock level: 1: (456Mhz)\nGPU[0]\t\t: sclk clock level: 1: (1Mhz)\nGPU[0]\t\t: socclk clock level: 0: (500Mhz)\nGPU[0]\t\t: pcie clock level: 2 (16.0GT/s x16)\n==========================================================================================\n================================== End of ROCm SMI Log ===================================",
+          "stderr": ""
+        },
+        "showpower": {
+          "rc": 0,
+          "stdout": "\n\n============================ ROCm System Management Interface ============================\n=================================== Power Consumption ====================================\nGPU[0]\t\t: Average Graphics Package Power (W): 42.0\n==========================================================================================\n================================== End of ROCm SMI Log ===================================",
+          "stderr": ""
+        },
+        "showtemp": {
+          "rc": 0,
+          "stdout": "\n\n============================ ROCm System Management Interface ============================\n====================================== Temperature =======================================\nGPU[0]\t\t: Temperature (Sensor edge) (C): 35.0\nGPU[0]\t\t: Temperature (Sensor junction) (C): 43.0\nGPU[0]\t\t: Temperature (Sensor memory) (C): 42.0\n==========================================================================================\n================================== End of ROCm SMI Log ===================================",
+          "stderr": ""
+        }
+      },
+      "env": {
+        "boot_time": "2026-03-07 12:54:34",
+        "power_profile": null,
+        "power_dpm_force_performance_level": "auto",
+        "power_dpm_source": "/sys/class/drm/card1/device/power_dpm_force_performance_level"
+      }
+    }
+  },
+  "boot": {
+    "ok": true,
+    "health_wall_s": 10
+  },
+  "client": {
+    "label": "gguf-hip-udq4kxl-auto-dflash2-c4-ctx131072",
+    "concurrency": 4,
+    "started_utc": "2026-08-21T02:01:37.538893+00:00",
+    "streams": [
+      {
+        "ttft_ms": 8883.323036134243,
+        "tpot_ms": 46.63715116035791,
+        "completion_tokens": 244,
+        "prompt_tokens": 1412,
+        "reasoning_tokens": 0,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 8881.961034610868,
+        "tpot_ms": 40.90413589249639,
+        "completion_tokens": 256,
+        "prompt_tokens": 1474,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 8881.647715345025,
+        "tpot_ms": 48.634868312407946,
+        "completion_tokens": 256,
+        "prompt_tokens": 1298,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 8881.898796185851,
+        "tpot_ms": 47.040332422829145,
+        "completion_tokens": 256,
+        "prompt_tokens": 1469,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      }
+    ],
+    "aggregate": {
+      "tok_per_s": 47.544926632813365,
+      "wall_s": 21.285131173208356,
+      "ok_streams": 4,
+      "failed_streams": 0
+    }
+  },
+  "anchor": {
+    "ok": true,
+    "content_tail": "OK"
+  },
+  "post_bench": {
+    "telemetry": {
+      "sclk_mhz": 1567.0,
+      "mclk_mhz": 1124.0,
+      "power_w": null,
+      "temp_edge_c": 43.0,
+      "errors": {
+        "power_w": "--showpower: pattern not found in --showpower output",
+        "power_profile": "FileNotFoundError: [Errno 2] No such file or directory: 'powerprofilesctl'"
+      },
+      "raw": {
+        "showclocks": {
+          "rc": 0,
+          "stdout": "\n\n============================ ROCm System Management Interface ============================\n=============================== Current clock frequencies ================================\nGPU[0]\t\t: dcefclk clock level: 0: (145Mhz)\nGPU[0]\t\t: fclk clock level: 4: (1801Mhz)\nGPU[0]\t\t: mclk clock level: 3: (1124Mhz)\nGPU[0]\t\t: sclk clock level: 1: (1567Mhz)\nGPU[0]\t\t: socclk clock level: 1: (1200Mhz)\nGPU[0]\t\t: pcie clock level: 2 (16.0GT/s x16)\n==========================================================================================\n================================== End of ROCm SMI Log ===================================",
+          "stderr": ""
+        },
+        "showpower": {
+          "rc": 0,
+          "stdout": "\n\n============================ ROCm System Management Interface ============================\n=================================== Power Consumption ====================================\nGPU[0]\t\t: Average Graphics Package Power (W): 67.0\n==========================================================================================\n================================== End of ROCm SMI Log ===================================",
+          "stderr": ""
+        },
+        "showtemp": {
+          "rc": 0,
+          "stdout": "\n\n============================ ROCm System Management Interface ============================\n====================================== Temperature =======================================\nGPU[0]\t\t: Temperature (Sensor edge) (C): 43.0\nGPU[0]\t\t: Temperature (Sensor junction) (C): 52.0\nGPU[0]\t\t: Temperature (Sensor memory) (C): 49.0\n==========================================================================================\n================================== End of ROCm SMI Log ===================================",
+          "stderr": ""
+        }
+      },
+      "env": {
+        "boot_time": "2026-03-07 12:54:34",
+        "power_profile": null,
+        "power_dpm_force_performance_level": "auto",
+        "power_dpm_source": "/sys/class/drm/card1/device/power_dpm_force_performance_level"
+      }
+    }
+  },
+  "log_excerpt": [
+    "llama-server : /workspace/Qwen3.8-27B-ROCm/third_party/llama.cpp/build-714-dflash2/bin/llama-server (version: 0.1.2-dev (build 1, commit 5ecbe1ac1))",
+    "model        : models/Qwen3.8-27B-GGUF/Qwen3.8-27B-UD-Q4_K_XL.gguf (17G)",
+    "ctx-size     : 131072  (override: CTX_SIZE=<n>)",
+    "gpu layers   : 99 (all)",
+    "mmproj       : models/Qwen3.8-27B-GGUF/mmproj-F16.gguf",
+    "speculative  : draft-dflash (DFlash2 block-diffusion drafter models/Qwen3.8-27B-DFlash2-GGUF/Qwen3.8-27B-DFlash2-Q8_0.gguf, n-max 7 = block_size-1 via --spec-draft-n-max)",
+    "extra args   : -np 4",
+    "Serving on http://127.0.0.1:8080 ...",
+    "0.00.077.404 W srv  llama_server: -----------------",
+    "0.00.077.407 W srv  llama_server: CORS is set to allow all origins ('*') and no API key is set",
+    "0.00.077.407 W srv  llama_server: this can be a security risk (cross-origin attacks)",
+    "0.00.077.407 W srv  llama_server: more info: https://github.com/ggml-org/llama.cpp/pull/25655",
+    "0.00.077.407 W srv  llama_server: -----------------",
+    "0.00.475.489 E llama_init_from_model: failed to initialize the context: dflash requires ctx_other to be set (this warning is normal during memory fitting)",
+    "0.00.517.611 W srv    load_model: [spec] failed to measure draft model memory: failed to create llama_context from model",
+    "0.01.145.228 W model has unused tensor blk.64.attn_norm.weight (size = 20480 bytes) -- ignoring",
+    "0.01.145.236 W model has unused tensor blk.64.post_attention_norm.weight (size = 20480 bytes) -- ignoring",
+    "0.01.145.242 W model has unused tensor blk.64.attn_q.weight (size = 43253760 bytes) -- ignoring",
+    "0.01.145.245 W model has unused tensor blk.64.attn_k.weight (size = 3604480 bytes) -- ignoring",
+    "0.01.145.247 W model has unused tensor blk.64.attn_v.weight (size = 4300800 bytes) -- ignoring"
+  ],
+  "degraded": false,
+  "degraded_reason": null
+}

@@ -170,6 +170,24 @@
           "sha256": "cbb841a9ee0636b2ec172f5bb8df2ea8dfeb01e90fe7c6126581d662a0b4e43e"
         }
       ]
+    },
+    "dflash2": {
+      "repository": "incoai/Qwen3.8-27B-DFlash2-GGUF",
+      "host": "modelscope",
+      "revision": "master",
+      "dest": "models/Qwen3.8-27B-DFlash2-GGUF",
+      "files": [
+        {
+          "path": "Qwen3.8-27B-DFlash2-Q8_0.gguf",
+          "size_bytes": 2056414752,
+          "sha256": "7f1c9a31a6ed40044c69f6508b50fd63b87abd8e1fb7fe4290303df549153751"
+        },
+        {
+          "path": "Qwen3.8-27B-DFlash2-Q4_K_M.gguf",
+          "size_bytes": 1143006752,
+          "sha256": "18a380efc9b7ed8d88677fc895f5c11ae170653434ee378f7348f715c14d0594"
+        }
+      ]
     }
   }
 }

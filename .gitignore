@@ -14,3 +14,7 @@ docs/results/*.json
 !docs/results/matrix-714/**
 docs/results/.matrix-721-baseline-snapshot/
 .superpowers/
+
+# Host-specific symlink: models/ may point at a persistent cache mount
+# (the gitignore pattern "models/" matches the directory but not a symlink).
+models

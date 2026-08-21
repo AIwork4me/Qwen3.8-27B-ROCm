@@ -1,0 +1,39 @@
+{
+ "checked_at": "2026-08-21T01:57:02Z",
+ "method": "greedy (temperature 0, thinking disabled, max_tokens 512), same llama.cpp binary for both arms, byte-identical content required",
+ "verdict": "PASS",
+ "prompts": [
+  {
+   "id": "arith",
+   "match": true,
+   "baseline_tokens": 194,
+   "dflash2_tokens": 194,
+   "baseline_finish": "stop",
+   "dflash2_finish": "stop"
+  },
+  {
+   "id": "code",
+   "match": true,
+   "baseline_tokens": 40,
+   "dflash2_tokens": 40,
+   "baseline_finish": "stop",
+   "dflash2_finish": "stop"
+  },
+  {
+   "id": "factual",
+   "match": true,
+   "baseline_tokens": 13,
+   "dflash2_tokens": 13,
+   "baseline_finish": "stop",
+   "dflash2_finish": "stop"
+  },
+  {
+   "id": "instr",
+   "match": true,
+   "baseline_tokens": 3,
+   "dflash2_tokens": 3,
+   "baseline_finish": "stop",
+   "dflash2_finish": "stop"
+  }
+ ]
+}

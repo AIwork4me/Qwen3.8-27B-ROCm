@@ -1,0 +1,55 @@
+{
+  "generated_at": "2026-08-21",
+  "generator": "docs/results/dflash2 (hand-declared, gen-matrix.py grammar)",
+  "notes": [
+    "DFlash2 phase evidence declaration (docs/superpowers/specs/2026-08-21-dflash2-phase-design.md).",
+    "Host namespace, NOT the project matrix: measured on gfx1100 48 GiB (W7900-class, the community w7900d host family) with the llama.cpp PR #27342 build — the project matrix-714 stays untouched (community-rule equivalent; the runner is pointed here via MATRIX_FILE/CELLS_DIR).",
+    "Clean pairing rule: EVERY cell in this matrix — base, mtp and dflash2 alike — boots the SAME PR-27342 binary via LLAMA_SERVER, so the base-vs-dflash2 delta isolates the drafter, not the build (the v0.1.4 mixed-pairing lesson applied from the start).",
+    "The c16 cell is the DFlash v1 -np 16 pathology re-probe, time-boxed per the muse-rocm aborted-cell protocol.",
+    "Cell id grammar is the run-cell-gguf.sh 2026-08-21 extension: gguf-hip-udq4kxl-auto-{base,mtp,mtp4,dflash2}-c{N}-ctx{K}."
+  ],
+  "cells": [
+    {
+      "id": "gguf-hip-udq4kxl-auto-base-c1-ctx131072",
+      "status": "measured",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true,
+      "note": "measured 2026-08-21: 29.4 tok/s per-stream, anchor PASS"
+    },
+    {
+      "id": "gguf-hip-udq4kxl-auto-dflash2-c1-ctx131072",
+      "status": "measured",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true,
+      "note": "measured 2026-08-21: 33.2 tok/s per-stream (+12.9% vs base), acceptance 0.36, anchor PASS"
+    },
+    {
+      "id": "gguf-hip-udq4kxl-auto-mtp-c1-ctx131072",
+      "status": "measured",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true,
+      "note": "measured 2026-08-21: 41.3 tok/s per-stream (+40.5% vs base), anchor PASS"
+    },
+    {
+      "id": "gguf-hip-udq4kxl-auto-base-c4-ctx131072",
+      "status": "measured",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true,
+      "note": "measured 2026-08-21: 17.3 tok/s median per-stream, anchor PASS"
+    },
+    {
+      "id": "gguf-hip-udq4kxl-auto-dflash2-c4-ctx131072",
+      "status": "measured",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true,
+      "note": "measured 2026-08-21: 21.4 tok/s median per-stream (+23.4% vs base), 4/4 streams ok, anchor PASS"
+    },
+    {
+      "id": "gguf-hip-udq4kxl-auto-dflash2-c16-ctx32768",
+      "status": "measured",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": false,
+      "note": "measured 2026-08-21 (probe): 43.1 tok/s aggregate, 16/16 streams ok in 93s — the DFlash v1 -np16 hang does NOT reproduce on v2 at this scale"
+    }
+  ]
+}
