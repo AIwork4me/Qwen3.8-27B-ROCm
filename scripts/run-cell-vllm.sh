@@ -70,7 +70,7 @@ BASE_URL="http://127.0.0.1:$PORT"
 HEALTH_TIMEOUT_S="${HEALTH_TIMEOUT_S:-900}"
 BENCH_TIMEOUT_S="${BENCH_TIMEOUT_S:-2400}"
 
-ID_RE='^vllm-bf16-auto-(base|mtp)-c(1|4|8|16)-ctx(131072|262144)$'
+ID_RE='^vllm-bf16-auto-(base|mtp|dflash)-c(1|4|8|16)-ctx(131072|262144)$'
 
 usage() {
     sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'
@@ -134,7 +134,7 @@ for CELL_ID in "${CELL_IDS[@]}"; do
         m="${BASH_REMATCH[1]}"; c="${BASH_REMATCH[2]}"; k="${BASH_REMATCH[3]}"
     else
         echo "ERROR: '$CELL_ID' is not a valid vllm cell id." >&2
-        echo "       grammar: vllm-bf16-auto-{base,mtp}-c{1,4,8,16}-ctx{131072,262144} (32768 is a dropped tier for this path)" >&2
+        echo "       grammar: vllm-bf16-auto-{base,mtp,dflash}-c{1,4,8,16}-ctx{131072,262144} (32768 is a dropped tier for this path)" >&2
         exit 2
     fi
     if [[ "$CELL_ID" != vllm-* ]]; then
@@ -157,6 +157,7 @@ done
 MTP_FLAG=()
 CONF_NAME="serve-args.conf"
 if [ "$MTP_PART" = "mtp" ]; then MTP_FLAG=(--mtp); CONF_NAME="serve-args-mtp.conf"; fi
+if [ "$MTP_PART" = "dflash" ]; then MTP_FLAG=(--dflash2); CONF_NAME="serve-args-dflash2.conf"; fi
 CONF="configs/$CONF_NAME"
 
 # Served model name + conf max-model-len come from the conf (the source of
@@ -515,6 +516,7 @@ cell = {
     "server_flags": {
         "conf": env["CONF"],
         "mtp": env["MTP_PART"] == "mtp",
+        "spec_variant": env["MTP_PART"],
         "serve_script": "scripts/03-serve-vllm.sh",
         "served_model_name": env["SERVED"],
         "max_model_len_conf": int(env["CONF_MAXLEN"]),

@@ -54,9 +54,34 @@ def test_declaration_is_deterministic():
     cells = mod.build_matrix()["cells"]
     # 2026-08-18 declaration: previous 48 + 8 new v0.1.2 cells = 56
     # (fresh declaration: no measured yet — 48 planned + 8 dropped).
-    assert len(cells) == 56
+    # 2026-08-21 declaration: 56 + 2 new v0.1.9 dflash cells = 58.
+    assert len(cells) == 58
     assert sum(1 for c in cells if c["status"] == "dropped") == 8
     assert all(c["status"] in ("planned", "dropped") for c in cells)
+
+
+def test_declaration_declares_dflash2_pairing_cells_as_planned():
+    """v0.1.9 DFlash2 integration (declared pre-measurement): the
+    block-diffusion draft (incoai/Qwen3.8-27B-DFlash2) on the vllm path —
+    dflash x {c1,c8} @262144. The base/mtp pairing partners for the
+    same-session comparison are already measured cells."""
+    mod = load_module()
+    cells = mod.build_cells()
+    new_ids = {
+        "vllm-bf16-auto-dflash-c1-ctx262144",
+        "vllm-bf16-auto-dflash-c8-ctx262144",
+    }
+    ids = {c["id"] for c in cells}
+    assert new_ids <= ids, f"missing new cells: {sorted(new_ids - ids)}"
+    by_id = {c["id"]: c for c in cells}
+    for cid in sorted(new_ids):
+        assert by_id[cid]["status"] == "planned"
+        assert "DFlash2" in by_id[cid]["reason"]
+        assert by_id[cid]["priority"] is True
+        assert by_id[cid]["runner_hint"] == "scripts/run-cell-vllm.sh"
+    # No other dflash tiers sneak in (c4/c16 and ctx131072 stay undeclared).
+    dflash_ids = {i for i in ids if "-dflash-" in i}
+    assert dflash_ids == new_ids
 
 
 def test_declaration_declares_the_8_new_v012_cells_as_planned():
@@ -82,8 +107,9 @@ def test_declaration_declares_the_8_new_v012_cells_as_planned():
         assert by_id[cid]["status"] == "planned"
         assert "Vulkan×MTP" in by_id[cid]["reason"]
         assert by_id[cid]["priority"] is True
-    # The 8 new cells are the ONLY additions: 56 - 48 previous = 8.
-    assert len(ids) == 56
+    # The 8 new cells are the ONLY additions in v0.1.2: 56 - 48 previous = 8.
+    # (v0.1.9 adds 2 dflash cells on top: 58 — see the dflash test above.)
+    assert len(ids) == 58
 
 
 def test_every_declared_gguf_id_carries_an_explicit_backend_tag():
@@ -99,7 +125,7 @@ def test_every_declared_gguf_id_carries_an_explicit_backend_tag():
     assert unified == ["gguf-hip-udq4kxl-auto-base-c4-ctx131072-unified"]
     # vllm ids stay unprefixed (single-backend path, grammar unchanged).
     vllm = [i for i in ids if i.startswith("vllm-")]
-    assert len(vllm) == 24  # 16 valid + 8 dropped ctx-32768
+    assert len(vllm) == 26  # 16 valid + 8 dropped ctx-32768 + 2 dflash (v0.1.9)
     assert all(re.match(r"^vllm-bf16-auto-", i) for i in vllm)
 
 

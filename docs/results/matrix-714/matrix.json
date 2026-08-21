@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-18",
+  "generated_at": "2026-08-21",
   "generator": "scripts/gen-matrix.py",
   "notes": [
     "Declaration only: statuses flip to measured by the cell runners (Tasks 3/4); regeneration resets to this declaration.",
@@ -380,6 +380,20 @@
     {
       "id": "vllm-bf16-auto-mtp-c16-ctx262144",
       "status": "measured",
+      "runner_hint": "scripts/run-cell-vllm.sh",
+      "priority": true
+    },
+    {
+      "id": "vllm-bf16-auto-dflash-c1-ctx262144",
+      "status": "planned",
+      "reason": "v0.1.9 DFlash2 block-diffusion speculative decoding priority (draft incoai/Qwen3.8-27B-DFlash2 on the vllm path; same-session pairing cells c1/c8 @262144, declared pre-measurement 2026-08-21)",
+      "runner_hint": "scripts/run-cell-vllm.sh",
+      "priority": true
+    },
+    {
+      "id": "vllm-bf16-auto-dflash-c8-ctx262144",
+      "status": "planned",
+      "reason": "v0.1.9 DFlash2 block-diffusion speculative decoding priority (draft incoai/Qwen3.8-27B-DFlash2 on the vllm path; same-session pairing cells c1/c8 @262144, declared pre-measurement 2026-08-21)",
       "runner_hint": "scripts/run-cell-vllm.sh",
       "priority": true
     }

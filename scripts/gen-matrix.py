@@ -46,6 +46,10 @@ addendum):
   hip mtp4-c1 @131072, and the hip unified-default-boot c4@131072 rider
   (id suffix -unified). Everything else valid: planned(reason="time-boxed
   session; machinery complete").
+- 2026-08-21 (v0.1.9 DFlash2 integration, declared pre-measurement): 2
+  additional planned cells — vllm dflash x {1,8} @262144 (the spec-variant
+  slot gains "dflash", vllm path only: llama.cpp cannot run the
+  block-diffusion drafter).
 """
 
 from __future__ import annotations
@@ -57,7 +61,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "docs" / "results" / "matrix-714" / "matrix.json"
 
-GENERATED_AT = "2026-08-18"  # declaration date; a date, never a timestamp
+GENERATED_AT = "2026-08-21"  # declaration date; a date, never a timestamp
 
 # path -> bound weight (invalid cross pairs are never constructed)
 PATH_WEIGHT = {"gguf": "udq4kxl", "vllm": "bf16"}
@@ -78,6 +82,10 @@ PLANNED_REASON_PRIORITY = "declared priority subset for this session (see METHOD
 PLANNED_REASON_REST = "time-boxed session; machinery complete"
 PLANNED_REASON_V012 = ("v0.1.2 Vulkan×MTP experiment priority (declared "
                        "pre-measurement, METHODOLOGY.md §8 addendum 2026-08-18)")
+PLANNED_REASON_V019 = ("v0.1.9 DFlash2 block-diffusion speculative decoding "
+                       "priority (draft incoai/Qwen3.8-27B-DFlash2 on the "
+                       "vllm path; same-session pairing cells c1/c8 @262144, "
+                       "declared pre-measurement 2026-08-21)")
 DROPPED_REASONS = {
     ("vllm", 32768): (
         "32768 is not a supported conf tier for the vllm path "
@@ -97,6 +105,14 @@ NEW_CELLS_V012: tuple[tuple[str, str, int, int, bool], ...] = (
     ("vulkan", "mtp4", 4, 131072, False),
     ("hip", "mtp4", 1, 131072, False),
     ("hip", "base", 4, 131072, True),  # unified-default-boot rider (no -np)
+)
+
+# The 2 new v0.1.9 cells (fixed order; declared planned + priority): the
+# DFlash2 block-diffusion draft on the vllm path — dflash x {c1,c8} @262144.
+# The base/mtp same-session pairing partners are already-measured cells.
+NEW_CELLS_V019: tuple[tuple[str, str, int], ...] = (
+    ("vllm", "dflash", 1, 262144),
+    ("vllm", "dflash", 8, 262144),
 )
 
 
@@ -173,6 +189,17 @@ def build_cells() -> list[dict]:
                     "runner_hint": RUNNER_HINT["vllm"],
                     "priority": priority,
                 })
+    # ... + the 2 new v0.1.9 dflash cells (spec-variant dimension: the
+    # DFlash2 block-diffusion draft, vllm path only — the gguf path has no
+    # dflash support by construction, llama.cpp cannot run the drafter).
+    for path, mtp, n, ctx in NEW_CELLS_V019:
+        cells.append({
+            "id": cell_id(path, mtp, n, ctx),
+            "status": "planned",
+            "reason": PLANNED_REASON_V019,
+            "runner_hint": RUNNER_HINT[path],
+            "priority": True,
+        })
     return cells
 
 
