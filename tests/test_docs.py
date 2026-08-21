@@ -377,10 +377,12 @@ def test_changelog_headline_numbers_recompute_from_verdicts() -> None:
     # v0.1.0/v0.1.1 cells + 8 v0.1.2 Vulkan×MTP/unified cells). The count
     # must DERIVE from the verdicts JSON, and the CHANGELOG line below is
     # what stays consistent with it.
-    assert len(cells) == 28, (
-        f"measured-cell count drifted: {len(cells)} (expect 28)")
-    assert dist == Counter({"caution": 14, "recommended": 8, "avoid": 6}), (
-        f"verdict distribution drifted from the pinned v0.1.2 shape: {dist}")
+    # v0.1.9 (2026-08-21): 30 measured cells = 9/15/6 (28 + the two
+    # DFlash2 corpus cells — dflash-c1 recommended, dflash-c8 caution).
+    assert len(cells) == 30, (
+        f"measured-cell count drifted: {len(cells)} (expect 30)")
+    assert dist == Counter({"caution": 15, "recommended": 9, "avoid": 6}), (
+        f"verdict distribution drifted from the pinned v0.1.9 shape: {dist}")
 
     text = CHANGELOG.read_text(encoding="utf-8")
     # The distribution line, verbatim from the generated tables.
