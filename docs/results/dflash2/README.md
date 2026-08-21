@@ -57,10 +57,21 @@ streams OK in 93 s, 43.1 tok/s aggregate, per-stream median 13.9 tok/s
 this scale** — but per-stream quality of service at c16 is poor; serve
 c ≤ 4 with DFlash2.
 
+**Post-release n-max sweep (F8) revises the single-stream story:** every
+cell above ran at n-max 7 (the block_size−1 cap and the GGUF README's
+suggested value) — but on gfx1100 the optimum is much lower. n-max 2–4
+measures **40.0–41.6 tok/s** (acceptance 0.71/0.52 vs 0.33 at 7), i.e.
+**+21–27% over n-max 7**, reaching **parity with MTP depth 1** (41.3).
+Q4_K_M draft is not faster here. Receipt:
+[`nmax-sweep.json`](nmax-sweep.json); analysis: [experiments.md F8](experiments.md).
+
 **Bottom line for this host class (W7900/gfx1100) — the recommendation
 splits by load shape:** single-stream interactive → **MTP depth 1**
-(41.3 tok/s, no extra model); 2–4 concurrent streams → **DFlash 2**
-(21.4 median vs 17.3 base — and MTP-d1 inverts to 16.4 at c4 here).
+(41.3 tok/s, no extra model) or **DFlash2 at `SPEC_DEPTH=4`** (≈40–42
+tok/s, parity — pick either; the table's 33.2 c1 figure is the n-max-7
+cell, superseded for interactive use by the sweep); 2–4 concurrent
+streams → **DFlash 2** (21.4 median vs 17.3 base at n-max 7 — and MTP-d1
+inverts to 16.4 at c4; an n-max-4 c4 re-pairing is future work).
 DFlash2 costs +6.9 GiB VRAM and ~0.4 s TTFT; its losslessness is proven
 either way. Its case strengthens further on bandwidth-rich,
 acceptance-friendly workloads (see the vendor blog for H200 numbers).
@@ -95,6 +106,7 @@ block_size − 1), `LLAMA_SERVER` (binary override).
 | [`experiments.md`](experiments.md) | findings, acceptance analysis, negative results |
 | [`equiv.json`](equiv.json) | greedy byte-identity receipt (losslessness proof, 4/4 PASS) |
 | [`acceptance-probe.json`](acceptance-probe.json) | sampling-regime acceptance probe (0.7 vs vendor 1.0/k20 — identical) |
+| [`nmax-sweep.json`](nmax-sweep.json) | n-max / draft-quant sweep (2–4 ≫ 7 on gfx1100; acceptance curve) |
 
 Spec: [`docs/superpowers/specs/2026-08-21-dflash2-phase-design.md`](../../superpowers/specs/2026-08-21-dflash2-phase-design.md).
 Vendor numbers & other engines (SGLang/vLLM/oMLX):

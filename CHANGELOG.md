@@ -8,6 +8,31 @@ receipts [`docs/results/matrix-714/cells/`](docs/results/matrix-714/cells/),
 and the rehearsal receipt
 [`docs/results/rocm-7.14/one-pass-rehearsal.md`](docs/results/rocm-7.14/one-pass-rehearsal.md).
 
+## v0.1.12 — 2026-08-21
+
+n-max sweep (the upstream-offer follow-up): the single-stream DFlash2
+recommendation on gfx1100 changes — **n-max 2–4, not 7**.
+
+### Measured
+
+- `scripts/probe-dflash2-nmax-sweep.sh` +
+  [`docs/results/dflash2/nmax-sweep.json`](docs/results/dflash2/nmax-sweep.json):
+  fresh boot per config, the cells' exact bench command ×3 (median), Q8_0
+  draft: n-max 2/4/5/7 → **41.59 / 40.02 / 38.64 / 31.64 tok/s** with
+  acceptance 0.706/0.519/0.457/0.326 (monotone — shorter blocks accept
+  more; n-max 7 pays draft+verify for rejected tails). Within-session
+  4-vs-7: **+26.5%**; vs the published n-max-7 cell: +20.6%
+  (conservative bound; session anchor measured −4.6% below the cell,
+  recorded in the receipt). n-max 2 vs 4 within run-spread noise.
+- **Q4_K_M drafter is not faster on gfx1100** (−3.2% at n-max 4, −11.6%
+  at 7; opposite of the Volta report upthread) — Q8_0 stays the default.
+- **Guidance revised:** `WITH_DFLASH2=1 SPEC_DEPTH=4` is the recommended
+  DFlash2 boot on this host class — 40.0–41.6 tok/s single-stream,
+  **parity with MTP depth 1** (41.34; the +0.6% gap is inside the run
+  spread). Matrix cells stay n-max-7 (grammar-pinned, published); a c4
+  n-max-4 re-pairing is future work. experiments.md F8; both READMEs
+  updated; guard test recomputes the sweep claims from the receipt.
+
 ## v0.1.11 — 2026-08-21
 
 Docs correction (no code, no new measurements): the two headline
