@@ -8,6 +8,32 @@ receipts [`docs/results/matrix-714/cells/`](docs/results/matrix-714/cells/),
 and the rehearsal receipt
 [`docs/results/rocm-7.14/one-pass-rehearsal.md`](docs/results/rocm-7.14/one-pass-rehearsal.md).
 
+## v0.1.10 — 2026-08-21
+
+DFlash 2 evidence completion (same-day follow-up to v0.1.9): the 3-way
+comparison table is closed and one hypothesis is retired by measurement.
+
+### Added / Measured
+
+- **c4 MTP arm** (`gguf-hip-udq4kxl-auto-mtp-c4-ctx131072`, clean-paired
+  on the same PR-27342 binary): **16.4 tok/s median** (−5.0% vs base c4
+  17.3; aggregate 43.6) — MTP-d1 inverts at c4 on this host, while
+  DFlash2 holds 21.4 (+23.4%). The recommendation now **splits by load
+  shape**: single-stream → `WITH_MTP=1 SPEC_DEPTH=1`; 2–4 concurrent
+  streams → `WITH_DFLASH2=1`. Receipt in
+  [`docs/results/dflash2/cells/`](docs/results/dflash2/cells/).
+- **Acceptance probe** (`scripts/probe-dflash2-acceptance.sh` +
+  [`acceptance-probe.json`](docs/results/dflash2/acceptance-probe.json)):
+  same binary, same 8 prompts, only the sampling regime changes —
+  project bench (0.7/0.95) acceptance **0.2855** vs vendor-recommended
+  (1.0/0.95/k20) **0.2829**. Statistically identical → the acceptance
+  gap vs the vendor evals is **workload-intrinsic, not a sampling
+  artifact** (v0.1.9's F1 sampling hypothesis retired by measurement).
+- **Upstream re-check**: llama.cpp PR #27342 still OPEN at the pinned
+  head `5ecbe1ac` — no re-pin needed (recorded in experiments.md F7).
+- Updated comparison tables in README + docs/results/dflash2/README.md;
+  experiments.md F1/F3 refined, F7 added.
+
 ## v0.1.9 — 2026-08-21
 
 DFlash 2 phase: **opt-in block-diffusion speculative decoding** for the

@@ -178,3 +178,28 @@ def test_stack_records_pr_pin_and_state():
     assert s["commit"].startswith("5ecbe1ac")
     assert "OPEN" in s["pr_state_at_pin"]
     assert s["spec_type"] == "draft-dflash"
+
+
+# ------------------------------------------------- acceptance probe (v0.1.10)
+
+def test_probe_script_defaults_to_the_two_declared_regimes():
+    src = (ROOT / "scripts" / "probe-dflash2-acceptance.sh").read_text()
+    # Arm 1: the project bench convention; arm 2: the vendor's recommended
+    # sampling (model card evaluation section) — the probe's whole point.
+    assert "run_arm project07 0.7 0.95 -" in src
+    assert "run_arm vendor10  1.0 0.95 20" in src
+    # Fresh server per arm (cumulative acceptance counters must not mix).
+    assert "WITH_DFLASH2=1 bash scripts/gguf-quickstart.sh" in src.replace(
+        "env LLAMA_SERVER=\"$SERVER\" PORT=\"$PORT\" CTX_SIZE=\"${CTX_SIZE:-131072}\" \\\n        WITH_DFLASH2=1 bash scripts/gguf-quickstart.sh",
+        "WITH_DFLASH2=1 bash scripts/gguf-quickstart.sh")
+
+
+def test_acceptance_probe_receipt_is_committed_and_countable():
+    r = json.loads((ROOT / "docs" / "results" / "dflash2" /
+                    "acceptance-probe.json").read_text(encoding="utf-8"))
+    assert r["verdict"] == "OK"
+    for arm in ("project_bench_sampling", "vendor_recommended_sampling"):
+        assert r[arm]["generated"] > 0
+        assert 0.0 < r[arm]["acceptance"] < 1.0
+    assert r["project_bench_sampling"]["sampling"]["top_k"] is None
+    assert r["vendor_recommended_sampling"]["sampling"]["top_k"] == 20

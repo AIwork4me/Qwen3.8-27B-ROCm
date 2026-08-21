@@ -156,17 +156,19 @@ SAME binary served both arms; UD-Q4_K_XL @ ctx 131072):**
 |---|---:|---:|---:|---:|
 | without DFlash2 (baseline) | 29.4 tok/s | 17.3 tok/s | 1.87 s | 25.9 GiB |
 | `WITH_DFLASH2=1` | 33.2 tok/s (**+12.9%**) | 21.4 tok/s (**+23.4%**) | 2.29 s | 32.6 GiB |
-| `WITH_MTP=1 SPEC_DEPTH=1` (context arm) | 41.3 tok/s (+40.5%) | — | 2.06 s | 27.4 GiB |
+| `WITH_MTP=1 SPEC_DEPTH=1` (context arm) | 41.3 tok/s (+40.5%) | 16.4 tok/s (−5.0%) | 2.06 s | 27.2 GiB |
 
-Read this honestly: the vendor tables (2.7–3.4× on H200/SGLang, 1.8× on
-M5 Pro/llama.cpp) did **not** transfer to this compute-limited card —
-draft acceptance measured 0.36 on the project bench vs ≈ 5/7 on the
-vendor's reasoning-heavy evals, and every 8-token verification step costs
-more here. On THIS host class the built-in MTP head at depth 1 remains
-the faster single-stream choice; DFlash2's measured case is multi-stream
-(c4) and its losslessness is proven. Full analysis, the c16 probe (the
-DFlash v1 `-np 16` hang does NOT reproduce on v2) and raw receipts:
-[docs/results/dflash2/](docs/results/dflash2/).
+Read this honestly — the recommendation splits by load shape: the vendor
+tables (2.7–3.4× on H200/SGLang, 1.8× on M5 Pro/llama.cpp) did **not**
+transfer to this compute-limited card; draft acceptance measured ≈ 0.29
+on the project's 8-prompt bench vs ≈ 5/7 on the vendor's reasoning-heavy
+evals (a post-release probe ruled the sampling regime out — the gap is
+workload-intrinsic), and every 8-token verification step costs more here.
+On THIS host class: **single-stream → MTP depth 1** (41.3 tok/s, no extra
+model); **2–4 concurrent streams → DFlash 2** (21.4 median vs 17.3 base —
+MTP-d1 inverts to 16.4 at c4). Losslessness is proven either way. Full
+analysis, the c16 probe (the DFlash v1 `-np 16` hang does NOT reproduce
+on v2) and raw receipts: [docs/results/dflash2/](docs/results/dflash2/).
 
 ```bash
 bash scripts/07-build-llama-dflash2.sh        # once: PR #27342 HIP build (GPU arch auto-detected)
@@ -242,8 +244,8 @@ Full tables with links to the raw receipts: [docs/results/benchmark.md](docs/res
 
 ## Status & roadmap
 
-Current release: **v0.1.9** — DFlash 2 speculative decoding (opt-in,
-measured with/without on gfx1100) — [CHANGELOG](CHANGELOG.md) ·
+Current release: **v0.1.10** — DFlash 2 evidence completed (3-way c4
+table + acceptance probe: sampling ruled out) — [CHANGELOG](CHANGELOG.md) ·
 [Releases](https://github.com/AIwork4me/Qwen3.8-27B-ROCm/releases).
 
 Roadmap — evidence-gated intentions, not promises; each item lands when its

@@ -1,0 +1,36 @@
+{
+ "checked_at": "2026-08-21T10:02:33Z",
+ "method": "same llama.cpp PR-27342 binary, same 8-prompt bench set, 256 tokens, thinking off; only the sampling regime changes; fresh server per arm (cumulative counters); counters summed across slots from the server log's print_timing lines",
+ "verdict": "OK",
+ "project_bench_sampling": {
+  "accepted": 624,
+  "generated": 2186,
+  "acceptance": 0.28545288197621227,
+  "mean_len_min": 2.65,
+  "mean_len_max": 3.22,
+  "slots_reporting": 4,
+  "sampling": {
+   "temperature": 0.7,
+   "top_p": 0.95,
+   "top_k": null
+  },
+  "prompts": 8,
+  "max_tokens": 256
+ },
+ "vendor_recommended_sampling": {
+  "accepted": 637,
+  "generated": 2252,
+  "acceptance": 0.28285968028419184,
+  "mean_len_min": 2.64,
+  "mean_len_max": 3.23,
+  "slots_reporting": 4,
+  "sampling": {
+   "temperature": 1.0,
+   "top_p": 0.95,
+   "top_k": 20
+  },
+  "prompts": 8,
+  "max_tokens": 256
+ },
+ "acceptance_delta": -0.0026
+}

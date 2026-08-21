@@ -45,6 +45,13 @@
       "note": "measured 2026-08-21: 21.4 tok/s median per-stream (+23.4% vs base), 4/4 streams ok, anchor PASS"
     },
     {
+      "id": "gguf-hip-udq4kxl-auto-mtp-c4-ctx131072",
+      "status": "measured",
+      "runner_hint": "scripts/run-cell-gguf.sh",
+      "priority": true,
+      "note": "measured 2026-08-21: 16.4 tok/s median per-stream (-5.0% vs base c4; MTP inverts at concurrency on this host) — completes the 3-way c4 table: DFlash2 21.4 > base 17.3 > MTP-d1 16.4, anchor PASS"
+    },
+    {
       "id": "gguf-hip-udq4kxl-auto-dflash2-c16-ctx32768",
       "status": "measured",
       "runner_hint": "scripts/run-cell-gguf.sh",
