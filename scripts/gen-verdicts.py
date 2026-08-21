@@ -139,9 +139,17 @@ from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-CELLS_DIR = ROOT / "docs" / "results" / "matrix-714" / "cells"
-MATRIX = ROOT / "docs" / "results" / "matrix-714" / "matrix.json"
-OUT = ROOT / "configs" / "benchmark-verdicts.json"
+CELLS_DIR = ROOT / "docs/results/matrix-714/cells"
+MATRIX = ROOT / "docs/results/matrix-714/matrix.json"
+OUT = ROOT / "configs/benchmark-verdicts.json"
+
+# v0.1.9 (2026-08-21): the DFlash2 corpus cells' same-session pairing
+# partners live in the stability session tree, NOT the corpus (the corpus
+# base/mtp cells are the 262144 story; the pairing ran at 131072 — the
+# dflash KV-feasible tier). Same loader convention as the stability
+# sessions: receipts-only, read by explicit path.
+DFLASH_SESSION_DIR = (ROOT / "docs/results/matrix-714/stability" /
+                      "dflash-pairing-2026-08-21")
 
 # METHODOLOGY §3 rung 2: per-stream TPOT < 10 tok/s at an interactive tier is
 # not recommendable; severity band 8–10 tok/s -> caution, < 8 -> avoid.
@@ -1387,7 +1395,8 @@ def _pit_correlation(m: dict) -> str:
 def compose_verdict(cid: str, cell: dict, m: dict, base_m: dict | None,
                     family_best_lower: float | None,
                     all_metrics: dict | None = None,
-                    unified_cell: dict | None = None) -> dict:
+                    unified_cell: dict | None = None,
+                    dflash_pair: dict | None = None) -> dict:
     parts = parse_cell_id(cid)
     m = dict(m)
     m["c"] = parts["c"]
@@ -1454,6 +1463,95 @@ def compose_verdict(cid: str, cell: dict, m: dict, base_m: dict | None,
                       f"(see the mtp-c4/mtp-c8 caution cells).")
         workaround = ("Serve without --mtp (configs/serve-args.conf) when "
                       "batching at 16 streams.")
+
+    elif parts["mtp"] == "dflash":
+        # v0.1.9 (2026-08-21): the DFlash2 corpus cells. Gains cite the
+        # same-session pairing partners (session receipts, NOT corpus —
+        # the corpus base/mtp cells are the 262144 story; the pairing ran
+        # at the dflash KV-feasible 131072 tier).
+        base_m2 = dflash_pair["base"]
+        mtp_m2 = dflash_pair["mtp"]
+        gains_base = {
+            "per_stream_pct": round((med / base_m2["per_stream_tok_s_median"] - 1) * 100, 1),
+            "aggregate_pct": round((agg / base_m2["aggregate_tok_s"] - 1) * 100, 1),
+            "base_per_stream_tok_s_median": base_m2["per_stream_tok_s_median"],
+            "base_aggregate_tok_s": base_m2["aggregate_tok_s"],
+            "basis": "same-session pairing receipt 2026-08-21 @131072 "
+                     "(stability/dflash-pairing-2026-08-21/)",
+        }
+        gains_mtp = {
+            "per_stream_pct": round((med / mtp_m2["per_stream_tok_s_median"] - 1) * 100, 1),
+            "aggregate_pct": round((agg / mtp_m2["aggregate_tok_s"] - 1) * 100, 1),
+            "mtp_per_stream_tok_s_median": mtp_m2["per_stream_tok_s_median"],
+            "mtp_aggregate_tok_s": mtp_m2["aggregate_tok_s"],
+            "basis": "same-session pairing receipt 2026-08-21 @131072 "
+                     "(stability/dflash-pairing-2026-08-21/)",
+        }
+        applicability = (
+            "Applicability: single session, one host; needs the upstream "
+            "PR #52816 patch (patches/vllm-dflash2-pr52816.diff, unmerged "
+            "at measurement — vLLM pin 4d2a68d has DFlash v1 only); ctx "
+            "262144 is KV-infeasible with the draft loaded (21.63 needed "
+            "vs 15.46 GiB available — 131072 only; boot receipt "
+            "dflash2-validation.md).")
+        if parts["c"] == 1:
+            reason = (
+                f"DFlash2 speculative decoding lifts the single-stream vLLM "
+                f"cell to {fmt(med)} tok/s (TPOT "
+                f"{fmt(m['tpot_ms_median'])} ms/token) — the first measured "
+                f"vLLM cell at/above the 10 tok/s interactive floor on this "
+                f"host. Same-session pairing @131072: "
+                f"+{gains_base['per_stream_pct']}% vs base ({fmt(med)} vs "
+                f"{fmt(gains_base['base_per_stream_tok_s_median'])} tok/s) "
+                f"and +{gains_mtp['per_stream_pct']}% vs MTP ({fmt(med)} vs "
+                f"{fmt(gains_mtp['mtp_per_stream_tok_s_median'])} tok/s) — "
+                f"the draft beats both native speculators' single-stream "
+                f"cells. Anchor clean (greedy byte-identity — the lossless "
+                f"claim holds), boot healthy ({boot_s} s, GTT {gtt_gib} "
+                f"GiB). Controller ruling 2026-08-21: the 2026-08-17 "
+                f"premise 'all measured vLLM cells are below the 10 tok/s "
+                f"floor' is SUPERSEDED for this cell (dated supersession, "
+                f"never silent); the GGUF hip MTP path (13.86 tok/s, clean "
+                f"d1 pairing) REMAINS the recommended interactive-chat "
+                f"path — dflash-c1 is the vLLM-path single-stream choice. "
+                f"{applicability}")
+            conditions = (
+                "Single-stream vLLM serving; multi-user tiers erode the "
+                "gain (see the dflash-c8 caution cell). Concurrency erodes "
+                "DFlash2's edge (upstream's stated shape, confirmed here at "
+                "c8). The corpus base/mtp @262144 cells remain the "
+                "262144-context/vision/batch reference. " + applicability)
+            workaround = (
+                "Interactive chat stays on the GGUF path "
+                "(WITH_MTP=1 SPEC_DEPTH=1); serve DFlash2 with "
+                "scripts/03-serve-vllm.sh --dflash2 (ctx via MAX_MODEL_LEN "
+                "=131072 or lower).")
+        else:
+            reason = (
+                f"Per-stream median {fmt(med)} tok/s (TPOT "
+                f"{fmt(m['tpot_ms_median'])} ms/token) at the multi-user "
+                f"c{parts['c']} tier — below the 10 tok/s interactive "
+                f"floor. DFlash2's single-stream gain erodes under "
+                f"concurrency (upstream's stated shape, confirmed here): "
+                f"same-session @131072 pairing +{gains_base['per_stream_pct']}% "
+                f"vs base-c{parts['c']} per-stream ({fmt(med)} vs "
+                f"{fmt(gains_base['base_per_stream_tok_s_median'])} tok/s) "
+                f"but only +{gains_mtp['per_stream_pct']}% vs mtp-c{parts['c']} "
+                f"({fmt(med)} vs {fmt(gains_mtp['mtp_per_stream_tok_s_median'])} "
+                f"tok/s); aggregate {fmt(agg)} vs base "
+                f"{fmt(gains_base['base_aggregate_tok_s'])} tok/s "
+                f"(+{gains_base['aggregate_pct']}%) — no regression; MTP's "
+                f"beneficial-through-c8 story is unchanged. Anchor clean, "
+                f"boot healthy ({boot_s} s, GTT {gtt_gib} GiB). "
+                f"{applicability}")
+            conditions = (
+                "Multi-user/batch on this path: the corpus base/mtp "
+                "@262144 cells remain the reference (262144 context, "
+                "vision, best aggregate); single-stream → the dflash-c1 "
+                "recommended cell. " + applicability)
+            workaround = (
+                "Single-stream workloads: scripts/03-serve-vllm.sh "
+                "--dflash2; batch: serve base per the corpus cells.")
 
     elif parts["path"] == "vllm":
         gain_txt = ""
@@ -1637,6 +1735,9 @@ def compose_verdict(cid: str, cell: dict, m: dict, base_m: dict | None,
         out["metrics"]["reviewed_by"] = V012_REVIEWED_BY
     if gains:
         out["metrics"]["mtp_gain_vs_base"] = gains
+    if dflash_pair:
+        out["metrics"]["dflash_gain_vs_base"] = gains_base
+        out["metrics"]["dflash_gain_vs_mtp"] = gains_mtp
     if conditions:
         out["conditions"] = conditions
     if workaround:
@@ -1671,6 +1772,17 @@ def build_verdicts(root: Path = ROOT) -> dict:
             base_id = (f"{parts['path']}-{parts['weight']}-{parts['kv']}-"
                        f"base-c{parts['c']}-ctx{parts['ctx']}")
         base_m = metrics.get(base_id) if parts["mtp"] in ("mtp", "mtp4") else None
+        # v0.1.9: dflash cells pair against the same-session receipts (the
+        # corpus has no base/mtp cells at the 131072 tier).
+        dflash_pair = None
+        if parts["mtp"] == "dflash":
+            dflash_pair = {
+                who: compute_metrics(json.loads(
+                    (DFLASH_SESSION_DIR / who /
+                     f"{parts['path']}-{parts['weight']}-{parts['kv']}-{who}"
+                     f"-c{parts['c']}-ctx{parts['ctx']}.json").read_text()))
+                for who in ("base", "mtp")
+            }
         # Best lower-concurrency aggregate in the same family (a family is
         # path x backend x mtp-variant x ctx — hip and vulkan never mix).
         lowers = [metrics[o]["aggregate_tok_s"] for o in measured
@@ -1681,7 +1793,8 @@ def build_verdicts(root: Path = ROOT) -> dict:
         family_best = max(lowers) if lowers else None
         out_cells.append(compose_verdict(cid, cells[cid], metrics[cid],
                                          base_m, family_best, metrics,
-                                         cells.get(UNIFIED_RIDER_ID)))
+                                         cells.get(UNIFIED_RIDER_ID),
+                                         dflash_pair))
 
     # Top-level shape is locked by schemas/benchmark-verdicts.schema.json
     # (additionalProperties: false) — provenance stays in this generator's
