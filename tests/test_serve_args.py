@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -60,3 +61,38 @@ def test_serve_script_uses_no_sync_and_default_port():
     src = (ROOT / "scripts" / "03-serve-vllm.sh").read_text()
     assert "uv run --no-sync vllm serve" in src
     assert "--port 8000" in src or "8000" in src
+
+
+def test_dflash2_conf_adds_speculative_decoding():
+    args = parse_conf("serve-args-dflash2.conf")
+    assert "--speculative-config" in args
+    assert args.get("--max-model-len") == "262144"
+
+
+def test_dflash2_conf_is_baseline_flags_plus_speculative_config_only():
+    # Lockstep, same contract as the MTP conf: exactly the baseline flag set
+    # plus --speculative-config — only the speculative line differs.
+    base = parse_conf("serve-args.conf")
+    dflash = parse_conf("serve-args-dflash2.conf")
+    assert set(dflash) == set(base) | {"--speculative-config"}
+    for flag, value in base.items():
+        assert dflash[flag] == value, f"{flag} drifted from baseline: {value!r} vs {dflash[flag]!r}"
+
+
+def test_dflash2_speculative_config_is_compact_valid_dflash_json():
+    # The serve script word-splits each conf line: the JSON must be compact
+    # (no spaces) or it would be chopped into multiple argv entries — same
+    # constraint documented in serve-args-mtp.conf.
+    args = parse_conf("serve-args-dflash2.conf")
+    raw = args["--speculative-config"]
+    assert " " not in raw
+    cfg = json.loads(raw)
+    assert cfg["method"] == "dflash"
+    assert cfg["model"].endswith("Qwen3.8-27B-DFlash2")
+    assert cfg["num_speculative_tokens"] == 7
+
+
+def test_serve_script_supports_dflash2_conf_branch():
+    src = (ROOT / "scripts" / "03-serve-vllm.sh").read_text()
+    assert "--dflash2" in src
+    assert "serve-args-dflash2.conf" in src

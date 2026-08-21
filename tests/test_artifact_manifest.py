@@ -56,3 +56,23 @@ def test_gguf_set_has_default_quant_and_mmproj():
     assert any("mmproj" in p.lower() for p in paths)
     for f in s["files"]:
         assert f["size_bytes"] > 0 and len(f["sha256"]) == 64
+
+
+def test_dflash2_set_is_the_speculative_draft_model():
+    # DFlash2 draft (block-diffusion speculator for the vLLM path): ships as
+    # exactly config.json + model.safetensors (HF repo incoai/Qwen3.8-27B-DFlash2,
+    # mirrored on ModelScope; queried 2026-08-21). No tokenizer files — vLLM
+    # uses the target model's tokenizer.
+    s = json.loads((ROOT / "configs" / "artifact-manifest.json").read_text())["sets"]["dflash2"]
+    assert s["repository"] == "incoai/Qwen3.8-27B-DFlash2"
+    assert s["host"] == "modelscope"
+    assert len(s["revision"]) == 40
+    assert s["dest"] == "models/Qwen3.8-27B-DFlash2"
+    paths = {f["path"] for f in s["files"]}
+    assert paths == {"config.json", "model.safetensors"}
+    for f in s["files"]:
+        assert f["size_bytes"] > 0 and len(f["sha256"]) == 64
+    # API fact (ModelScope repo/files API, master, queried 2026-08-21): the
+    # two files sum to 3,848,819,135 bytes = 3.6 GiB.
+    total = sum(f["size_bytes"] for f in s["files"])
+    assert round(total / 2**30, 1) == 3.6
