@@ -47,9 +47,10 @@ addendum):
   (id suffix -unified). Everything else valid: planned(reason="time-boxed
   session; machinery complete").
 - 2026-08-21 (v0.1.9 DFlash2 integration, declared pre-measurement): 2
-  additional planned cells — vllm dflash x {1,8} @262144 (the spec-variant
+  additional planned cells — vllm dflash x {1,8} @131072 (the spec-variant
   slot gains "dflash", vllm path only: llama.cpp cannot run the
-  block-diffusion drafter).
+  block-diffusion drafter; 262144 re-tiered away same day — KV-infeasible
+  with the draft loaded on the 80 GiB pool, boot receipt 2026-08-21).
 """
 
 from __future__ import annotations
@@ -84,8 +85,11 @@ PLANNED_REASON_V012 = ("v0.1.2 Vulkan×MTP experiment priority (declared "
                        "pre-measurement, METHODOLOGY.md §8 addendum 2026-08-18)")
 PLANNED_REASON_V019 = ("v0.1.9 DFlash2 block-diffusion speculative decoding "
                        "priority (draft incoai/Qwen3.8-27B-DFlash2 on the "
-                       "vllm path; same-session pairing cells c1/c8 @262144, "
-                       "declared pre-measurement 2026-08-21)")
+                       "vllm path; same-session pairing cells c1/c8 "
+                       "@131072 — re-tiered from 262144 after the dflash "
+                       "boot failed the KV budget there (21.63 needed vs "
+                       "15.46 GiB available; engine max-len estimate "
+                       "181376), declared 2026-08-21)")
 DROPPED_REASONS = {
     ("vllm", 32768): (
         "32768 is not a supported conf tier for the vllm path "
@@ -108,11 +112,14 @@ NEW_CELLS_V012: tuple[tuple[str, str, int, int, bool], ...] = (
 )
 
 # The 2 new v0.1.9 cells (fixed order; declared planned + priority): the
-# DFlash2 block-diffusion draft on the vllm path — dflash x {c1,c8} @262144.
-# The base/mtp same-session pairing partners are already-measured cells.
-NEW_CELLS_V019: tuple[tuple[str, str, int], ...] = (
-    ("vllm", "dflash", 1, 262144),
-    ("vllm", "dflash", 8, 262144),
+# DFlash2 block-diffusion draft on the vllm path — dflash x {c1,c8} @131072
+# (262144 is KV-infeasible with the draft loaded on the 80 GiB pool — see
+# PLANNED_REASON_V019). The base/mtp same-session pairing partners run at
+# the same tier (stability-session receipts; the corpus base/mtp cells are
+# the 262144 ones).
+NEW_CELLS_V019: tuple[tuple[str, str, int, int], ...] = (
+    ("vllm", "dflash", 1, 131072),
+    ("vllm", "dflash", 8, 131072),
 )
 
 

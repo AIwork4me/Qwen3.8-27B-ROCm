@@ -332,23 +332,26 @@ def test_vllm_runner_enforces_id_format():
 
 
 def test_vllm_runner_dry_run_dflash_derives_dflash2_boot():
-    # dflash cells boot 03-serve-vllm.sh --dflash2 with the dedicated conf.
-    r = run_vllm_runner(["vllm-bf16-auto-dflash-c1-ctx262144", "--dry-run"])
+    # dflash cells boot 03-serve-vllm.sh --dflash2 with the dedicated conf;
+    # ctx 131072 != the conf's 262144, so the MAX_MODEL_LEN override path
+    # exercises too (the declared dflash tier — 262144 is KV-infeasible).
+    r = run_vllm_runner(["vllm-bf16-auto-dflash-c1-ctx131072", "--dry-run"])
     assert r.returncode == 0, r.stderr
     assert "--dflash2" in r.stdout
     assert "serve-args-dflash2.conf" in r.stdout
+    assert "MAX_MODEL_LEN=131072" in r.stdout
 
 
 def test_vllm_runner_dry_run_dflash_c1_c8_share_one_boot():
-    r = run_vllm_runner(["vllm-bf16-auto-dflash-c1-ctx262144",
-                         "vllm-bf16-auto-dflash-c8-ctx262144", "--dry-run"])
+    r = run_vllm_runner(["vllm-bf16-auto-dflash-c1-ctx131072",
+                         "vllm-bf16-auto-dflash-c8-ctx131072", "--dry-run"])
     assert r.returncode == 0, r.stderr
 
 
 def test_vllm_runner_refuses_mixed_dflash_mtp_in_one_boot():
     # Same batch rule as {base,mtp}: one server config per invocation.
-    r = run_vllm_runner(["vllm-bf16-auto-dflash-c1-ctx262144",
-                         "vllm-bf16-auto-mtp-c1-ctx262144", "--dry-run"])
+    r = run_vllm_runner(["vllm-bf16-auto-dflash-c1-ctx131072",
+                         "vllm-bf16-auto-mtp-c1-ctx131072", "--dry-run"])
     assert r.returncode == 2
     assert "same server config" in r.stderr
 

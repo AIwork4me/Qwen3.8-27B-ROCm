@@ -61,15 +61,20 @@ def test_declaration_is_deterministic():
 
 
 def test_declaration_declares_dflash2_pairing_cells_as_planned():
-    """v0.1.9 DFlash2 integration (declared pre-measurement): the
-    block-diffusion draft (incoai/Qwen3.8-27B-DFlash2) on the vllm path —
-    dflash x {c1,c8} @262144. The base/mtp pairing partners for the
-    same-session comparison are already measured cells."""
+    """v0.1.9 DFlash2 integration (declared pre-measurement 2026-08-21,
+    re-tiered same day): the block-diffusion draft
+    (incoai/Qwen3.8-27B-DFlash2) on the vllm path — dflash x {c1,c8}
+    @131072. Declared at ctx262144 first; the dflash boot at 262144 fails
+    the KV budget on the 80 GiB pool (draft weights 3.6 GiB + draft KV
+    group: 21.63 GiB KV needed vs 15.46 available, engine estimate max len
+    181376 — boot receipt 2026-08-21), so the pairing re-tiers to 131072
+    (the other declared vllm conf tier). The base/mtp same-session pairing
+    partners run at the same tier."""
     mod = load_module()
     cells = mod.build_cells()
     new_ids = {
-        "vllm-bf16-auto-dflash-c1-ctx262144",
-        "vllm-bf16-auto-dflash-c8-ctx262144",
+        "vllm-bf16-auto-dflash-c1-ctx131072",
+        "vllm-bf16-auto-dflash-c8-ctx131072",
     }
     ids = {c["id"] for c in cells}
     assert new_ids <= ids, f"missing new cells: {sorted(new_ids - ids)}"
@@ -79,7 +84,8 @@ def test_declaration_declares_dflash2_pairing_cells_as_planned():
         assert "DFlash2" in by_id[cid]["reason"]
         assert by_id[cid]["priority"] is True
         assert by_id[cid]["runner_hint"] == "scripts/run-cell-vllm.sh"
-    # No other dflash tiers sneak in (c4/c16 and ctx131072 stay undeclared).
+    # No other dflash tiers sneak in (c4/c16 stay undeclared, and the
+    # KV-infeasible 262144 tier is not declared either).
     dflash_ids = {i for i in ids if "-dflash-" in i}
     assert dflash_ids == new_ids
 
