@@ -118,3 +118,39 @@ scale, not a general c16 endorsement (serve c ≤ 4 with DFlash2).
 - **Upstream PR #27342 re-check (post-release)**: still OPEN, head still
   `5ecbe1ac17ec0484c5b44af0bd580cdc9c428ed4` == our pin — no re-pin
   needed; re-verified 2026-08-21 after the v0.1.9 release.
+
+## F8 — The n-max sweep flips the single-stream story: SPEC_DEPTH 2–4, not 7 (2026-08-21)
+
+**Receipt:** [`nmax-sweep.json`](nmax-sweep.json); script:
+`scripts/probe-dflash2-nmax-sweep.sh` (fresh `WITH_DFLASH2=1` boot per
+config, the cells' exact bench command ×3 runs, median; acceptance summed
+over all per-task log lines). Every committed cell ran at n-max 7 — the
+checkpoint's block_size−1 cap and the GGUF-repo README's suggested value.
+The upstream thread independently reports lower optima on V100/3090/R9700;
+on gfx1100 it is decisive:
+
+| n-max (Q8_0 draft) | 2 | 4 | 5 | 7 | 4 (Q4_K_M) | 7 (Q4_K_M) |
+|---|---:|---:|---:|---:|---:|---:|
+| per-stream tok/s (median of 3) | **41.59** | 40.02 | 38.64 | 31.64 | 38.74 | 27.97 |
+| draft acceptance | 0.706 | 0.519 | 0.457 | 0.326 | 0.473 | 0.298 |
+
+- **Mechanism, not noise:** acceptance rises monotonically as the block
+  shortens (0.71 at 2 vs 0.33 at 7) — the tail tokens of a 7-block rarely
+  survive verification, so n-max 7 pays draft+verify cost for rejects.
+  Within-session (both arms same session): 4 vs 7 = **+26.5%**
+  (40.02/31.64). Against the published n-max-7 cell (33.18): +20.6% —
+  cross-session, with the session anchor measured −1.54 tok/s (−4.6%)
+  below the cell, so treat +20.6% as the conservative bound (the receipt
+  records the drift).
+- **n-max 2 vs 4 are within noise of each other** (run ranges
+  [40.89–42.96] and [38.81–43.21] overlap); both are far above 7.
+- **Single-stream recommendation revised:** DFlash2 at n-max 2–4 reaches
+  40.0–41.6 tok/s — **parity with MTP-d1 (41.34; the +0.6% gap is inside
+  the run spread)**. `WITH_DFLASH2=1 SPEC_DEPTH=4` is now the recommended
+  DFlash2 boot on this host class (4 over 2: one fewer boot knob away
+  from the cap, deeper acceptance headroom; both are correct).
+- **Q4_K_M drafter is NOT faster here** (−3.2% at n-max 4, −11.6% at 7;
+  acceptance similar) — the opposite of the Volta finding upthread;
+  Q8_0 stays the default on gfx1100.
+- Scope: c1 only (the c4 cells remain n-max-7, grammar-pinned — a c4
+  n-max-4 re-pairing is future work); one host; 3 runs per config.

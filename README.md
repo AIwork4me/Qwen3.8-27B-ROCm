@@ -164,11 +164,15 @@ transfer to this compute-limited card; draft acceptance measured ≈ 0.29
 on the project's 8-prompt bench vs ≈ 5/7 on the vendor's reasoning-heavy
 evals (a post-release probe ruled the sampling regime out — the gap is
 workload-intrinsic), and every 8-token verification step costs more here.
-On THIS host class: **single-stream → MTP depth 1** (41.3 tok/s, no extra
-model); **2–4 concurrent streams → DFlash 2** (21.4 median vs 17.3 base —
+On THIS host class: **single-stream → MTP depth 1** (41.3 tok/s, no
+extra model) or **DFlash2 at `SPEC_DEPTH=4`** — a post-release sweep
+found n-max 2–4 gives 40.0–41.6 tok/s (+21–27% over the n-max-7 cell
+above; acceptance doubles as blocks shorten), reaching parity with MTP;
+**2–4 concurrent streams → DFlash 2** (21.4 median vs 17.3 base —
 MTP-d1 inverts to 16.4 at c4). Losslessness is proven either way. Full
-analysis, the c16 probe (the DFlash v1 `-np 16` hang does NOT reproduce
-on v2) and raw receipts: [docs/results/dflash2/](docs/results/dflash2/).
+analysis, the n-max sweep ([nmax-sweep.json](docs/results/dflash2/nmax-sweep.json)),
+the c16 probe (the DFlash v1 `-np 16` hang does NOT reproduce on v2) and
+raw receipts: [docs/results/dflash2/](docs/results/dflash2/).
 
 ```bash
 bash scripts/07-build-llama-dflash2.sh        # once: PR #27342 HIP build (GPU arch auto-detected)
@@ -244,9 +248,9 @@ Full tables with links to the raw receipts: [docs/results/benchmark.md](docs/res
 
 ## Status & roadmap
 
-Current release: **v0.1.11** — docs correction: headline deltas now
-recompute from raw cell medians (c1 +12.8%, c4 +23.3%) with a
-drift-guard test — [CHANGELOG](CHANGELOG.md) ·
+Current release: **v0.1.12** — n-max sweep: DFlash2 single-stream
+recommendation revised to SPEC_DEPTH=4 (40.0–41.6 tok/s, parity with
+MTP-d1; +21–27% over the n-max-7 cells) — [CHANGELOG](CHANGELOG.md) ·
 [Releases](https://github.com/AIwork4me/Qwen3.8-27B-ROCm/releases).
 
 Roadmap — evidence-gated intentions, not promises; each item lands when its

@@ -248,3 +248,65 @@ def test_readme_claims_recompute_from_cell_receipts():
     for name in ("README.md", "docs/results/dflash2/README.md"):
         assert f"{mtp_c1_vram:.1f} GiB" in (ROOT / name).read_text(
             encoding="utf-8"), f"{name}: mtp-c1 VRAM {mtp_c1_vram:.1f} GiB missing"
+
+
+# ----------------------------------------------- n-max sweep probe (v0.1.12)
+
+def test_nmax_sweep_script_pins_the_declared_configs_and_yardstick():
+    src = (ROOT / "scripts" / "probe-dflash2-nmax-sweep.sh").read_text()
+    # The default sweep set: the cap plus the thread-reported optimum, both
+    # draft quants; nothing else.
+    assert 'CONFIGS="2:q8_0 4:q8_0 5:q8_0 7:q8_0 4:q4_km 7:q4_km"' in src
+    # Same yardstick as the published cells (bench command is byte-equal).
+    assert '"--concurrency", "1"' in src
+    assert '"scripts/prompt-sets/default.json"' in src
+    assert '"--max-tokens", "256"' in src
+    assert '"--no-thinking"' in src
+    # Fresh boot per config; SPEC_DEPTH/DFLASH_FILE are the swept knobs.
+    assert 'SPEC_DEPTH="$nmax" DFLASH_FILE="$draft"' in src
+    # Anchor-of-record: the 7:q8_0 config cross-checks against the cell.
+    assert "33.18" in src
+
+
+# ------------------------------------------------ n-max sweep claims (v0.1.12)
+
+def _sweep():
+    return json.loads((ROOT / "docs" / "results" / "dflash2" /
+                       "nmax-sweep.json").read_text(encoding="utf-8"))
+
+
+def test_sweep_receipt_shape_and_claims_recompute():
+    d = _sweep()
+    by_cfg = {c["config"]: c for c in d["configs"]}
+    assert set(by_cfg) == {"2:q8_0", "4:q8_0", "5:q8_0", "7:q8_0",
+                           "4:q4_km", "7:q4_km"}
+    for c in d["configs"]:
+        runs = sorted(c["runs_tok_s"])
+        n = len(runs)
+        median = runs[n // 2] if n % 2 else (runs[n // 2 - 1] + runs[n // 2]) / 2
+        assert abs(median - c["median_tok_s"]) < 0.01
+        assert c["anchor_ok"] is True
+        assert abs(c["acceptance"]["ratio"] -
+                   round(c["acceptance"]["accepted"] /
+                         c["acceptance"]["generated"], 4)) < 0.0001
+    # Acceptance is monotone in n-max for the Q8_0 drafter (F8's mechanism).
+    acc = [by_cfg[f"{n}:q8_0"]["acceptance"]["ratio"] for n in (2, 4, 5, 7)]
+    assert acc[0] > acc[1] > acc[2] > acc[3], acc
+    # The headline claims in the docs recompute from the receipt.
+    within_session = by_cfg["4:q8_0"]["median_tok_s"] / \
+        by_cfg["7:q8_0"]["median_tok_s"] - 1
+    exp = (ROOT / "docs" / "results" / "dflash2" / "experiments.md").read_text(
+        encoding="utf-8")
+    assert f"{within_session * 100:+.1f}%" in exp  # +26.5%
+    assert str(by_cfg["2:q8_0"]["median_tok_s"]) in exp  # 41.59
+    # Parity phrasing, not a win: MTP-d1 cell median vs best sweep config.
+    mtp = _median_tok_s("gguf-hip-udq4kxl-auto-mtp-c1-ctx131072")
+    assert "parity with MTP" in exp
+    assert abs(by_cfg["2:q8_0"]["median_tok_s"] - mtp) < 2.0  # within ~run spread
+
+
+def test_readmes_carry_the_revised_sweep_guidance():
+    for name in ("README.md", "docs/results/dflash2/README.md"):
+        text = (ROOT / name).read_text(encoding="utf-8")
+        assert "SPEC_DEPTH=4" in text, name
+        assert "nmax-sweep.json" in text, name
