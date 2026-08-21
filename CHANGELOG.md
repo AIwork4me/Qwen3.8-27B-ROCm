@@ -8,6 +8,35 @@ receipts [`docs/results/matrix-714/cells/`](docs/results/matrix-714/cells/),
 and the rehearsal receipt
 [`docs/results/rocm-7.14/one-pass-rehearsal.md`](docs/results/rocm-7.14/one-pass-rehearsal.md).
 
+## v0.1.13 — 2026-08-21
+
+Docs UX pass after an independent review (GO-WITH-FIXES): the v0.1.12
+guidance revision had not reached the surfaces users actually copy.
+
+- **P0 — troubleshooting `#dflash2-nmax-cap` no longer steers to the
+  config the sweep retired**: the workaround now recommends the
+  measured-optimal 2–4 band (`SPEC_DEPTH=4`; n-max 7 costs 21–27%
+  single-stream) instead of "request 7 directly".
+- **All three copy-paste surfaces now show `SPEC_DEPTH=4`** (README boot
+  table + 3-command quick start; dflash2/README quick start) with the
+  parity-with-MTP figures; the stale "+13% vs base" row is gone.
+- "Which serving path?" multi-user row now scopes the gfx1151 "Don't" and
+  names DFlash2 as the measured gfx1100 c4 winner; README nav gains a
+  DFlash 2 anchor; the sweep headline carries its scope tag
+  (c1-only, 3-run medians, one host); roadmap gains the DFlash2
+  follow-up items.
+- Evidence discoverability: the results index
+  ([`docs/results/README.md`](docs/results/README.md)) now lists the
+  dflash2 namespace; getting-started "Where to go next" links it; the
+  broken fp8-unlock link in dflash2/README is fixed
+  (`community-explorations/…/spike/fp8-unlock.md`) and the link-guard
+  test now covers the dflash2 namespace docs.
+- Figures: "+6.9 GiB" VRAM (mixed bases) corrected to the exact
+  +6918 MiB in three files; CITATION date-released updated to 2026-08-21.
+- `gguf-quickstart.sh` --help/header/boot-echo texts updated (the echo
+  no longer claims any n-max equals block_size−1). New guard test pins
+  the corrected copy-paste surfaces.
+
 ## v0.1.12 — 2026-08-21
 
 n-max sweep (the upstream-offer follow-up): the single-stream DFlash2
@@ -121,7 +150,7 @@ losslessness proof. Defaults untouched — every boot without
 Clean pairing — SAME PR-27342 binary both arms, same day, same prompts —
 on a W7900-class `gfx1100` host (48 GiB, ROCm 7.2.1 serving, UD-Q4_K_XL
 @ ctx 131072): **+12.8% single-stream** (29.4 → 33.2 tok/s), **+23.3%
-c4 median** (17.3 → 21.4 tok/s), TTFT +0.42 s, VRAM +6.9 GiB. MTP-d1
+c4 median** (17.3 → 21.4 tok/s), TTFT +0.42 s, VRAM +6918 MiB. MTP-d1
 context arm: 41.3 tok/s (+40.5%) — on THIS host class MTP depth 1 stays
 the faster single-stream choice; DFlash2's measured case is c4 and
 losslessness. Vendor numbers (2.7–3.4× H200/SGLang, 1.8× M5 Pro) do not

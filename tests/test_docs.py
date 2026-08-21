@@ -83,6 +83,9 @@ TASK2_DOCS = (
     "docs/upstream/llama-cpp-hip-greedy-degradation.md",
     "docs/results/upstream-controls/README.md",
     "docs/results/community-explorations/w7900d-gfx1100/README.md",
+    "docs/results/dflash2/README.md",
+    "docs/results/dflash2/experiments.md",
+    "docs/results/dflash2/serving-receipt.md",
 )
 
 FOUR_PART_LABELS = ("Symptom", "Reproduction", "Root cause", "Workaround", "Upstream")

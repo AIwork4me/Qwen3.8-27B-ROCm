@@ -17,7 +17,7 @@ ROCm 7.14.0. W7900D (`gfx1100`) is community-validated (GGUF path, per the
 hardware matrix below); more platforms are evidence-gated.
 
 [Quick start](#quick-start-interactive-chat-the-gguf-path) ·
-[Serving paths](#serving-paths) · [Hardware support](#hardware-support) ·
+[Serving paths](#serving-paths) · [DFlash 2](#dflash-2-speculative-decoding-opt-in-withwithout-measured) · [Hardware support](#hardware-support) ·
 [Performance](#performance) · [Context capacity](#context-capacity) ·
 [Known good / known bad](#known-good--known-bad) ·
 [Documentation](#documentation) · [Status & roadmap](#status--roadmap) ·
@@ -76,7 +76,7 @@ stops the server.
 | `bash scripts/gguf-quickstart.sh` (default: hip, UD-Q4_K_XL, ctx 131072) | 10.1 tok/s |
 | `WITH_MTP=1 SPEC_DEPTH=1 bash scripts/gguf-quickstart.sh` (recommended — MTP depth 1) | 13.86 tok/s (2026-08-19 clean d1 pairing; [stability session 3](docs/results/matrix-714/stability/README.md)) |
 | `WITH_MTP=1 bash scripts/gguf-quickstart.sh` (implicit depth 3, the upstream default) | 13.0 tok/s (+28% per-stream) — the corpus cell |
-| `WITH_DFLASH2=1 bash scripts/gguf-quickstart.sh` (DFlash 2 drafter — needs [scripts/07-build-llama-dflash2.sh](scripts/07-build-llama-dflash2.sh) + `SET=dflash2 bash scripts/02-fetch-model.sh`) | gfx1100 host: **+13% vs base** single-stream / **+23% at c4** — measured on W7900-class gfx1100, lossless (greedy byte-identical); [DFlash 2 comparison](docs/results/dflash2/) |
+| `WITH_DFLASH2=1 SPEC_DEPTH=4 bash scripts/gguf-quickstart.sh` (DFlash 2 drafter — needs [scripts/07-build-llama-dflash2.sh](scripts/07-build-llama-dflash2.sh) + `SET=dflash2 bash scripts/02-fetch-model.sh`) | gfx1100 host: **~40–41.6 tok/s, parity with MTP-d1** (SPEC_DEPTH=4, post-sweep; the bare default-7 boot measures +12.8% c1 / +23.3% c4) — lossless (greedy byte-identical); [DFlash 2 comparison](docs/results/dflash2/) |
 | `BACKEND=vulkan WITH_MTP=1 bash scripts/gguf-quickstart.sh` (opt-in) | 16.0 tok/s (2026-08-18 cell) / 14.53 on the 2026-08-19 clean pairing (+4.81% vs hip, aggregate −13.31%) — available experimental opt-in, not recommended (project ruling 2026-08-19 supersedes 2026-08-18) |
 
 Which serving path?
@@ -85,7 +85,7 @@ Which serving path?
 |---|---|---|
 | Interactive chat | `WITH_MTP=1 SPEC_DEPTH=1 bash scripts/gguf-quickstart.sh` (port 8080) — hip is both the default and the recommended path (`BACKEND=vulkan` exists as an experimental opt-in, not recommended) | every measured vLLM cell is below the 10 tok/s interactive floor |
 | 262144-token context, vision, or aggregate batch throughput (to 38.6 tok/s) | `bash scripts/03-serve-vllm.sh` (port 8000) | the greedy-degradation-free path, but not interactive on this host |
-| Multi-user GGUF loads | Don't | greedy-degradation pit on hip — see [Known good / known bad](#known-good--known-bad) |
+| Multi-user GGUF loads | Don't (gfx1151) — on gfx1100-class the pit did not reproduce and `WITH_DFLASH2=1` is the measured c4 winner (21.4 vs 17.3 base tok/s) | greedy-degradation pit on hip — see [Known good / known bad](#known-good--known-bad) and [DFlash 2](#dflash-2-speculative-decoding-opt-in-withwithout-measured) |
 
 Measured (2026-08-18, v0.1.2 rider): unified-default-boot c4 at ctx 131072
 (the stock quickstart's 4-slot default under 4 concurrent users) runs at
@@ -166,8 +166,9 @@ evals (a post-release probe ruled the sampling regime out — the gap is
 workload-intrinsic), and every 8-token verification step costs more here.
 On THIS host class: **single-stream → MTP depth 1** (41.3 tok/s, no
 extra model) or **DFlash2 at `SPEC_DEPTH=4`** — a post-release sweep
-found n-max 2–4 gives 40.0–41.6 tok/s (+21–27% over the n-max-7 cell
-above; acceptance doubles as blocks shorten), reaching parity with MTP;
+(c1-only, 3-run medians, one host) found n-max 2–4 gives 40.0–41.6 tok/s
+(+21–27% over the n-max-7 cell above; acceptance doubles as blocks
+shorten), reaching parity with MTP;
 **2–4 concurrent streams → DFlash 2** (21.4 median vs 17.3 base —
 MTP-d1 inverts to 16.4 at c4). Losslessness is proven either way. Full
 analysis, the n-max sweep ([nmax-sweep.json](docs/results/dflash2/nmax-sweep.json)),
@@ -177,7 +178,7 @@ raw receipts: [docs/results/dflash2/](docs/results/dflash2/).
 ```bash
 bash scripts/07-build-llama-dflash2.sh        # once: PR #27342 HIP build (GPU arch auto-detected)
 SET=dflash2 bash scripts/02-fetch-model.sh    # once: draft GGUF, SHA256-verified (ModelScope)
-WITH_DFLASH2=1 bash scripts/gguf-quickstart.sh    # serving on :8080 — same client, same answers, faster
+WITH_DFLASH2=1 SPEC_DEPTH=4 bash scripts/gguf-quickstart.sh   # serving on :8080 — lossless; SPEC_DEPTH=4 per the n-max sweep (the bare boot = the n-max-7 matrix cells)
 ```
 
 Knobs & traps: `DFLASH_FILE` (Q4_K_M 1.1 GiB if VRAM-tight), `SPEC_DEPTH`
@@ -248,14 +249,19 @@ Full tables with links to the raw receipts: [docs/results/benchmark.md](docs/res
 
 ## Status & roadmap
 
-Current release: **v0.1.12** — n-max sweep: DFlash2 single-stream
-recommendation revised to SPEC_DEPTH=4 (40.0–41.6 tok/s, parity with
-MTP-d1; +21–27% over the n-max-7 cells) — [CHANGELOG](CHANGELOG.md) ·
+Current release: **v0.1.13** — docs UX pass: every copy-paste surface
+(boot table, quick starts, troubleshooting pit) now carries the
+SPEC_DEPTH=4 optimum; evidence index + link-guard extended —
+[CHANGELOG](CHANGELOG.md) ·
 [Releases](https://github.com/AIwork4me/Qwen3.8-27B-ROCm/releases).
 
 Roadmap — evidence-gated intentions, not promises; each item lands when its
 receipts do:
 
+- **DFlash2 follow-ups**: c4 n-max-4 re-pairing, and re-pin + one-shot
+  re-measure when llama.cpp PR #27342 merges (tracked in
+  [`docs/results/dflash2/`](docs/results/dflash2/) F8/F7;
+  `configs/validated-stack.json` `llama_cpp_dflash2`).
 - **vLLM path on community platforms** (W7900-class `gfx1100`): the
   reference vLLM stack is gfx1151-only (the TheRock nightly index has no
   gfx1100 builds), so submissions bring and document their own stack — the

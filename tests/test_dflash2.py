@@ -310,3 +310,25 @@ def test_readmes_carry_the_revised_sweep_guidance():
         text = (ROOT / name).read_text(encoding="utf-8")
         assert "SPEC_DEPTH=4" in text, name
         assert "nmax-sweep.json" in text, name
+
+
+# ------------------------------------- copy-paste surfaces carry the optimum
+
+def test_quickstart_surfaces_recommend_the_measured_optimum():
+    """The v0.1.13 review found all three copy-paste surfaces still booting
+    the superseded n-max-7 default; pin the corrected surfaces."""
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    ns = (ROOT / "docs" / "results" / "dflash2" / "README.md").read_text(
+        encoding="utf-8")
+    # Boot-table row and both quick-start command blocks show SPEC_DEPTH=4.
+    assert "WITH_DFLASH2=1 SPEC_DEPTH=4 bash scripts/gguf-quickstart.sh" in readme
+    assert "WITH_DFLASH2=1 SPEC_DEPTH=4 bash scripts/gguf-quickstart.sh" in ns
+    # The stale pre-sweep row text is gone from the boot table.
+    assert "+13% vs base" not in readme
+    # The troubleshooting pit recommends the 2-4 band, not the cap.
+    troub = (ROOT / "docs" / "troubleshooting.md").read_text(encoding="utf-8")
+    assert "request 7 directly" not in troub.lower().replace("request the effective maximum directly: 7", "XX")
+    assert "SPEC_DEPTH=4" in troub
+    # The boot echo can no longer claim any n-max equals block_size-1.
+    qs = (ROOT / "scripts" / "gguf-quickstart.sh").read_text(encoding="utf-8")
+    assert "of cap 7 via" in qs
