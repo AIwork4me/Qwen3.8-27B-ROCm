@@ -93,5 +93,35 @@
       "note": "hip mtp receipts measured 2026-08-17 predate this discovery and ran at the implicit default n_max=3; cells booted by run-cell-gguf.sh now pass the depth explicitly and record it in server_flags"
     },
     "built_at": "2026-08-18"
+  },
+  "llama_cpp_dflash2": {
+    "source_repo": "https://github.com/ggml-org/llama.cpp.git",
+    "pr": 27342,
+    "pr_title": "spec : add DFlash2 support (local convolution + candidate selector)",
+    "pr_state_at_pin": "OPEN (unmerged); build from the pull ref, re-pin here when it moves or merges",
+    "commit": "5ecbe1ac17ec0484c5b44af0bd580cdc9c428ed4",
+    "backend": "HIP",
+    "build_dir": "third_party/llama.cpp/build-714-dflash2",
+    "build_script": "scripts/07-build-llama-dflash2.sh",
+    "spec_type": "draft-dflash",
+    "spec_draft_n_max": 7,
+    "spec_draft_n_max_basis": "the DFlash2 checkpoint's block_size is 8 (incoai/Qwen3.8-27B-DFlash2 config.json dflash_config.block_size = 8), so at most block_size - 1 = 7 tokens are drafted per verification step; the official GGUF repo's llama.cpp quick start passes exactly --spec-draft-n-max 7. Requesting more is pointless (and upstream clamps with a warning \u2014 the muse-rocm F-18 lesson applied to v2 at the source); the constant lives HERE and scripts/gguf-quickstart.sh / run-cell-gguf.sh read or mirror only this value",
+    "draft_model": {
+      "set": "dflash2",
+      "repo": "incoai/Qwen3.8-27B-DFlash2-GGUF",
+      "host": "modelscope",
+      "default_file": "Qwen3.8-27B-DFlash2-Q8_0.gguf",
+      "alt_file": "Qwen3.8-27B-DFlash2-Q4_K_M.gguf",
+      "lossless": "greedy output matches the target model exactly; sampling preserves its distribution (model card claim \u2014 verified on-host by scripts/check-dflash2-equiv.sh)"
+    },
+    "validated": {
+      "text": true,
+      "date": "2026-08-21",
+      "receipt": "docs/results/dflash2/serving-receipt.md",
+      "note": "gfx1100 48 GiB host, ROCm 7.2.1 serving + toolchain; greedy byte-identity PASS (docs/results/dflash2/equiv.json); 6-cell clean-paired matrix measured (docs/results/dflash2/)"
+    },
+    "built_at": "2026-08-21",
+    "build_arch": "gfx1100",
+    "toolchain": "/opt/rocm-7.2.1"
   }
 }

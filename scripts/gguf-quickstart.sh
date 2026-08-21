@@ -16,6 +16,14 @@
 #                             --spec-draft-n-max n (discovered at the pin,
 #                             see configs/validated-stack.json
 #                             llama_cpp_vulkan.mtp_depth; upstream default 3)
+#   WITH_DFLASH2=1            opt in to DFlash 2 block-diffusion speculative
+#                             decoding (llama.cpp PR #27342 build required —
+#                             scripts/07-build-llama-dflash2.sh; draft GGUF
+#                             fetched by SET=dflash2 scripts/02-fetch-model.sh).
+#                             In this mode SPEC_DEPTH is the draft length,
+#                             --spec-draft-n-max n (default 7 = block_size-1;
+#                             see configs/validated-stack.json
+#                             llama_cpp_dflash2.spec_draft_n_max)
 #   BACKEND=<hip|vulkan>      llama.cpp build to serve. DEFAULT hip (build-714,
 #                             unchanged) — hip WITH_MTP=1 is BOTH the default
 #                             and the recommended path. vulkan = build-714-vk —
@@ -89,6 +97,13 @@ artifact manifest, never a guess):
                          bare WITH_MTP=1 boots); SPEC_DEPTH=1 pins the
                          recommended depth (the clean d1 pairing of
                          2026-08-19: hip 13.86 tok/s).
+  WITH_DFLASH2=1         opt in to DFlash 2 speculative decoding
+                         (--spec-type draft-dflash + the DFlash2 draft GGUF
+                         via -md; needs the PR #27342 build from
+                         scripts/07-build-llama-dflash2.sh and the draft
+                         from SET=dflash2 scripts/02-fetch-model.sh). In
+                         this mode SPEC_DEPTH is the draft length
+                         (default 7 = block_size-1, the checkpoint physics).
   CTX_SIZE=<n>           context size (default 131072 from the validated
                          stack)
   PORT=<n>               port (default 8080)
@@ -172,6 +187,21 @@ case "$BACKEND" in
     *)      echo "ERROR: unknown BACKEND '$BACKEND' (expected hip|vulkan)." >&2
             exit 1 ;;
 esac
+
+# DFlash 2 mode (WITH_DFLASH2=1): the spec wiring lives in the unmerged
+# llama.cpp PR #27342, so this mode needs its OWN build — the default flips
+# to build-714-dflash2 (still a hip build; BACKEND stays hip and the pinned
+# build-714 / build-714-vk binaries are never touched). LLAMA_SERVER remains
+# the top-level override on top of this default.
+WITH_DFLASH2="${WITH_DFLASH2:-0}"
+if [ "$WITH_DFLASH2" = "1" ]; then
+    if [ "$BACKEND" != "hip" ]; then
+        echo "ERROR: WITH_DFLASH2=1 requires the hip backend (got BACKEND=$BACKEND; the PR #27342 build is a HIP build)." >&2
+        exit 1
+    fi
+    SERVER="${LLAMA_SERVER:-$ROOT/third_party/llama.cpp/build-714-dflash2/bin/llama-server}"
+    BUILD_HINT="run scripts/07-build-llama-dflash2.sh first (PR #27342 HIP build for DFlash2)."
+fi
 
 [ -x "$SERVER" ] || {
     echo "ERROR: llama-server not found at $SERVER" >&2
@@ -291,6 +321,78 @@ if [ "${WITH_MTP:-0}" = "1" ]; then
     fi
 fi
 
+# DFlash 2 speculative decoding, opt-in via WITH_DFLASH2=1 (scripts/
+# 07-build-llama-dflash2.sh build + SET=dflash2 scripts/02-fetch-model.sh
+# draft required). One drafter per boot: combining MTP and DFlash2 would
+# make every receipt ambiguous about what actually drafted, so the
+# combination is refused loudly instead of silently resolved.
+if [ "$WITH_DFLASH2" = "1" ] && [ "${WITH_MTP:-0}" = "1" ]; then
+    echo "ERROR: WITH_MTP=1 and WITH_DFLASH2=1 are mutually exclusive — pick ONE drafter per boot." >&2
+    echo "       (MTP: head from the same GGUF, no extra files; DFlash2: external draft GGUF, PR #27342 build)" >&2
+    exit 1
+fi
+if [ "$WITH_DFLASH2" = "1" ]; then
+    # Draft GGUF resolution mirrors the target pattern: manifest-driven
+    # (sets.dflash2), DFLASH_FILE override (bare name -> set dir, or any path),
+    # presence + manifest-size gated, fetch remedy with disk preflight.
+    DFLASH_DEST="$(python3 -c 'import json;print(json.load(open("'"$MANIFEST"'"))["sets"]["dflash2"]["dest"])')"
+    DFLASH_FILE="${DFLASH_FILE:-Qwen3.8-27B-DFlash2-Q8_0.gguf}"
+    if [[ "$DFLASH_FILE" = /* ]]; then
+        DRAFT_PATH="$DFLASH_FILE"
+    else
+        DRAFT_PATH="$DFLASH_DEST/$DFLASH_FILE"
+    fi
+    if [ ! -f "$DRAFT_PATH" ]; then
+        echo "ERROR: DFlash2 draft not found: $DRAFT_PATH" >&2
+        echo "       run SET=dflash2 bash scripts/02-fetch-model.sh" >&2
+        dflash_need_bytes="$(python3 - "$MANIFEST" "$(basename "$DRAFT_PATH")" <<'PYD'
+import json, sys
+files = json.load(open(sys.argv[1]))["sets"]["dflash2"]["files"]
+print(next((f["size_bytes"] for f in files if f["path"] == sys.argv[2]), 0))
+PYD
+)"
+        if [ "$dflash_need_bytes" -gt 0 ]; then
+            avail_kb="$(df -Pk "$ROOT" 2>/dev/null | awk 'NR==2 {print $4}')"
+            if [ -n "$avail_kb" ] && [ "$((avail_kb * 1024))" -lt "$dflash_need_bytes" ]; then
+                echo "       (that filesystem has $((avail_kb / 1024 / 1024)) GiB free; the fetch needs $((dflash_need_bytes / 1024 / 1024)) MiB)" >&2
+            fi
+        fi
+        exit 1
+    fi
+    dflash_expected_size="$(python3 - "$MANIFEST" "$(basename "$DRAFT_PATH")" <<'PYD'
+import json, sys
+files = json.load(open(sys.argv[1]))["sets"]["dflash2"]["files"]
+print(next((f["size_bytes"] for f in files if f["path"] == sys.argv[2]), 0))
+PYD
+)"
+    if [ "$dflash_expected_size" -gt 0 ]; then
+        dflash_actual_size="$(stat -c%s "$DRAFT_PATH")"
+        if [ "$dflash_actual_size" -ne "$dflash_expected_size" ]; then
+            echo "ERROR: $DRAFT_PATH has size $dflash_actual_size, manifest says $dflash_expected_size;" >&2
+            echo "       delete it and rerun SET=dflash2 bash scripts/02-fetch-model.sh" >&2
+            exit 1
+        fi
+    fi
+    # n-max 7 = block_size(8) - 1, the checkpoint physics: upstream drafts at
+    # most block_size-1 tokens per round and clamps higher requests with a
+    # warning at every server start (muse-rocm F-18 lesson, applied to v2 at
+    # the source). The constant's home is validated-stack.json
+    # (llama_cpp_dflash2.spec_draft_n_max); this default mirrors it and the
+    # tests pin the two against each other.
+    DFLASH_N_MAX="${SPEC_DEPTH:-7}"
+    case "$DFLASH_N_MAX" in
+        ''|*[!0-9]*) echo "ERROR: SPEC_DEPTH (DFlash2 draft length) must be a positive integer (got '$DFLASH_N_MAX')." >&2; exit 1 ;;
+    esac
+    [ "$DFLASH_N_MAX" -ge 1 ] || {
+        echo "ERROR: SPEC_DEPTH (DFlash2 draft length) must be >= 1 (got $DFLASH_N_MAX)." >&2; exit 1
+    }
+    [ "$DFLASH_N_MAX" -le 7 ] || {
+        echo "ERROR: SPEC_DEPTH $DFLASH_N_MAX exceeds the DFlash2 cap (block_size 8 - 1 = 7); upstream clamps it back anyway." >&2
+        exit 1
+    }
+    SERVER_ARGS+=(-md "$DRAFT_PATH" --spec-type draft-dflash --spec-draft-n-max "$DFLASH_N_MAX")
+fi
+
 # EXTRA_ARGS pass-through (benchmark matrix, Task 3): appended verbatim after
 # the validated flags, word-split on whitespace. Empty default → unchanged
 # behavior; the matrix cell runner is the only intended user (explicit -np N
@@ -316,7 +418,13 @@ echo "model        : $MODEL_PATH ($(du -h "$MODEL_PATH" | cut -f1))"
 echo "ctx-size     : $CTX_SIZE  (override: CTX_SIZE=<n>)"
 echo "gpu layers   : 99 (all)"
 echo "mmproj       : $([ "${WITH_MMPROJ:-1}" != "0" ] && [ -f "$MMPROJ_PATH" ] && echo "$MMPROJ_PATH" || echo "none")"
-echo "speculative  : $([ "${WITH_MTP:-0}" = "1" ] && echo "draft-mtp (MTP head from the same GGUF, depth ${SPEC_DEPTH:-default 3} via --spec-draft-n-max)" || echo "off (opt in: WITH_MTP=1)")"
+if [ "$WITH_DFLASH2" = "1" ]; then
+    echo "speculative  : draft-dflash (DFlash2 block-diffusion drafter $DRAFT_PATH, n-max $DFLASH_N_MAX = block_size-1 via --spec-draft-n-max)"
+elif [ "${WITH_MTP:-0}" = "1" ]; then
+    echo "speculative  : draft-mtp (MTP head from the same GGUF, depth ${SPEC_DEPTH:-default 3} via --spec-draft-n-max)"
+else
+    echo "speculative  : off (opt in: WITH_MTP=1, or WITH_DFLASH2=1 for the DFlash 2 drafter — docs/results/dflash2/)"
+fi
 echo "extra args   : ${EXTRA_ARGS:-none}"
 
 # --- End-of-launch UX (muse pattern): where to point the client, how to verify.

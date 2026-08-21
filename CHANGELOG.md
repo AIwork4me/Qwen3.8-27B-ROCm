@@ -8,6 +8,62 @@ receipts [`docs/results/matrix-714/cells/`](docs/results/matrix-714/cells/),
 and the rehearsal receipt
 [`docs/results/rocm-7.14/one-pass-rehearsal.md`](docs/results/rocm-7.14/one-pass-rehearsal.md).
 
+## v0.1.9 — 2026-08-21
+
+DFlash 2 phase: **opt-in block-diffusion speculative decoding** for the
+GGUF path, with a host-measured with/without comparison and a
+losslessness proof. Defaults untouched — every boot without
+`WITH_DFLASH2=1` is byte-identical to v0.1.8.
+
+### Added
+
+- `WITH_DFLASH2=1` quickstart mode (`scripts/gguf-quickstart.sh`):
+  attaches the [`incoai/Qwen3.8-27B-DFlash2`](https://huggingface.co/incoai/Qwen3.8-27B-DFlash2)
+  drafter via `-md … --spec-type draft-dflash --spec-draft-n-max 7`
+  (7 = `block_size 8 − 1`, the checkpoint physics; higher requests are
+  refused — the muse-rocm F-18 lesson applied to v2 at the source;
+  pinned by `tests/test_dflash2.py`).
+- `scripts/07-build-llama-dflash2.sh`: idempotent HIP build of llama.cpp
+  PR [#27342](https://github.com/ggml-org/llama.cpp/pull/27342) (OPEN at
+  pin `5ecbe1ac…`, recorded in `configs/validated-stack.json`
+  `llama_cpp_dflash2`) into `build-714-dflash2` — the pinned `build-714`
+  and `build-714-vk` are never touched. GPU arch auto-detected as the
+  concrete 4-digit gfx target (`gfx11-generic` can never win).
+- `dflash2` artifact set (`configs/artifact-manifest.json`,
+  ModelScope mirror; huggingface.co is unreachable from the evidence
+  host — pit `#dflash2-draft-fetch`): Q8_0 (default) + Q4_K_M drafts,
+  SHA256-verified at fetch.
+- `scripts/check-dflash2-equiv.sh`: greedy byte-identity A/B (same
+  binary both arms) — **PASS 4/4 on-host**
+  ([`docs/results/dflash2/equiv.json`](docs/results/dflash2/equiv.json)):
+  the model card's losslessness claim is verified, not repeated.
+- `dflash2` spec part in the cell-id grammar
+  (`run-cell-gguf.sh`, shared with the schema/test pin) + `LLAMA_SERVER`
+  honored in the runner preflight so an evidence run can boot BOTH arms
+  from one binary (clean pairing).
+- `docs/results/dflash2/`: host-labeled evidence namespace (project
+  matrix untouched) — 6 measured cells, stack receipt, experiments.
+- Three troubleshooting pits: unmerged-PR build/re-pin
+  (`#dflash2-pr-build`), the n-max cap (`#dflash2-nmax-cap`), the
+  draft-fetch/ModelScope fact (`#dflash2-draft-fetch`).
+- `tests/test_dflash2.py` (15 contract tests) and the extended
+  `test_cell_runner.py` grammar pin.
+
+### Measured (the point of the phase)
+
+Clean pairing — SAME PR-27342 binary both arms, same day, same prompts —
+on a W7900-class `gfx1100` host (48 GiB, ROCm 7.2.1 serving, UD-Q4_K_XL
+@ ctx 131072): **+12.9% single-stream** (29.4 → 33.2 tok/s), **+23.4%
+c4 median** (17.3 → 21.4 tok/s), TTFT +0.42 s, VRAM +6.9 GiB. MTP-d1
+context arm: 41.3 tok/s (+40.5%) — on THIS host class MTP depth 1 stays
+the faster single-stream choice; DFlash2's measured case is c4 and
+losslessness. Vendor numbers (2.7–3.4× H200/SGLang, 1.8× M5 Pro) do not
+transfer — draft acceptance measured 0.36 vs ≈ 5/7 on vendor evals; the
+analysis is in
+[`docs/results/dflash2/experiments.md`](docs/results/dflash2/experiments.md)
+(F1–F4, including the c16 probe: the DFlash v1 `-np 16` hang does NOT
+reproduce on v2).
+
 ## v0.1.8 — 2026-08-20
 
 Decision release (closeout D1): the repository owner **DECIDED the OPEN

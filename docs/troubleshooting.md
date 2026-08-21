@@ -24,6 +24,9 @@ the full tables in [`results/benchmark.md`](results/benchmark.md).
 | vLLM amdsmi import | source builds need the pinned patch + `.pth` shim | [#amdsmi](#amdsmi) |
 | Dirty llama.cpp checkout | rebuild refuses to discard your uncommitted changes | [#dirty-llama-cpp-checkout](#dirty-llama-cpp-checkout) |
 | Cold `uv sync` loop-fail | 3 small PyPI packages retry forever while ~2 GiB of wheels succeed | [#uv-sync-loop-fail](#uv-sync-loop-fail) |
+| DFlash2 needs the unmerged PR build | `build-714-dflash2` comes from llama.cpp PR #27342, not master; re-pin when it moves | [#dflash2-pr-build](#dflash2-pr-build) |
+| DFlash2 n-max hard cap 7 | `--spec-draft-n-max` above 7 is clamped (block_size 8 − 1); request 7 directly | [#dflash2-nmax-cap](#dflash2-nmax-cap) |
+| DFlash2 draft fetch: huggingface.co unreachable | some hosts only reach ModelScope; the `dflash2` manifest set is the remedy | [#dflash2-draft-fetch](#dflash2-draft-fetch) |
 
 ## llama.cpp HIP greedy degradation (`'////'` tails)
 <a id="greedy-degradation"></a>
@@ -492,3 +495,91 @@ as the first Vulkan build); the HIP default path keeps serving throughout.
 **Upstream tracking.** None — packaging/integration fact at the pinned
 commit (`4df29be4`), documented per
 [llama.cpp's Vulkan build docs at the pin](https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md).
+
+## DFlash 2 serving requires the unmerged llama.cpp PR build
+<a id="dflash2-pr-build"></a>
+
+**Symptom.** `WITH_DFLASH2=1 bash scripts/gguf-quickstart.sh` fails with
+`llama-server not found at .../build-714-dflash2/bin/llama-server`, or a
+manually launched stock `llama-server` rejects `--spec-type draft-dflash`
+(unknown choice) or the DFlash2 GGUF (unknown architecture tensors).
+
+**Reproduction conditions.** Any boot of the DFlash 2 drafter without
+`scripts/07-build-llama-dflash2.sh` having run: the spec wiring (drafter
+model, dynamic conv, candidate selector) lives in
+[llama.cpp PR #27342](https://github.com/ggml-org/llama.cpp/pull/27342),
+which was **still OPEN** at the pinned head
+(`5ecbe1ac17ec0484c5b44af0bd580cdc9c428ed4`, recorded in
+`configs/validated-stack.json` `llama_cpp_dflash2`) — the pinned `build-714`
+(master-era `4df29be4`) and `build-714-vk` cannot serve it and are never
+touched by the DFlash2 build.
+
+**Root cause / diagnosis state.** Upstream feature not yet merged, by
+design of this repo's pin discipline: the DFlash2 build is a separate
+build dir with its own fingerprint, and the PR head SHA is the pin. If the
+PR moves or merges, `07-build-llama-dflash2.sh` refuses a checkout that
+does not match the recorded pin — re-pin
+`llama_cpp_dflash2.commit` in `configs/validated-stack.json` (one line) and
+rerun; the receipts always carry the exact head SHA + `--version` line
+that served.
+
+**Workaround.** None needed beyond the build:
+`bash scripts/07-build-llama-dflash2.sh` (idempotent, ~6–20 min; builds for
+the GPU `rocminfo` reports — gfx1151 on the reference host, gfx1100 on
+W7900-class hosts). Related trap inherited from the muse-rocm DFlash v1
+work: passing `-md <draft.gguf>` **without** `--spec-type draft-dflash` is
+a *silent no-op* — the quickstart always passes both together; hand-rolled
+flags must too.
+
+**Upstream tracking.**
+[ggml-org/llama.cpp#27342](https://github.com/ggml-org/llama.cpp/pull/27342)
+(state OPEN at pin time; this section updates when it merges).
+
+## DFlash 2 `--spec-draft-n-max` is hard-capped at 7
+<a id="dflash2-nmax-cap"></a>
+
+**Symptom.** Requesting `--spec-draft-n-max 8` (or higher) for a DFlash 2
+draft does not draft more: upstream clamps to **7** and emits a warning
+line at every server start; recorded sweeps would be mislabeled.
+
+**Reproduction conditions.** Any DFlash2 boot with
+`SPEC_DEPTH > 7` (the quickstart refuses it with `exceeds the DFlash2 cap`)
+or a hand-rolled `--spec-draft-n-max 16`.
+
+**Root cause / diagnosis state.** Checkpoint physics, not a bug: the
+DFlash2 draft's `block_size` is 8
+(`incoai/Qwen3.8-27B-DFlash2` `config.json` → `dflash_config.block_size`),
+so at most `block_size − 1 = 7` tokens are drafted per verification step.
+This is the same class of finding as muse-rocm's F-18 (DFlash v1 capped at
+15 = 16 − 1, not 16); the constant's home is
+`configs/validated-stack.json` (`llama_cpp_dflash2.spec_draft_n_max`) and
+`tests/test_dflash2.py` pins every call site to it.
+
+**Workaround.** Request the effective maximum directly: 7 (the default of
+`WITH_DFLASH2=1`; cells derive `SPEC_DEPTH=7` from the id grammar).
+
+**Upstream tracking.** None — intended behavior; documented so nobody
+"sweeps" into a clamped lie.
+
+## DFlash 2 draft GGUF: huggingface.co unreachable, ModelScope set is the remedy
+<a id="dflash2-draft-fetch"></a>
+
+**Symptom.** `huggingface.co` times out from the evidence host (and some
+networks behind it); a hand-rolled `hf download incoai/Qwen3.8-27B-DFlash2-GGUF`
+hangs or fails TLS.
+
+**Reproduction conditions.** Any direct HF fetch on such hosts; the
+`dflash2` set of `configs/artifact-manifest.json` exists precisely because
+of this.
+
+**Root cause / diagnosis state.** Host network policy (this repo's evidence
+host reaches ModelScope and hf-mirror, not huggingface.co directly). The
+draft GGUFs are mirrored on ModelScope at
+`incoai/Qwen3.8-27B-DFlash2-GGUF` and fetched hash-verified by the
+manifest-driven fetcher — no new host support was needed.
+
+**Workaround.** `SET=dflash2 bash scripts/02-fetch-model.sh` (resumable,
+SHA256-verified against the manifest, same path as every other artifact).
+
+**Upstream tracking.** None — network fact, recorded per the repo's
+environment-notes discipline.

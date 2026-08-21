@@ -76,6 +76,7 @@ stops the server.
 | `bash scripts/gguf-quickstart.sh` (default: hip, UD-Q4_K_XL, ctx 131072) | 10.1 tok/s |
 | `WITH_MTP=1 SPEC_DEPTH=1 bash scripts/gguf-quickstart.sh` (recommended — MTP depth 1) | 13.86 tok/s (2026-08-19 clean d1 pairing; [stability session 3](docs/results/matrix-714/stability/README.md)) |
 | `WITH_MTP=1 bash scripts/gguf-quickstart.sh` (implicit depth 3, the upstream default) | 13.0 tok/s (+28% per-stream) — the corpus cell |
+| `WITH_DFLASH2=1 bash scripts/gguf-quickstart.sh` (DFlash 2 drafter — needs [scripts/07-build-llama-dflash2.sh](scripts/07-build-llama-dflash2.sh) + `SET=dflash2 bash scripts/02-fetch-model.sh`) | gfx1100 host: **+13% vs base** single-stream / **+23% at c4** — measured on W7900-class gfx1100, lossless (greedy byte-identical); [DFlash 2 comparison](docs/results/dflash2/) |
 | `BACKEND=vulkan WITH_MTP=1 bash scripts/gguf-quickstart.sh` (opt-in) | 16.0 tok/s (2026-08-18 cell) / 14.53 on the 2026-08-19 clean pairing (+4.81% vs hip, aggregate −13.31%) — available experimental opt-in, not recommended (project ruling 2026-08-19 supersedes 2026-08-18) |
 
 Which serving path?
@@ -135,6 +136,51 @@ Measured 2026-08-16 and 2026-08-18 on the reference host (gfx1151, ROCm 7.14, 80
 
 **Honesty clause (aggregate never headlines over UX):** the best aggregate on this host — vLLM base-c16, 38.6 tok/s — runs each stream at 3.0 tok/s median (min 2.58): batch presentation only. GGUF-hip c8/c16 aggregates (to 27.5 tok/s) are ❌ avoid cells — greedy decoding degrades after sustained multistream load (see Known good / known bad; the pit does NOT reproduce on Vulkan, whose c8/c16 tiers are unmeasured). Interactive chat → GGUF `WITH_MTP=1` on the default hip backend (13.0 tok/s per stream — the recommended path). `BACKEND=vulkan` remains an available experimental opt-in, NOT a recommendation (project ruling 2026-08-19 supersedes the 2026-08-18 promotion: the clean d1 pairing is 14.53 vs 13.86 tok/s, +4.81% — the conservative FLOOR case, vk measured in the unidentified slow state — aggregate -13.31%; the variance is decomposed v0.1.7: the cold-cache swing +38% is the BOUND (cold 12.38 / warm 16.96–17.10 tok/s), s3's cache was forensically INTACT so its vk-specific trigger is UNIDENTIFIED, common-mode drift is ±5–6%, and the warm pairing band spans 4 sessions (+15.88%/+20.61%/+19.90%/+15.93% incl. overnight persistence) while aggregate/TTFT stay hip-favored) — see the verdicts).
 <!-- END GENERATED: performance-highlights -->
+
+## DFlash 2 speculative decoding (opt-in, with/without measured)
+
+**What changes:** one switch — `WITH_DFLASH2=1` — attaches the
+[DFlash 2](https://huggingface.co/incoai/Qwen3.8-27B-DFlash2) block-diffusion
+drafter (~1.9 B, Q8_0 2.0 GiB) and turns on `--spec-type draft-dflash
+--spec-draft-n-max 7` (7 = the checkpoint's `block_size 8 − 1`). Decoding
+is **lossless** — verified on-host by greedy byte-identity
+([`equiv.json`](docs/results/dflash2/equiv.json), 4/4 prompts identical).
+Every default boot (no `WITH_DFLASH2`) is byte-identical to before.
+
+**With vs without, measured 2026-08-21 on a W7900-class `gfx1100` host
+(48 GiB, ROCm 7.2.1, llama.cpp PR
+[#27342](https://github.com/ggml-org/llama.cpp/pull/27342) build — the
+SAME binary served both arms; UD-Q4_K_XL @ ctx 131072):**
+
+| Boot | c=1 per-stream | c=4 per-stream (median) | TTFT c=1 | VRAM |
+|---|---:|---:|---:|---:|
+| without DFlash2 (baseline) | 29.4 tok/s | 17.3 tok/s | 1.87 s | 25.9 GiB |
+| `WITH_DFLASH2=1` | 33.2 tok/s (**+12.9%**) | 21.4 tok/s (**+23.4%**) | 2.29 s | 32.6 GiB |
+| `WITH_MTP=1 SPEC_DEPTH=1` (context arm) | 41.3 tok/s (+40.5%) | — | 2.06 s | 27.4 GiB |
+
+Read this honestly: the vendor tables (2.7–3.4× on H200/SGLang, 1.8× on
+M5 Pro/llama.cpp) did **not** transfer to this compute-limited card —
+draft acceptance measured 0.36 on the project bench vs ≈ 5/7 on the
+vendor's reasoning-heavy evals, and every 8-token verification step costs
+more here. On THIS host class the built-in MTP head at depth 1 remains
+the faster single-stream choice; DFlash2's measured case is multi-stream
+(c4) and its losslessness is proven. Full analysis, the c16 probe (the
+DFlash v1 `-np 16` hang does NOT reproduce on v2) and raw receipts:
+[docs/results/dflash2/](docs/results/dflash2/).
+
+```bash
+bash scripts/07-build-llama-dflash2.sh        # once: PR #27342 HIP build (GPU arch auto-detected)
+SET=dflash2 bash scripts/02-fetch-model.sh    # once: draft GGUF, SHA256-verified (ModelScope)
+WITH_DFLASH2=1 bash scripts/gguf-quickstart.sh    # serving on :8080 — same client, same answers, faster
+```
+
+Knobs & traps: `DFLASH_FILE` (Q4_K_M 1.1 GiB if VRAM-tight), `SPEC_DEPTH`
+(draft length, hard cap 7 — requesting more is refused, upstream clamps
+it anyway), mutually exclusive with `WITH_MTP`; the build is an
+**unmerged PR** pinned in
+[`configs/validated-stack.json`](configs/validated-stack.json)
+(`llama_cpp_dflash2`) — see
+[troubleshooting: DFlash2](docs/troubleshooting.md#dflash2-pr-build).
 
 ## Context capacity
 
@@ -196,7 +242,8 @@ Full tables with links to the raw receipts: [docs/results/benchmark.md](docs/res
 
 ## Status & roadmap
 
-Current release: **v0.1.8** — [CHANGELOG](CHANGELOG.md) ·
+Current release: **v0.1.9** — DFlash 2 speculative decoding (opt-in,
+measured with/without on gfx1100) — [CHANGELOG](CHANGELOG.md) ·
 [Releases](https://github.com/AIwork4me/Qwen3.8-27B-ROCm/releases).
 
 Roadmap — evidence-gated intentions, not promises; each item lands when its
