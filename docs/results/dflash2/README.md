@@ -30,19 +30,23 @@ Q8_0 (2.0 GiB); bench: 8-prompt set, 256 tokens, temperature 0.7
 |---|---:|---:|---:|---:|---:|---:|
 | `bash scripts/gguf-quickstart.sh` (baseline, no drafter) | 29.4 tok/s | — | 17.3 tok/s | — | 1.87 s | 25.9 GiB |
 | `WITH_DFLASH2=1 bash scripts/gguf-quickstart.sh` | 33.2 tok/s | **+12.9%** | 21.4 tok/s | **+23.4%** | 2.29 s | 32.6 GiB |
-| `WITH_MTP=1 SPEC_DEPTH=1 bash scripts/gguf-quickstart.sh` (context arm) | 41.3 tok/s | +40.5% | — | — | 2.06 s | 27.4 GiB |
+| `WITH_MTP=1 SPEC_DEPTH=1 bash scripts/gguf-quickstart.sh` (context arm) | 41.3 tok/s | +40.5% | 16.4 tok/s | −5.0% | 2.06 s | 27.2 GiB |
 
 Aggregates (total output tokens / wall): c=1 25.7 vs 24.3 tok/s (+5.6%);
-c=4 47.5 vs 45.0 tok/s (+5.7%). The per-stream vs aggregate gap at c=1 is
-the TTFT cost — the drafter adds ~0.4 s prompt processing before the
-first token.
+c=4 47.5 vs 45.0 tok/s (+5.7%); MTP c4 aggregate 43.6. The per-stream vs
+aggregate gap at c=1 is the TTFT cost — the drafter adds ~0.4 s prompt
+processing before the first token.
 
 **Why the win is smaller than the vendor table** (H200/SGLang 2.7–3.4× at
 c=1; M5 Pro/llama.cpp 1.8×): acceptance. This host's bench measured
-**draft acceptance 0.36** (182/502, mean accepted length 3.53 of 7) on
-the sampling prompt set — versus the vendor's ≈ 5/7 on GSM8K-class
+**draft acceptance ≈ 0.29** (8-prompt probe, 624/2186; the single-prompt
+cell log showed 0.36) — versus the vendor's ≈ 5/7 on GSM8K-class
 reasoning workloads — and a compute-limited `gfx1100` pays more per
-8-token verification step than an H200. The vendor numbers are real for
+8-token verification step than an H200. A post-release probe ruled the
+sampling regime OUT (0.7/0.95 vs the vendor's 1.0/0.95/20 measured
+statistically identical acceptance —
+[`acceptance-probe.json`](acceptance-probe.json)): the gap is
+workload-intrinsic on this prompt set. The vendor numbers are real for
 their stacks; they do not transfer to this host as-is. Numbers here are
 the honest local ones.
 
@@ -53,11 +57,12 @@ streams OK in 93 s, 43.1 tok/s aggregate, per-stream median 13.9 tok/s
 this scale** — but per-stream quality of service at c16 is poor; serve
 c ≤ 4 with DFlash2.
 
-**Bottom line for this host class (W7900/gfx1100):** DFlash2 is a real
-but modest win — **+13% single-stream, +23% at 4-way concurrency** — at
-+6.9 GiB VRAM and ~0.4 s TTFT cost. For pure single-stream speed on THIS
-host, the built-in MTP head at depth 1 remains faster (41.3 tok/s, no
-extra model). DFlash2's case is stronger on bandwidth-rich,
+**Bottom line for this host class (W7900/gfx1100) — the recommendation
+splits by load shape:** single-stream interactive → **MTP depth 1**
+(41.3 tok/s, no extra model); 2–4 concurrent streams → **DFlash 2**
+(21.4 median vs 17.3 base — and MTP-d1 inverts to 16.4 at c4 here).
+DFlash2 costs +6.9 GiB VRAM and ~0.4 s TTFT; its losslessness is proven
+either way. Its case strengthens further on bandwidth-rich,
 acceptance-friendly workloads (see the vendor blog for H200 numbers).
 
 ## Quick start (3 commands)
@@ -89,6 +94,7 @@ block_size − 1), `LLAMA_SERVER` (binary override).
 | [`serving-receipt.md`](serving-receipt.md) | stack manifest: exact binary, commits, commands, environment |
 | [`experiments.md`](experiments.md) | findings, acceptance analysis, negative results |
 | [`equiv.json`](equiv.json) | greedy byte-identity receipt (losslessness proof, 4/4 PASS) |
+| [`acceptance-probe.json`](acceptance-probe.json) | sampling-regime acceptance probe (0.7 vs vendor 1.0/k20 — identical) |
 
 Spec: [`docs/superpowers/specs/2026-08-21-dflash2-phase-design.md`](../../superpowers/specs/2026-08-21-dflash2-phase-design.md).
 Vendor numbers & other engines (SGLang/vLLM/oMLX):

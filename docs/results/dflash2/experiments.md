@@ -13,23 +13,27 @@ arms): 29.4 → 33.2 tok/s at c1 (+12.9%), 17.3 → 21.4 tok/s median at c4
 
 Two compounding causes, both measured or derivable:
 
-1. **Acceptance 0.36** on this bench (server log: `draft acceptance =
-   0.36255 (182 accepted / 502 generated), mean len = 3.53`) — versus the
-   vendor's ≈ 5/7 on GSM8K-class reasoning prompts. The project bench is
-   8 generic professional prompts at temperature 0.7; vendor evals use
-   the model's recommended sampling (temperature 1.0, top-p 0.95, top-k
-   20) on reasoning-heavy tasks where a drafter trained on those
-   distributions accepts more.
+1. **Acceptance ~0.29 on this prompt set** (server log, c1 cell:
+   `draft acceptance = 0.36255 (182/502)` on the single bench prompt;
+   the fuller 8-prompt probe measures **0.2855**, 624/2186) — versus the
+   vendor's ≈ 5/7 on GSM8K-class reasoning prompts.
 2. **Verification is not free on a compute-limited card**: at ~3.5
    accepted tokens per step the target runs batch-8 forwards; gfx1100
    (~61 TFLOPs class, bandwidth 864 GB/s) gains less per weight-pass
    than an H200 before the drafter's own per-step cost (dynamic conv +
    selector) is subtracted.
 
-Follow-up candidates (NOT measured this phase, deliberately — the corpus
-bench must stay comparable): a temperature-1.0/top-k-20 acceptance probe
-to separate cause 1 from cause 2; a Q4_K_M-draft cell (vendor says
-quant-invariant, table in the PR).
+**Follow-up probe (post-release, 2026-08-21): sampling is NOT the
+cause** — [`acceptance-probe.json`](acceptance-probe.json)
+(`scripts/probe-dflash2-acceptance.sh`): same binary, same 8 prompts,
+256 tokens, only the sampling regime changes — project bench
+(temperature 0.7 / top-p 0.95) acceptance **0.2855** (624/2186) vs the
+vendor's recommended sampling (temperature 1.0 / top-p 0.95 / top-k 20)
+**0.2829** (637/2252). Statistically identical → the acceptance gap vs
+the vendor evals is workload-intrinsic (generic professional prose vs
+the reasoning-heavy tasks the drafter was evaluated on), not a sampling
+artifact. What remains untested here: reasoning-heavy prompts on this
+host (deliberately — the corpus bench must stay comparable).
 
 ## F2 — DFlash 2 is lossless on-host: greedy byte-identity 4/4 PASS
 
@@ -38,17 +42,28 @@ thinking-off, 4 prompt surfaces (arithmetic / code / factual / exact
 instruction) — content byte-identical, token counts identical, all
 finish `stop`. The model-card claim is verified, not just repeated.
 
-## F3 — MTP depth-1 beats DFlash 2 on THIS host at c1
+## F3 — c1: MTP depth-1 wins; c4: DFlash 2 wins (the recommendation splits by load shape)
 
-Same clean pairing: `mtp-c1` 41.3 tok/s (+40.5% vs base) vs DFlash2 33.2
-(+12.9%). MTP-d1 verifies 2 tokens per step (batch 2) with no external
-model; its acceptance/cost ratio suits a compute-limited card better
-than an 8-token block drafter. **The single-stream recommendation for
-this host class therefore stays MTP d1**; DFlash2's case is c4
-concurrency (+23.4%, where MTP-d1 was not re-measured this phase — see
-the project corpus for MTP concurrency behavior) and
-acceptance-friendly/bandwidth-rich workloads. Receipt:
-`cells/gguf-hip-udq4kxl-auto-mtp-c1-ctx131072.json`.
+Same clean pairing at c1: `mtp-c1` 41.3 tok/s (+40.5% vs base) vs DFlash2
+33.2 (+12.9%). MTP-d1 verifies 2 tokens per step (batch 2) with no external
+model; its acceptance/cost ratio suits a compute-limited card better than
+an 8-token block drafter at low batch.
+
+**Post-release completion of the 3-way c4 table (2026-08-21):**
+`mtp-c4` measured **16.4 tok/s median** (−5.0% vs base c4's 17.3;
+aggregate 43.6 vs 45.0) — MTP-d1 INVERTS at c4 on this host (consistent
+with the project's corpus-wide "MTP inverts at high concurrency" ruling),
+while DFlash2 holds **21.4 (+23.4%)**. Final shape on this host class:
+
+| | base | MTP-d1 | DFlash2 |
+|---|---:|---:|---:|
+| c=1 per-stream | 29.4 | **41.3** | 33.2 |
+| c=4 per-stream (median) | 17.3 | 16.4 | **21.4** |
+
+**Recommendation splits by load shape:** single-stream interactive →
+`WITH_MTP=1 SPEC_DEPTH=1`; 2–4 concurrent streams → `WITH_DFLASH2=1`.
+Receipts: `cells/gguf-hip-udq4kxl-auto-mtp-c{1,4}-ctx131072.json`,
+`cells/gguf-hip-udq4kxl-auto-{base,dflash2}-c{1,4}-ctx131072.json`.
 
 ## F4 — The DFlash v1 `-np 16` hang does NOT reproduce on v2
 
@@ -91,3 +106,15 @@ scale, not a general c16 endorsement (serve c ≤ 4 with DFlash2).
   VRAM) can outlive its wrapper; the equiv script now escalates to
   SIGKILL after a 60 s grace (observed once, receipt: WARN line in the
   first equiv attempt's log).
+
+## F7 — Post-release follow-ups (2026-08-21, after v0.1.9)
+
+- **Acceptance probe** (F1 addendum above): sampling regime ruled out —
+  0.2855 (project 0.7/0.95) vs 0.2829 (vendor 1.0/0.95/k20), same binary,
+  same prompts. Receipt: `acceptance-probe.json`; script:
+  `scripts/probe-dflash2-acceptance.sh`.
+- **c4 MTP arm** (F3 addendum above): 16.4 tok/s median — the 3-way c4
+  table is complete and the recommendation splits by load shape.
+- **Upstream PR #27342 re-check (post-release)**: still OPEN, head still
+  `5ecbe1ac17ec0484c5b44af0bd580cdc9c428ed4` == our pin — no re-pin
+  needed; re-verified 2026-08-21 after the v0.1.9 release.
