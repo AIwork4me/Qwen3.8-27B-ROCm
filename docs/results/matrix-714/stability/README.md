@@ -352,3 +352,21 @@ Exact-basis deltas from the receipts: vulkan vs the two s4 warm runs
 hip; aggregate basis hip 10.89 vs vulkan 10.63 (gap −0.26, −2.39% of hip).
 Warm-pair series so far (exact-basis, % of hip): s4 +15.88% / +20.61%,
 s5 +19.90%, s6 +15.93%.
+
+## dflash floor series (pre-registered 2026-08-22)
+
+Closes the vLLM dflash-c1 floor-crossing day-dependence (verdict addendum
+2026-08-22). One installment per UTC day, one command (3 boots ≈ 25 min,
+host must be idle):
+
+    ARMS="7" bash scripts/probe-vllm-dflash2-nmax-sweep.sh
+
+Receipts land in `dflash-nmax-sweep-<date>/` (same driver/date convention
+as the 2026-08-22 sweep — `base.json`, `mtp.json`, `dflash-7.json`,
+`nmax-sweep.json`); commit them receipts-only. Ruling criteria are
+pre-registered in the README roadmap decision entry (≥5 sessions on ≥5
+distinct UTC days; dflash-7 median ≥ 10.0 in ≥5-of-5 with clean anchors
+upgrades the "at/near the floor" wording to "stably at/above the floor";
+any anchor failure or ≥3 missed days voids the series; the mapping does
+not change under any outcome). The ruling integrates as a dated verdict
+addendum, never a metric rewrite.

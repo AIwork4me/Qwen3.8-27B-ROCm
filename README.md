@@ -299,11 +299,22 @@ receipts do:
   vLLM cell at the interactive floor; +150.1%/+65.3% same-session vs
   base/MTP), c8 erodes to +3.3% vs MTP, anchors clean (lossless). OPEN
   follow-ups, evidence-gated: (1) the patch is an unmerged upstream PR —
-  re-pin when #52816 lands and retire the patch; (2) PARTIALLY RESOLVED
-  2026-08-22 — the n-max sweep session ran cross-day: dflash-7 9.79 vs
-  the 10.23 cell = −4.3% common-mode (controls +1.5%/+0.5%); the
-  floor-crossing is day-dependent (dated verdict addendum; a full
-  multi-day series remains open before any mapping upgrade); (3) c4/c16
+  re-pin when #52816 lands and retire the patch; (2) the **dflash floor series (pre-registered
+  2026-08-22, before any further session ran)**
+  closes the day-dependence: daily `ARMS="7"` installments (3 boots:
+  base/mtp controls + dflash-7, ~25 min, receipts
+  `matrix-714/stability/dflash-nmax-sweep-<date>/`), target ≥5 sessions
+  on ≥5 distinct UTC days. Ruling criteria — (a) "stably at/above the
+  floor": dflash-7 median ≥ 10.0 tok/s in ≥5-of-5 sessions with every
+  greedy anchor clean → the verdict wording upgrades from "at/near the
+  floor" to "stably at/above the floor"; (b) "straddles the floor": the median crosses 10.0 across
+  sessions → wording stays "at/near the floor" and the measured band
+  (min–max) is recorded; (c) any anchor failure or ≥3 missed days voids
+  the series for ruling purposes (investigate before re-registering).
+  The mapping does not change under ANY outcome — GGUF hip MTP (13.86)
+  remains the interactive recommendation; this series only hardens the
+  floor-crossing wording (prior data points 10.23 / 9.79 are context,
+  not counted toward the ≥5); (3) c4/c16
   dflash tiers unmeasured; (4) RESOLVED 2026-08-22 — vLLM-side n-max
   sweep (`matrix-714/stability/dflash-nmax-sweep-2026-08-22/`): 7
   confirmed (n=4 statistically tied, +2.7% inside run spread; n=2–3

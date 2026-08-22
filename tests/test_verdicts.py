@@ -1525,3 +1525,28 @@ def test_dflash_c1_carries_the_crossday_and_nmax_addendum():
     for token in ("2026-08-22", "9.79", "day-dependent", "n-max",
                   "does not transfer"):
         assert token in text, f"{token!r} missing from the c1 addendum"
+
+
+def test_dflash_floor_series_criteria_are_preregistered():
+    """v0.1.15 (2026-08-22): the dflash floor-crossing question gets a
+    PRE-REGISTERED ruling protocol before the multi-day series runs
+    (the Vulkan-series governance precedent): the criteria live in the
+    README roadmap decision entry, the verdict points at them, and the
+    series convention is documented in the stability README."""
+    readme = README.read_text()
+    block = readme[readme.find("dflash floor series (pre-registered"):][:2500] \
+        if "dflash floor series (pre-registered" in readme else ""
+    assert block, "README roadmap lacks the pre-registered series block"
+    for token in ("≥5 sessions", "≥5 distinct UTC days", "median ≥ 10.0",
+                  "stably at/above the floor", "straddles",
+                  "mapping does not change", "anchor"):
+        assert token in block, f"pre-registration lacks {token!r}"
+
+    v = load(VERDICTS)
+    c1 = {c["id"]: c for c in v["cells"]}["vllm-bf16-auto-dflash-c1-ctx131072"]
+    assert "pre-registered 2026-08-22" in c1["reason"], (
+        "the verdict addendum must point at the pre-registered protocol")
+
+    stab = (ROOT / "docs/results/matrix-714/stability/README.md").read_text()
+    assert 'ARMS="7"' in stab and "probe-vllm-dflash2-nmax-sweep" in stab, (
+        "the stability README must document the daily one-liner")
