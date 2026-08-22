@@ -699,3 +699,31 @@ def test_runner_post_bench_snapshot_and_load_telemetry_in_receipt():
     r = run_runner(["gguf-vulkan-udq4kxl-auto-mtp-c1-ctx131072", "--dry-run"])
     assert r.returncode == 0, r.stderr
     assert "telemetry" in r.stdout.lower()
+
+
+def test_vllm_nmax_sweep_script_pins_the_declared_configs():
+    # vLLM-side draft-length sweep (v0.1.15): mirrors the GGUF-path
+    # probe-dflash2-nmax-sweep.sh methodology — fresh boot per config, the
+    # cells' exact bench command, session receipts (never corpus cells).
+    import re
+    script = ROOT / "scripts" / "probe-vllm-dflash2-nmax-sweep.sh"
+    assert script.is_file(), "sweep script missing"
+    src = script.read_text()
+    # Default arms: the vendor default (7, doubles as the cross-day
+    # replication anchor) + the GGUF-sweep optimum band 2-4.
+    assert 'ARMS="${ARMS:-' in src and "2 3 4 7" in src
+    # Same-session base/mtp controls for the pairing basis.
+    assert "base" in src and "mtp" in src and "--mtp" in src
+    assert "SPEC_N" in src and "MAX_MODEL_LEN=131072" in src
+    # The exact cell bench command pieces (same flags as run-cell-vllm.sh).
+    assert "--concurrency 1" in src
+    assert 'PROMPTS="scripts/prompt-sets/default.json"' in src
+    assert "--max-tokens 256" in src and "--no-thinking" in src
+    assert "--anchor-only" in src
+    # Receipts land in the stability session namespace, never the corpus
+    # (the dir is assembled from STABILITY_DIR + a dated component).
+    assert 'STABILITY_DIR="docs/results/matrix-714/stability"' in src
+    assert "dflash-nmax-sweep-" in src
+    assert "cells/" not in re.sub(r"stability/dflash-nmax-sweep[^\"]*", "", src)
+    # --help is guarded (the v0.1.5 trap principle).
+    assert "-h|--help" in src

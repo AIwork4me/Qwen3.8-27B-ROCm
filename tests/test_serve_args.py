@@ -106,3 +106,14 @@ def test_dflash2_boot_warns_when_ctx_override_missing():
     src = (ROOT / "scripts" / "03-serve-vllm.sh").read_text()
     assert "KV-infeasible" in src or "KV budget" in src
     assert "MAX_MODEL_LEN" in src
+
+
+def test_dflash2_conf_supports_spec_n_override():
+    # n-max sweep support (v0.1.15): SPEC_N=<int> rewrites
+    # num_speculative_tokens inside the dflash2 conf's --speculative-config
+    # (env pass-through, conf untouched — same pattern as MAX_MODEL_LEN).
+    src = (ROOT / "scripts" / "03-serve-vllm.sh").read_text()
+    assert "SPEC_N" in src
+    assert "num_speculative_tokens" in src
+    # Refuses misuse: non-integer values and non-dflash2 confs.
+    assert "positive integer" in src

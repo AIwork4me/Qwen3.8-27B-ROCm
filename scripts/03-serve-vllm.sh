@@ -89,6 +89,32 @@ elif [ "$CONF_NAME" = "serve-args-dflash2.conf" ]; then
     echo "WARNING: boot the validated tier with: MAX_MODEL_LEN=131072 $0 --dflash2 (see docs/troubleshooting.md#dflash2-vllm-kv)" >&2
 fi
 
+# SPEC_N (dflash2 only, v0.1.15): rewrite num_speculative_tokens inside the
+# conf's --speculative-config — the draft-length (n-max) sweep knob. Env
+# pass-through; the conf file is never edited (same pattern as MAX_MODEL_LEN).
+if [ -n "${SPEC_N:-}" ]; then
+    if [ "$CONF_NAME" != "serve-args-dflash2.conf" ]; then
+        echo "ERROR: SPEC_N is only valid with --dflash2 (conf in use: $CONF_NAME)" >&2
+        exit 2
+    fi
+    if ! [[ "$SPEC_N" =~ ^[1-9][0-9]*$ ]]; then
+        echo "ERROR: SPEC_N must be a positive integer (got '$SPEC_N')" >&2
+        exit 2
+    fi
+    for i in "${!SERVE_ARGS[@]}"; do
+        if [ "${SERVE_ARGS[$i]}" = "--speculative-config" ]; then
+            SERVE_ARGS[i+1]="$(python3 - "$SPEC_N" "${SERVE_ARGS[i+1]}" <<'PY'
+import json, sys
+cfg = json.loads(sys.argv[2])
+cfg["num_speculative_tokens"] = int(sys.argv[1])
+print(json.dumps(cfg, separators=(",", ":")))
+PY
+)"
+            echo "SPEC_N override: num_speculative_tokens=$SPEC_N (conf value replaced; conf file untouched)"
+        fi
+    done
+fi
+
 # Task 5's validation client talks to http://127.0.0.1:8000/v1/chat/completions;
 # the confs pin --port 8000. Echo the effective port for the operator.
 PORT=8000
