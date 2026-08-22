@@ -328,9 +328,41 @@ def test_vllm_runner_script_exists_and_names_the_contract():
 
 def test_vllm_runner_enforces_id_format():
     src = VSCRIPT.read_text()
-    for part in ("vllm-bf16-auto-", "(base|mtp)", "c(1|4|8|16)",
+    for part in ("vllm-bf16-auto-", "(base|mtp|dflash)", "c(1|4|8|16)",
                  "ctx(131072|262144)"):
         assert part in src, f"vllm runner must encode id grammar part {part!r}"
+
+
+def test_vllm_runner_dry_run_dflash_derives_dflash2_boot():
+    # dflash cells boot 03-serve-vllm.sh --dflash2 with the dedicated conf;
+    # ctx 131072 != the conf's 262144, so the MAX_MODEL_LEN override path
+    # exercises too (the declared dflash tier — 262144 is KV-infeasible).
+    r = run_vllm_runner(["vllm-bf16-auto-dflash-c1-ctx131072", "--dry-run"])
+    assert r.returncode == 0, r.stderr
+    assert "--dflash2" in r.stdout
+    assert "serve-args-dflash2.conf" in r.stdout
+    assert "MAX_MODEL_LEN=131072" in r.stdout
+
+
+def test_vllm_runner_dry_run_dflash_c1_c8_share_one_boot():
+    r = run_vllm_runner(["vllm-bf16-auto-dflash-c1-ctx131072",
+                         "vllm-bf16-auto-dflash-c8-ctx131072", "--dry-run"])
+    assert r.returncode == 0, r.stderr
+
+
+def test_vllm_runner_refuses_mixed_dflash_mtp_in_one_boot():
+    # Same batch rule as {base,mtp}: one server config per invocation.
+    r = run_vllm_runner(["vllm-bf16-auto-dflash-c1-ctx131072",
+                         "vllm-bf16-auto-mtp-c1-ctx131072", "--dry-run"])
+    assert r.returncode == 2
+    assert "same server config" in r.stderr
+
+
+def test_vllm_runner_records_spec_variant_in_cell_json():
+    # Receipt honesty: the cell JSON must state which spec variant booted,
+    # not just the legacy mtp boolean (a dflash cell records "dflash").
+    src = VSCRIPT.read_text()
+    assert '"spec_variant"' in src
 
 
 def test_vllm_runner_refuses_unknown_id_not_in_matrix():

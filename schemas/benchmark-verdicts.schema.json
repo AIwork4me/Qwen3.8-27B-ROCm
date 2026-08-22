@@ -12,7 +12,7 @@
         "type": "object",
         "required": ["id", "verdict", "reason", "metrics"],
         "properties": {
-          "id": {"type": "string", "pattern": "^(gguf-(hip|vulkan)-udq4kxl-auto-(base|mtp|mtp4)-c4-ctx(32768|131072|262144)-unified|gguf-(hip|vulkan)-udq4kxl-auto-(base|mtp|mtp4)-c(1|4|8|16)-ctx(32768|131072|262144)|vllm-bf16-auto-(base|mtp)-c(1|4|8|16)-ctx(131072|262144))$"},
+          "id": {"type": "string", "pattern": "^(gguf-(hip|vulkan)-udq4kxl-auto-(base|mtp|mtp4)-c4-ctx(32768|131072|262144)-unified|gguf-(hip|vulkan)-udq4kxl-auto-(base|mtp|mtp4)-c(1|4|8|16)-ctx(32768|131072|262144)|vllm-bf16-auto-(base|mtp|dflash)-c(1|4|8|16)-ctx(131072|262144))$"},
           "verdict": {"enum": ["recommended", "caution", "avoid"]},
           "reason": {"type": "string"},
           "conditions": {"type": "string"},

@@ -25,7 +25,8 @@ hardware matrix below); more platforms are evidence-gated.
 
 Prerequisites: a `gfx1151`-class AMD GPU (reference host: Ryzen AI MAX+
 PRO 395 / 8060S), ROCm 7.14.0 (installer script provided), ~20 GiB disk
-for the GGUF path (+~52 GiB for the vLLM BF16 path), git / curl / python3,
+for the GGUF path (+~52 GiB for the vLLM BF16 path, +3.6 GiB more for the
+optional DFlash2 draft), git / curl / python3,
 and ~26.5 GiB of GPU-visible memory (GTT) for the default boot at ctx
 131072 — measured 26,548 MiB at load, and 29,270 MiB for the recommended
 `WITH_MTP=1` boot (cell receipts `docs/results/matrix-714/cells/`). On
@@ -34,10 +35,12 @@ pressure. Details in [Getting started](docs/getting-started.md).
 
 ## Quick start (interactive chat: the GGUF path)
 
-The benchmark matrix (28 measured cells across the `hip` and `vulkan`
-llama.cpp backends; verdicts in `configs/benchmark-verdicts.json`) puts
-interactive chat on the GGUF path: every measured vLLM cell runs below the
-10 tok/s interactive floor on this host — project ruling (2026-08-17); see
+The benchmark matrix (30 measured cells across the `hip` and `vulkan`
+llama.cpp backends and the vLLM path; verdicts in
+`configs/benchmark-verdicts.json`) puts interactive chat on the GGUF path:
+every GGUF-measured alternative is slower, and on vLLM only the DFlash2
+cell reaches the 10 tok/s interactive floor (10.2 tok/s — still below
+GGUF MTP's 13.86) — project ruling (2026-08-17); see
 [Performance](#performance).
 
 ```bash
@@ -83,7 +86,8 @@ Which serving path?
 
 | You want | Use | Why |
 |---|---|---|
-| Interactive chat | `WITH_MTP=1 SPEC_DEPTH=1 bash scripts/gguf-quickstart.sh` (port 8080) — hip is both the default and the recommended path (`BACKEND=vulkan` exists as an experimental opt-in, not recommended) | every measured vLLM cell is below the 10 tok/s interactive floor |
+| Interactive chat | `WITH_MTP=1 SPEC_DEPTH=1 bash scripts/gguf-quickstart.sh` (port 8080) — hip is both the default and the recommended path (`BACKEND=vulkan` exists as an experimental opt-in, not recommended) | 13.86 tok/s per stream — still the fastest interactive cell measured (the vLLM DFlash2 cell reaches 10.2, the only vLLM cell at the 10 tok/s floor) |
+| vLLM serving, best single-stream | `SET=dflash2-bf16 bash scripts/02-fetch-model.sh` then `MAX_MODEL_LEN=131072 bash scripts/03-serve-vllm.sh --dflash2` (port 8000) | DFlash2 speculative decoding: 10.2 tok/s c1 (+150% vs base, +65% vs MTP, same-session 2026-08-21); needs the PR #52816 patch (applied by `01-build-vllm.sh`) and the 3.6 GiB draft; ctx 262144 is KV-infeasible with the draft loaded |
 | 262144-token context, vision, or aggregate batch throughput (to 38.6 tok/s) | `bash scripts/03-serve-vllm.sh` (port 8000) | the greedy-degradation-free path, but not interactive on this host |
 | Multi-user GGUF loads | Don't (gfx1151) — on gfx1100-class the pit did not reproduce and `WITH_DFLASH2=1` is the measured c4 winner (21.4 vs 17.3 base tok/s) | greedy-degradation pit on hip — see [Known good / known bad](#known-good--known-bad) and [DFlash 2](#dflash-2-speculative-decoding-opt-in-withwithout-measured) |
 
@@ -98,6 +102,7 @@ interactivity; single-stream use is unaffected.
 | Path | Status (`gfx1151`, ROCm 7.14) | Evidence |
 | --- | --- | --- |
 | vLLM (source build @ `4d2a68d`, BF16) | Validated — text, MTP speculative decoding, 262144 context, and single-small-image vision; encoder-peak memory for larger image workloads is unbudgeted under `--skip-mm-profiling` | `docs/results/rocm-7.14/vllm-validation.md` |
+| vLLM + DFlash2 (same pin + `patches/vllm-dflash2-pr52816.diff`, draft `incoai/Qwen3.8-27B-DFlash2` 3.6 GiB) | Validated (v0.1.14) — block-diffusion speculative decoding via `--dflash2`: 10.2 tok/s c1 (the first vLLM cell at the interactive floor; +150% vs base, +65% vs MTP same-session), greedy byte-identical (lossless) across all measured cells; ctx 262144 is KV-infeasible with the draft loaded (131072 only); the patch is an unmerged upstream PR (#52816) — tracked until it lands | `docs/results/rocm-7.14/dflash2-validation.md` |
 | llama.cpp / GGUF (HIP build @ `4df29be`, UD-Q4_K_XL) | Validated — text (greedy smoke at ctx 131072), MTP via `--spec-type draft-mtp`, and single-small-image vision via mmproj-F16; `CTX_SIZE=262144` boots but total GTT grows to 33.9 GiB (weights + KV; the 262144 KV increment is 8.0 GiB over the 131072 boot), so the validated default stays 131072 | `docs/results/rocm-7.14/gguf-validation.md` |
 
 ## Hardware support
@@ -114,7 +119,7 @@ interactivity; single-stream use is unaffected.
 ## Performance
 
 <!-- BEGIN GENERATED: performance-highlights -->
-Measured 2026-08-16 and 2026-08-18 on the reference host (gfx1151, ROCm 7.14, 80 GiB GTT pool): **28 cells — 8 recommended / 14 caution / 6 avoid**. Verdicts: `configs/benchmark-verdicts.json`; raw receipts: `docs/results/matrix-714/cells/`; full tables: `docs/results/benchmark.md`.
+Measured 2026-08-16 through 2026-08-21 on the reference host (gfx1151, ROCm 7.14, 80 GiB GTT pool): **30 cells — 9 recommended / 15 caution / 6 avoid**. Verdicts: `configs/benchmark-verdicts.json`; raw receipts: `docs/results/matrix-714/cells/`; full tables: `docs/results/benchmark.md`.
 
 **Recommended — interactive chat (GGUF path, UD-Q4_K_XL):**
 
@@ -133,6 +138,14 @@ Measured 2026-08-16 and 2026-08-18 on the reference host (gfx1151, ROCm 7.14, 80
 | base-c16-ctx262144 | 3.0 (min 2.58) tok/s | 38.6 tok/s | ⚠️ caution — best batch cell measured |
 | mtp-c8-ctx262144 | 4.2 (min 3.47) tok/s | 24.7 tok/s | ⚠️ caution — MTP beneficial through c8 |
 | mtp-c1-ctx262144 | 6.5 tok/s | 5.8 tok/s | ⚠️ caution — +52.6% per-stream vs base (+45.5% aggregate, basis labeled in the verdict) |
+
+**DFlash2 vs no-DFlash2 (vLLM path, same-session pairing 2026-08-21 @131072 — `--dflash2` needs the upstream PR #52816 patch, and ctx 262144 is KV-infeasible with the draft loaded; the GGUF path's own DFlash 2 story is [the section below](#dflash-2-speculative-decoding-opt-in-withwithout-measured); pairing receipts `matrix-714/stability/dflash-pairing-2026-08-21/`):**
+
+| Config | c1 per-stream | c8 per-stream | c8 aggregate | Verdict |
+|---|---|---|---|---|
+| base (no speculator) | 4.1 tok/s | 3.1 tok/s | 19.8 tok/s | the corpus @262144 cells |
+| MTP (`--mtp`) | 6.2 tok/s | 4.0 tok/s | 23.4 tok/s | caution (below floor) |
+| DFlash2 (`--dflash2`) | **10.2 tok/s (+150.1% vs base, +65.3% vs MTP)** | 4.1 tok/s (+31.5% vs base, +3.3% vs MTP) | 23.2 tok/s (+17.2% vs base) | c1 ✅ recommended — the first vLLM cell above the 10 tok/s interactive floor on this host; c8 caution (gain erodes under concurrency, no regression; single session, one host; GGUF hip MTP 13.86 tok/s remains the interactive recommendation) |
 
 **Honesty clause (aggregate never headlines over UX):** the best aggregate on this host — vLLM base-c16, 38.6 tok/s — runs each stream at 3.0 tok/s median (min 2.58): batch presentation only. GGUF-hip c8/c16 aggregates (to 27.5 tok/s) are ❌ avoid cells — greedy decoding degrades after sustained multistream load (see Known good / known bad; the pit does NOT reproduce on Vulkan, whose c8/c16 tiers are unmeasured). Interactive chat → GGUF `WITH_MTP=1` on the default hip backend (13.0 tok/s per stream — the recommended path). `BACKEND=vulkan` remains an available experimental opt-in, NOT a recommendation (project ruling 2026-08-19 supersedes the 2026-08-18 promotion: the clean d1 pairing is 14.53 vs 13.86 tok/s, +4.81% — the conservative FLOOR case, vk measured in the unidentified slow state — aggregate -13.31%; the variance is decomposed v0.1.7: the cold-cache swing +38% is the BOUND (cold 12.38 / warm 16.96–17.10 tok/s), s3's cache was forensically INTACT so its vk-specific trigger is UNIDENTIFIED, common-mode drift is ±5–6%, and the warm pairing band spans 4 sessions (+15.88%/+20.61%/+19.90%/+15.93% incl. overnight persistence) while aggregate/TTFT stay hip-favored) — see the verdicts).
 <!-- END GENERATED: performance-highlights -->
@@ -189,6 +202,16 @@ it anyway), mutually exclusive with `WITH_MTP`; the build is an
 (`llama_cpp_dflash2`) — see
 [troubleshooting: DFlash2](docs/troubleshooting.md#dflash2-pr-build).
 
+**The vLLM path serves the same drafter too (v0.1.14):**
+`SET=dflash2-bf16 bash scripts/02-fetch-model.sh` (safetensors draft) +
+`MAX_MODEL_LEN=131072 bash scripts/03-serve-vllm.sh --dflash2` — measured
+on the reference host (gfx1151, 80 GiB unified pool): 10.2 tok/s single-
+stream, the first vLLM cell at the interactive floor there (+150.1% vs
+base, +65.3% vs MTP, same-session pairing). Different engine, different
+host class, different memory model — see the comparison table under
+[Performance](#performance) and
+[`docs/results/rocm-7.14/dflash2-validation.md`](docs/results/rocm-7.14/dflash2-validation.md).
+
 ## Context capacity
 
 <!-- BEGIN GENERATED: context-capacity -->
@@ -213,8 +236,9 @@ Boot ladder (S3) + deep-prompt retrieval smoke — GGUF path, needle sentence at
 
 - ✅ **GGUF interactive at c1** — hip: all three ctx tiers recommended, default boot (10.1 tok/s per stream) and `WITH_MTP=1` (13.0 tok/s, +28% per-stream) — the recommended path; vulkan (experimental opt-in): base 10.7 and mtp 16.0 tok/s in the 2026-08-18 cells (see the Vulkan bullet for the downgraded mapping).
 - ✅ **vLLM path anchor-clean in all 8 cells** — including anchors run immediately after 16-stream benches: the GGUF greedy-degradation pit does NOT reproduce here; the honest choice for 262144 context, vision, and batch throughput (38.6 tok/s aggregate @base-c16).
+- ✅ **vLLM + DFlash2 (v0.1.14, 2026-08-21, reference host gfx1151)** — block-diffusion speculative decoding (`--dflash2`, draft incoai/Qwen3.8-27B-DFlash2 3.6 GiB via manifest set `dflash2-bf16`, upstream vLLM PR #52816 ported as `patches/vllm-dflash2-pr52816.diff`): dflash-c1 @131072 measures 10.23 tok/s — the FIRST vLLM cell at/above the 10 tok/s interactive floor on this host (+150.1% vs base, +65.3% vs MTP, same-session pairing; greedy anchors byte-clean on all 6 pairing cells — lossless). c8 erodes to +3.3% vs MTP (upstream's concurrency shape; no regression). Mapping on gfx1151: GGUF hip MTP (13.86) stays the recommended interactive path; DFlash2 is the vLLM single-stream choice. Constraints: ctx 262144 KV-infeasible with the draft (131072 only); one-session basis; patch unmerged upstream (tracked). The GGUF path serves the same drafter via `WITH_DFLASH2=1` (llama.cpp PR #27342) — measured on a gfx1100 host, a separate evidence namespace (`docs/results/dflash2/`, the DFlash 2 section below). Receipts: `docs/results/rocm-7.14/dflash2-validation.md`, `docs/results/matrix-714/stability/dflash-pairing-2026-08-21/`.
 - ✅ **Vulkan backend (v0.1.2 cells; opt-in downgraded v0.1.4, variance decomposed v0.1.7)** — anchor-clean in all 6 measured vulkan cells (the hip greedy pit does NOT reproduce on this backend; cell-run anchors now 19/19 across s1–s6). `BACKEND=vulkan WITH_MTP=1` is an AVAILABLE experimental opt-in, NOT a recommendation — project ruling 2026-08-19 SUPERSEDES the 2026-08-18 promotion (mixed-depth basis): the clean d1 pairing (2026-08-19) is 14.53 vs 13.86 tok/s = +4.81% single-stream (the conservative FLOOR case — vk measured in the unidentified slow state), aggregate flips to -13.31% (vulkan TTFT 9.94–12.21 s vs 8.36–8.83 s on 08-18), and cross-day re-runs dropped every vulkan cell (spreads 11.81%/30.70%/6.07% mtp/mtp4/base) — v0.1.6 root-caused that class to Mesa shader-cache state (identical config/flags/pin measures cold 12.38 with the cache aside / warm 16.96–17.10 tok/s, mean 17.03 = a +38% cold→warm swing), and v0.1.7's trigger-hunt forensics refine it (dated supersession #3): the cache was forensically INTACT at s3 (`matrix-714/stability/trigger-hunt-2026-08-19.md` — 866 files pre-window / 0 written inside the causal window / 1 post), so the partial-cold reading is retired: s3 ran slow with a warm untouched cache and its vk-specific TRIGGER is UNIDENTIFIED (no suspend/resume, no amdgpu reset/errors, no power-profile switch in the window; clock-stepping absent during s3's run; the only discrete in-window state change is an unattended-upgrade linux-libc-dev/linux-tools-common 6.8.0-137→138 — fact recorded, no mechanism claimed); clock-stepping is a CHRONIC common-mode condition (883+ events since the 08-12 boot, present during fast sessions too — not s3-specific). Session-5/6 series: BOTH backends drift together evening vs morning (vk -4.6%, hip -6.0% vs s4 — common-mode ±5–6%), the warm pairing band is 4 sessions +15.88%/+20.61%/+19.90%/+15.93% (s4 boots 1-2, s5, s6), OVERNIGHT persistence is confirmed (s6 7 h 50 m after s5, cache byte-identical 7884 KiB/867 files / zero writes, pairing in band), and aggregate/TTFT are consistently hip-favored (TTFT vk 8.49–8.54 vs hip 5.49–5.63 s across s5/s6; aggregate s5 +1.07%, s6 -2.39%) — vulkan's edge is the single-stream median only. hip `WITH_MTP=1` is BOTH the default and the recommended path (recommendation unchanged by every refinement). Evidence: `docs/results/matrix-714/stability/`; one host / one ICD (RADV 25.2.8) remain the limits. Selection guidance (owner ruling 2026-08-20 — self-selection criteria, NOT a recommendation): self-select the opt-in for long outputs (≳300-token replies; crossover ≈230–310 tokens (derived) — where the warm streaming band (+15.88%/+20.61%/+19.90%/+15.93%) repays the ~3 s slower first token: TTFT vk 8.49–8.54 vs hip 5.49–5.63 s) or power-sensitive setups (package power ~30–32 W vs ~52–53 W on hip); short-reply interactive users get no end-to-end benefit and a slower first token — see `docs/adaptation.md` §Vulkan (the four pre-registered promotion criteria: README roadmap decision entry).
-- ✅ **Boot reliability** — every declared-priority cell booted (GGUF 4–6 s warm; vLLM 171/226 s); zero failed streams across all 28 cells.
+- ✅ **Boot reliability** — every declared-priority cell booted (GGUF 4–6 s warm; vLLM 171/226 s); zero failed streams across all 30 cells.
 
 **Known bad / pits:**
 
@@ -249,17 +273,30 @@ Full tables with links to the raw receipts: [docs/results/benchmark.md](docs/res
 
 ## Status & roadmap
 
-Current release: **v0.1.13** — docs UX pass: every copy-paste surface
-(boot table, quick starts, troubleshooting pit) now carries the
-SPEC_DEPTH=4 optimum; evidence index + link-guard extended —
+Current release: **v0.1.14** — vLLM-path DFlash2 (v0.1.14, this
+release) on top of the GGUF-path DFlash2 series (v0.1.9–v0.1.13:
+with/without evidence, acceptance probe, n-max sweep, docs UX pass) —
 [CHANGELOG](CHANGELOG.md) ·
 [Releases](https://github.com/AIwork4me/Qwen3.8-27B-ROCm/releases).
 
 Roadmap — evidence-gated intentions, not promises; each item lands when its
 receipts do:
 
-- **DFlash2 follow-ups**: c4 n-max-4 re-pairing, and re-pin + one-shot
-  re-measure when llama.cpp PR #27342 merges (tracked in
+- **DFlash2 on the vLLM path — integrated (v0.1.14, 2026-08-21, this
+  release)** — the block-diffusion draft (incoai/Qwen3.8-27B-DFlash2,
+  safetensors via manifest set `dflash2-bf16`) served via `--dflash2` +
+  the ported upstream vLLM PR #52816 patch: dflash-c1 10.23 tok/s (first
+  vLLM cell at the interactive floor; +150.1%/+65.3% same-session vs
+  base/MTP), c8 erodes to +3.3% vs MTP, anchors clean (lossless). OPEN
+  follow-ups, evidence-gated: (1) the patch is an unmerged upstream PR —
+  re-pin when #52816 lands and retire the patch; (2) one-session
+  measurement basis — a cross-day replication before any mapping upgrade;
+  (3) c4/c16 dflash tiers unmeasured; (4) n-max: the GGUF-path sweep found
+  draft length 2–4 >> 7 (gfx1100; `docs/results/dflash2/nmax-sweep.json`)
+  — the vLLM conf still serves the vendor default
+  num_speculative_tokens=7; sweep before treating 10.23 as the optimum.
+- **DFlash2 follow-ups (GGUF path)**: c4 n-max-4 re-pairing, and re-pin +
+  one-shot re-measure when llama.cpp PR #27342 merges (tracked in
   [`docs/results/dflash2/`](docs/results/dflash2/) F8/F7;
   `configs/validated-stack.json` `llama_cpp_dflash2`).
 - **vLLM path on community platforms** (W7900-class `gfx1100`): the

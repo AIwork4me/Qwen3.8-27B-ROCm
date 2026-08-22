@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-18",
+  "generated_at": "2026-08-21",
   "generator": "scripts/gen-matrix.py",
   "notes": [
     "Declaration only: statuses flip to measured by the cell runners (Tasks 3/4); regeneration resets to this declaration.",
@@ -379,6 +379,18 @@
     },
     {
       "id": "vllm-bf16-auto-mtp-c16-ctx262144",
+      "status": "measured",
+      "runner_hint": "scripts/run-cell-vllm.sh",
+      "priority": true
+    },
+    {
+      "id": "vllm-bf16-auto-dflash-c1-ctx131072",
+      "status": "measured",
+      "runner_hint": "scripts/run-cell-vllm.sh",
+      "priority": true
+    },
+    {
+      "id": "vllm-bf16-auto-dflash-c8-ctx131072",
       "status": "measured",
       "runner_hint": "scripts/run-cell-vllm.sh",
       "priority": true

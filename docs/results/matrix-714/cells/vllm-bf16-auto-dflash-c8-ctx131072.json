@@ -1,0 +1,182 @@
+{
+  "id": "vllm-bf16-auto-dflash-c8-ctx131072",
+  "label": "vllm-bf16-auto-dflash-c8-ctx131072",
+  "base_url": "http://127.0.0.1:8000",
+  "started_utc": "2026-08-21T02:41:24Z",
+  "server_flags": {
+    "conf": "configs/serve-args-dflash2.conf",
+    "mtp": false,
+    "spec_variant": "dflash",
+    "serve_script": "scripts/03-serve-vllm.sh",
+    "served_model_name": "qwen3.8-27b",
+    "max_model_len_conf": 262144,
+    "max_model_len_override": 131072,
+    "port": 8000,
+    "concurrency": 8,
+    "conf_flags_verbatim": [
+      "--served-model-name qwen3.8-27b",
+      "--max-model-len 262144",
+      "--gpu-memory-utilization 0.92",
+      "--kv-cache-dtype auto",
+      "--attention-backend TRITON_ATTN",
+      "--dtype bfloat16",
+      "--port 8000",
+      "--skip-mm-profiling",
+      "--reasoning-parser qwen3",
+      "--speculative-config {\"method\":\"dflash\",\"model\":\"models/Qwen3.8-27B-DFlash2\",\"num_speculative_tokens\":7}"
+    ]
+  },
+  "engine": {
+    "non_default_args": "(APIServer pid=46221) INFO 08-21 10:41:34 [api_utils.py:272] non-default args: {'model_tag': '/home/amd/Desktop/Qwen3.8-27B-ROCm/models/Qwen3.8-27B', 'model': '/home/amd/Desktop/Qwen3.8-27B-ROCm/models/Qwen3.8-27B', 'dtype': 'bfloat16', 'max_model_len': 131072, 'served_model_name': ['qwen3.8-27b'], 'attention_backend': 'TRITON_ATTN', 'reasoning_parser': 'qwen3', 'skip_mm_profiling': True, 'speculative_config': {'method': 'dflash', 'model': 'models/Qwen3.8-27B-DFlash2', 'num_speculative_tokens': 7}}",
+    "engine_init_excerpt": "(EngineCore pid=46578) INFO 08-21 10:41:50 [core.py:122] Initializing a V1 LLM engine (v0.1.dev1+g4d2a68d64.d20260816) with config: model='/home/amd/Desktop/Qwen3.8-27B-ROCm/models/Qwen3.8-27B', speculative_config=SpeculativeConfig(method='dflash', model='models/Qwen3.8-27B-DFlash2', num_spec_tokens=7), tokenizer='/home/amd/Desktop/Qwen3.8-27B-ROCm/models/Qwen3.8-27B', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=131072, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=True, quantization=None, quantization_config=None, enforce_eager=False, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='qwen3', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_deta",
+    "kv_and_load_lines": [
+      "(EngineCore pid=46578) INFO 08-21 10:42:27 [model_runner.py:380] Model loading took 54.84 GiB memory and 35.603588 seconds",
+      "(EngineCore pid=46578) INFO 08-21 10:42:42 [gpu_worker.py:578] Available KV cache memory: 17.03 GiB",
+      "(EngineCore pid=46578) INFO 08-21 10:42:42 [kv_cache_utils.py:1869] GPU KV cache size: 192,394 tokens, Maximum concurrency for 131,072 tokens per request: 1.47x",
+      "(EngineCore pid=46578) INFO 08-21 10:45:12 [core.py:347] init engine (profile, create kv cache, warmup model) took 164.87 s (compilation: 6.94 s)"
+    ],
+    "max_num_seqs_note": "absent from the non-default args line -> the pin default applied (max_num_seqs=1024, max_num_batched_tokens=8192; vllm/engine/arg_utils.py:2592-2601, METHODOLOGY 7)"
+  },
+  "instrument_mode": {
+    "no_thinking": true,
+    "mechanism": "chat_template_kwargs {'enable_thinking': false} (bench_client --no-thinking)",
+    "reasoning_parser": "qwen3 (from the conf; splits <think> into message.reasoning \u2014 with thinking disabled no reasoning deltas are produced)",
+    "comparability": "same visible-answer instrument mode as the gguf cells (METHODOLOGY 2 erratum)"
+  },
+  "load": {
+    "vram_mib": 1117,
+    "gtt_mib": 76566
+  },
+  "boot": {
+    "ok": true,
+    "health_wall_s": 258,
+    "shared_boot": {
+      "cells": [
+        "vllm-bf16-auto-dflash-c1-ctx131072",
+        "vllm-bf16-auto-dflash-c8-ctx131072"
+      ],
+      "this_cell_index": 2
+    }
+  },
+  "client": {
+    "label": "vllm-bf16-auto-dflash-c8-ctx131072",
+    "concurrency": 8,
+    "started_utc": "2026-08-21T02:46:18.391773+00:00",
+    "streams": [
+      {
+        "ttft_ms": 29291.321986000185,
+        "tpot_ms": 202.41158998038978,
+        "completion_tokens": 256,
+        "prompt_tokens": 1412,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 17413.323320999552,
+        "tpot_ms": 238.418540737257,
+        "completion_tokens": 256,
+        "prompt_tokens": 1474,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 25066.331340000033,
+        "tpot_ms": 222.3563779254904,
+        "completion_tokens": 256,
+        "prompt_tokens": 1298,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 4346.548610999889,
+        "tpot_ms": 300.2234679098026,
+        "completion_tokens": 256,
+        "prompt_tokens": 1469,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 21247.28244400012,
+        "tpot_ms": 250.73301486274573,
+        "completion_tokens": 256,
+        "prompt_tokens": 1336,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 13165.307213000233,
+        "tpot_ms": 279.8813271411763,
+        "completion_tokens": 256,
+        "prompt_tokens": 1516,
+        "reasoning_tokens": 0,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 8843.517553999845,
+        "tpot_ms": 278.67523681568713,
+        "completion_tokens": 256,
+        "prompt_tokens": 1462,
+        "reasoning_tokens": 0,
+        "finish_reason": "length",
+        "ok": true,
+        "error": null
+      },
+      {
+        "ttft_ms": 33511.332899999616,
+        "tpot_ms": 225.14726760540773,
+        "completion_tokens": 186,
+        "prompt_tokens": 1408,
+        "reasoning_tokens": 0,
+        "finish_reason": "stop",
+        "ok": true,
+        "error": null
+      }
+    ],
+    "aggregate": {
+      "tok_per_s": 23.219404828999366,
+      "wall_s": 85.18736869300028,
+      "ok_streams": 8,
+      "failed_streams": 0
+    }
+  },
+  "anchor": {
+    "ok": true,
+    "content_tail": "OK"
+  },
+  "log_excerpt": [
+    "Serving /home/amd/Desktop/Qwen3.8-27B-ROCm/models/Qwen3.8-27B (serve-args-dflash2.conf) on http://127.0.0.1:8000/v1 ...",
+    "/home/amd/Desktop/Qwen3.8-27B-ROCm/.venv/lib/python3.12/site-packages/tvm_ffi/_optional_torch_c_dlpack.py:181: UserWarning: Failed to JIT torch c dlpack extension, EnvTensorAllocator will not be enabled.",
+    "warnings.warn(",
+    "(APIServer pid=46221) INFO 08-21 10:41:34 [api_utils.py:272] non-default args: {'model_tag': '/home/amd/Desktop/Qwen3.8-27B-ROCm/models/Qwen3.8-27B', 'model': '/home/amd/Desktop/Qwen3.8-27B-ROCm/models/Qwen3.8-27B', 'dtype': 'bfloat16', 'max_model_len': 131072, 'served_model_name': ['qwen3.8-27b'], ",
+    "(APIServer pid=46221) INFO 08-21 10:41:34 [model.py:672] Resolved architecture: Qwen3_5ForConditionalGeneration",
+    "(APIServer pid=46221) [ERROR] `min_frames` is part of Qwen3VLVideoProcessorInitKwargs, but not documented. Make sure to add it to the docstring of the function in /home/amd/Desktop/Qwen3.8-27B-ROCm/.venv/lib/python3.12/site-packages/transformers/models/qwen3_vl/video_processing_qwen3_vl.py.",
+    "(APIServer pid=46221) [ERROR] `max_frames` is part of Qwen3VLVideoProcessorInitKwargs, but not documented. Make sure to add it to the docstring of the function in /home/amd/Desktop/Qwen3.8-27B-ROCm/.venv/lib/python3.12/site-packages/transformers/models/qwen3_vl/video_processing_qwen3_vl.py.",
+    "(APIServer pid=46221) INFO 08-21 10:41:35 [model.py:672] Resolved architecture: DFlash2DraftModel",
+    "(APIServer pid=46221) WARNING 08-21 10:41:35 [vllm.py:1862] max_num_scheduled_tokens is set to 2048 based on the speculative decoding settings. This may lead to suboptimal performance. Consider increasing max_num_batched_tokens to accommodate the additional draft token slots, or decrease num_specula",
+    "(EngineCore pid=46578) INFO 08-21 10:41:50 [core.py:122] Initializing a V1 LLM engine (v0.1.dev1+g4d2a68d64.d20260816) with config: model='/home/amd/Desktop/Qwen3.8-27B-ROCm/models/Qwen3.8-27B', speculative_config=SpeculativeConfig(method='dflash', model='models/Qwen3.8-27B-DFlash2', num_spec_tokens",
+    "(EngineCore pid=46578) [ERROR] `min_frames` is part of Qwen3VLVideoProcessorInitKwargs, but not documented. Make sure to add it to the docstring of the function in /home/amd/Desktop/Qwen3.8-27B-ROCm/.venv/lib/python3.12/site-packages/transformers/models/qwen3_vl/video_processing_qwen3_vl.py.",
+    "(EngineCore pid=46578) [ERROR] `max_frames` is part of Qwen3VLVideoProcessorInitKwargs, but not documented. Make sure to add it to the docstring of the function in /home/amd/Desktop/Qwen3.8-27B-ROCm/.venv/lib/python3.12/site-packages/transformers/models/qwen3_vl/video_processing_qwen3_vl.py.",
+    "(EngineCore pid=46578) WARNING 08-21 10:41:52 [activation.py:808] [ROCm] PyTorch's native GELU with tanh approximation is unstable. Falling back to GELU(approximate='none').",
+    "(EngineCore pid=46578) WARNING 08-21 10:41:55 [compilation.py:1348] Op 'sparse_attn_indexer' doesn't exist (or wasn't imported/registered), enabling with '+sparse_attn_indexer' has no effect",
+    "(EngineCore pid=46578) WARNING 08-21 10:42:24 [vllm.py:1862] max_num_scheduled_tokens is set to 2048 based on the speculative decoding settings. This may lead to suboptimal performance. Consider increasing max_num_batched_tokens to accommodate the additional draft token slots, or decrease num_specul",
+    "(EngineCore pid=46578) WARNING 08-21 10:42:26 [speculator.py:182] Draft model DFlash2Qwen3ForCausalLM does not support external multimodal embeddings. Embeddings from the target model will not be passed to the drafter; using text-only draft inputs instead.",
+    "(EngineCore pid=46578) INFO 08-21 10:42:27 [model_runner.py:380] Model loading took 54.84 GiB memory and 35.603588 seconds",
+    "(EngineCore pid=46578) INFO 08-21 10:42:42 [gpu_worker.py:578] Available KV cache memory: 17.03 GiB",
+    "(EngineCore pid=46578) WARNING 08-21 10:42:42 [kv_cache_utils.py:1227] Add 2 padding layers, may waste at most 4.17% KV cache memory",
+    "(EngineCore pid=46578) WARNING 08-21 10:42:42 [kv_cache_utils.py:1227] Add 4 padding layers, may waste at most 25.00% KV cache memory"
+  ],
+  "degraded": false,
+  "degraded_reason": null
+}

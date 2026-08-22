@@ -145,6 +145,31 @@ the interactive floor; use GGUF for chat):
 bash scripts/03-serve-vllm.sh --mtp         # conf: configs/serve-args-mtp.conf
 ```
 
+DFlash2 variant (v0.1.14 — block-diffusion speculative decoding; 10.2 tok/s
+single-stream, +150.1% vs base / +65.3% vs MTP, same-session 2026-08-21;
+the first vLLM cell at the interactive floor — for pure interactive speed
+the GGUF MTP path at 13.86 tok/s is still faster):
+
+```bash
+SET=dflash2-bf16 bash scripts/02-fetch-model.sh  # ~3.6 GiB draft, SHA256-verified (models/Qwen3.8-27B-DFlash2)
+MAX_MODEL_LEN=131072 bash scripts/03-serve-vllm.sh --dflash2   # conf: configs/serve-args-dflash2.conf
+```
+
+`MAX_MODEL_LEN=131072` is required, not optional: with the draft loaded,
+ctx 262144 exceeds the KV budget on the 80 GiB pool (21.63 needed vs
+15.46 GiB available — the boot refuses; receipt
+[`results/rocm-7.14/dflash2-validation.md`](results/rocm-7.14/dflash2-validation.md)).
+The draft needs the upstream PR #52816 patch. A fresh `bash
+scripts/01-build-vllm.sh` applies it with the build; an existing v0.1.8
+install can apply it directly — it is pure Python, no rebuild (the editable
+install picks it up):
+
+```bash
+git -C third_party/vllm apply patches/vllm-dflash2-pr52816.diff
+```
+
+Boot ~330 s to first healthy poll (compile + speculator capture).
+
 Verify (boot takes ~171 s base / ~226 s MTP to first healthy poll — that is
 measured normal, not a hang):
 

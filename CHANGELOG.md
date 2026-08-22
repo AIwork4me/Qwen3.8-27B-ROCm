@@ -8,6 +8,50 @@ receipts [`docs/results/matrix-714/cells/`](docs/results/matrix-714/cells/),
 and the rehearsal receipt
 [`docs/results/rocm-7.14/one-pass-rehearsal.md`](docs/results/rocm-7.14/one-pass-rehearsal.md).
 
+## v0.1.14 — 2026-08-21 (vLLM path)
+
+DFlash2 release: the vLLM path gains **DFlash2 block-diffusion speculative
+decoding** (draft [`incoai/Qwen3.8-27B-DFlash2`](https://hf-mirror.com/incoai/Qwen3.8-27B-DFlash2),
+3.6 GiB, manifest set `dflash2-bf16`), served by
+`scripts/03-serve-vllm.sh --dflash2` (conf `configs/serve-args-dflash2.conf`,
+`num_speculative_tokens=7`). The pinned vLLM (`4d2a68d`) predates the
+DFlash2 architecture — upstream support is PR
+[#52816](https://github.com/vllm-project/vllm/pull/52816) (OPEN at port
+time), ported as `patches/vllm-dflash2-pr52816.diff` (pure Python, listed
+in `configs/validated-stack.json`, applied idempotently by
+`scripts/01-build-vllm.sh`, whose patch guard now also enumerates
+untracked files — patches may create files).
+
+**The measured headline (same-session pairing {base,mtp,dflash} × {c1,c8}
+@131072, 2026-08-21; receipts
+`docs/results/matrix-714/stability/dflash-pairing-2026-08-21/` + the 2
+dflash corpus cells):** dflash-c1 runs **10.23 tok/s** per stream (TPOT
+97.8 ms) — **the first measured vLLM cell at/above the 10 tok/s
+interactive floor on this host**, +150.1% vs base (4.09) and +65.3% vs MTP
+(6.19) same-session; dflash-c8 erodes to 4.09 tok/s (+31.5% vs base,
++3.3% vs MTP; aggregate 23.2 tok/s, +17.2% — no regression). Greedy
+byte-identity anchors are clean on all 6 pairing cells — the lossless
+claim holds on this stack. Matrix: 30 measured cells = 9 recommended / 15 caution / 6 avoid (dflash-c1 recommended, dflash-c8 caution; the
+2026-08-17 "all vLLM cells below the floor" premise is superseded FOR THE
+dflash-c1 CELL, dated in the verdict). **Mapping unchanged at the top**:
+GGUF hip `WITH_MTP=1 SPEC_DEPTH=1` (13.86 tok/s) remains both the default
+and the recommended interactive path; DFlash2 is the vLLM-path
+single-stream choice.
+
+**Tier finding:** ctx 262144 is KV-infeasible with the draft loaded
+(21.63 GiB needed vs 15.46 available; engine max-len estimate 181376) —
+the dflash cells are declared at 131072 (KV 15.46 GiB = 174,643 tokens =
+1.33x), and `MAX_MODEL_LEN=131072` is required with the conf. Boot
+receipts (both failed attempts + the success), the patch-port record, and
+the ROCm feasibility answer (the non-causal draft attention runs on
+`TRITON_ATTN` — no separate draft backend):
+`docs/results/rocm-7.14/dflash2-validation.md`. Caveats carried on every
+surface: single session, one host; the patch is unmerged upstream
+(tracked until it lands). The GGUF path serves the same drafter via
+the separate `WITH_DFLASH2=1` opt-in (llama.cpp PR #27342; released as
+v0.1.9–v0.1.13, evidence `docs/results/dflash2/`, gfx1100 host) — the
+two integrations are path-bound and complementary.
+
 ## v0.1.13 — 2026-08-21
 
 Docs UX pass after an independent review (GO-WITH-FIXES): the v0.1.12
