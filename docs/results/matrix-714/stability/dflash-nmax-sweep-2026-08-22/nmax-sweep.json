@@ -1,0 +1,68 @@
+{
+ "generated_on": "2026-08-22",
+ "method": "fresh boot per arm (base, mtp, dflash@SPEC_N in ARMS) at MAX_MODEL_LEN=131072; the cells' exact bench command; dflash arms = median of RUNS runs; greedy anchor per arm",
+ "arms": {
+  "base": {
+   "arm": "base",
+   "started_utc": "2026-08-22T02:12:06Z",
+   "runs": [
+    4.145679099535298
+   ],
+   "tok_s_median": 4.15,
+   "anchor_ok": true
+  },
+  "dflash-2": {
+   "arm": "dflash-2",
+   "started_utc": "2026-08-22T02:23:52Z",
+   "runs": [
+    7.678294378091952,
+    7.527430813763416,
+    7.749841000028161
+   ],
+   "tok_s_median": 7.68,
+   "anchor_ok": true
+  },
+  "dflash-3": {
+   "arm": "dflash-3",
+   "started_utc": "2026-08-22T02:30:03Z",
+   "runs": [
+    7.6165450646597135,
+    7.370980090580725,
+    7.300136997431717
+   ],
+   "tok_s_median": 7.37,
+   "anchor_ok": true
+  },
+  "dflash-4": {
+   "arm": "dflash-4",
+   "started_utc": "2026-08-22T02:36:55Z",
+   "runs": [
+    9.76743304251661,
+    9.530980391756353,
+    9.076074926256593
+   ],
+   "tok_s_median": 9.53,
+   "anchor_ok": true
+  },
+  "dflash-7": {
+   "arm": "dflash-7",
+   "started_utc": "2026-08-22T02:43:00Z",
+   "runs": [
+    10.595912290722573,
+    9.467970580676896,
+    9.787092407363717
+   ],
+   "tok_s_median": 9.79,
+   "anchor_ok": true
+  },
+  "mtp": {
+   "arm": "mtp",
+   "started_utc": "2026-08-22T02:16:47Z",
+   "runs": [
+    6.219545589434368
+   ],
+   "tok_s_median": 6.22,
+   "anchor_ok": true
+  }
+ }
+}

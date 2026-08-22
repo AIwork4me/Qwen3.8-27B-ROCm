@@ -1507,3 +1507,21 @@ def test_readme_carries_the_dflash2_pairing_comparison_table():
                   "same-session pairing", "#52816", "131072"):
         assert token in block, f"{token!r} missing from the comparison table"
     assert "first vLLM cell" in block and "10 tok/s" in block
+
+
+def test_dflash_c1_carries_the_crossday_and_nmax_addendum():
+    """v0.1.15 (2026-08-22): the n-max sweep session
+    (stability/dflash-nmax-sweep-2026-08-22/) adds two dated facts to the
+    dflash-c1 ruling: (1) the 10 tok/s floor-crossing is DAY-DEPENDENT
+    (dflash-7 median 9.79 today vs the 10.23 corpus cell — controls
+    replicated +1.5%/+0.5%, so common-mode drift); (2) num_speculative_
+    tokens 7 is confirmed (n=4 statistically tied, gap +2.7% < the arm's
+    own run spread; n=2–3 clearly lower) — the GGUF-side 2–4 optimum does
+    NOT transfer to the vLLM path."""
+    v = load(VERDICTS)
+    by_id = {c["id"]: c for c in v["cells"]}
+    c1 = by_id["vllm-bf16-auto-dflash-c1-ctx131072"]
+    text = (c1["reason"] + " " + (c1["conditions"] or "")).lower()
+    for token in ("2026-08-22", "9.79", "day-dependent", "n-max",
+                  "does not transfer"):
+        assert token in text, f"{token!r} missing from the c1 addendum"

@@ -95,6 +95,37 @@ anchor) is the formal check.
   re-tiered to ctx131072 (`gen-matrix.py` NEW_CELLS_V019, reason carries
   these numbers); the corpus base/mtp cells remain the 262144 story
 
+## n-max sweep (2026-08-22)
+
+`scripts/probe-vllm-dflash2-nmax-sweep.sh` — 6 fresh boots (base, mtp,
+dflash at SPEC_N 2/3/4/7), all @131072, the cells' exact bench command;
+dflash arms = median of 3 runs. Receipt:
+`../matrix-714/stability/dflash-nmax-sweep-2026-08-22/`.
+
+| Arm | Median tok/s | Runs |
+|---|---|---|
+| base-c1 (control) | 4.15 | single |
+| mtp-c1 (control) | 6.22 | single |
+| dflash n=2 | 7.68 | 7.68 / 7.53 / 7.75 |
+| dflash n=3 | 7.37 | 7.62 / 7.37 / 7.30 |
+| dflash n=4 | 9.53 | 9.77 / 9.53 / 9.08 |
+| dflash n=7 | 9.79 | 10.60 / 9.47 / 9.79 |
+
+All anchors clean. Findings (recorded as the dated verdict addendum):
+
+1. **7 confirmed, n=4 statistically tied** — the 4-vs-7 gap (+2.7%) is
+   inside n=7's own run spread (9.47–10.60); n=2–3 are ~22% lower, and
+   the ordering is NOT monotonic (n=2 beats n=3). The GGUF-path optimum
+   (2–4, gfx1100) does NOT transfer to the vLLM path on this host; the
+   conf keeps 7 — now as a swept choice, not an unexamined default.
+2. **The floor-crossing is day-dependent** — dflash-7 re-measures 9.79
+   (below the 10 tok/s floor) vs the corpus cell's 10.23 (above), −4.3%,
+   inside the documented ±5–6% common-mode band; the same-session
+   controls replicated tightly (base +1.5%, mtp +0.5% vs the 2026-08-21
+   pairing), so this is host-state drift, not a config regression.
+   Same-session pairing ratios today: +136.1% vs base, +57.4% vs MTP
+   (2026-08-21: +150.1% / +65.3%).
+
 Sibling integration: the GGUF path serves the same drafter via
 `WITH_DFLASH2=1` (llama.cpp PR #27342), measured on a gfx1100-class host —
 see [`../dflash2/`](../dflash2/) and

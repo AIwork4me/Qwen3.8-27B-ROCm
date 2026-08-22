@@ -1514,6 +1514,17 @@ def compose_verdict(cid: str, cell: dict, m: dict, base_m: dict | None,
                 f"never silent); the GGUF hip MTP path (13.86 tok/s, clean "
                 f"d1 pairing) REMAINS the recommended interactive-chat "
                 f"path — dflash-c1 is the vLLM-path single-stream choice. "
+                f"Dated addendum 2026-08-22 (n-max sweep session, "
+                f"stability/dflash-nmax-sweep-2026-08-22/): the "
+                f"floor-crossing is DAY-DEPENDENT — dflash-7 re-measured "
+                f"9.79 tok/s median (runs 9.47–10.60) vs this cell's "
+                f"10.23, a -4.3% common-mode drift (controls replicated: "
+                f"base +1.5%, mtp +0.5%); treat 'at/near the 10 tok/s "
+                f"floor', not stably above it. num_speculative_tokens=7 "
+                f"is CONFIRMED optimal (n=4 statistically tied at +2.7% "
+                f"gap, inside the arm's own run spread; n=2–3 clearly "
+                f"lower, ~-22%) — the GGUF-side 2–4 optimum does NOT "
+                f"transfer to the vLLM path. "
                 f"{applicability}")
             conditions = (
                 "Single-stream vLLM serving; multi-user tiers erode the "

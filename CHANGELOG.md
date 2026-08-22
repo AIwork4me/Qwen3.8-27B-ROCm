@@ -8,6 +8,35 @@ receipts [`docs/results/matrix-714/cells/`](docs/results/matrix-714/cells/),
 and the rehearsal receipt
 [`docs/results/rocm-7.14/one-pass-rehearsal.md`](docs/results/rocm-7.14/one-pass-rehearsal.md).
 
+## v0.1.15 — 2026-08-22
+
+vLLM-side n-max sweep + cross-day replication (evidence closeout for the
+two open follow-ups of v0.1.14). New machinery:
+`SPEC_N` env override on `scripts/03-serve-vllm.sh --dflash2`
+(dflash2-only, positive-integer-validated, conf untouched) and the
+6-boot session driver `scripts/probe-vllm-dflash2-nmax-sweep.sh` (base/mtp
+controls + dflash at SPEC_N 2/3/4/7; the cells' exact bench command;
+receipts-only under `matrix-714/stability/`).
+
+**Findings** (receipt
+`matrix-714/stability/dflash-nmax-sweep-2026-08-22/nmax-sweep.json`,
+all anchors clean; dated verdict addendum on the dflash-c1 cell):
+- **num_speculative_tokens=7 CONFIRMED** on the vLLM path (gfx1151):
+  n=4 statistically ties (+2.7% gap < the arm's own 9.47–10.60 run
+  spread), n=2–3 are ~22% lower, ordering non-monotonic (2 beats 3).
+  The GGUF-path optimum (2–4, gfx1100) does NOT transfer between
+  engines/hosts. The conf keeps 7 — now a swept choice.
+- **The dflash-c1 floor-crossing is DAY-DEPENDENT**: dflash-7 re-measures
+  **9.79** tok/s median vs the corpus cell's **10.23** (−4.3%, inside the
+  documented ±5–6% common-mode band; controls replicated +1.5%/+0.5% —
+  host-state drift, not a regression). Same-session ratios today:
+  +136.1% vs base / +57.4% vs MTP (08-21: +150.1%/+65.3%). Verdict
+  wording strengthened: treat dflash-c1 as at/near the floor. A full
+  multi-day series remains open before any mapping upgrade (roadmap).
+- No corpus cells, matrix, or verdict metrics changed — the corpus
+  dflash cells stand as measured; the addendum is dated, never a
+  rewrite.
+
 ## v0.1.14 — 2026-08-21 (vLLM path)
 
 DFlash2 release: the vLLM path gains **DFlash2 block-diffusion speculative

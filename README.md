@@ -213,9 +213,10 @@ it anyway), mutually exclusive with `WITH_MTP`; the build is an
 on the reference host (gfx1151, 80 GiB unified pool): 10.2 tok/s single-
 stream, the first vLLM cell at the interactive floor there (+150.1% vs
 base, +65.3% vs MTP, same-session pairing). num_speculative_tokens stays
-at the vendor default 7 in the conf — the GGUF-path sweep above found
-draft length 2–4 clearly better on RDNA-class gfx1100, so a vLLM-side
-sweep may lift this number (open follow-up, roadmap). Different engine,
+at 7 in the conf — swept 2026-08-22 on this host
+(`matrix-714/stability/dflash-nmax-sweep-2026-08-22/`): 7 confirmed
+(n=4 statistically tied, +2.7% gap inside run spread; n=2–3 ~22% lower)
+— the GGUF-side 2–4 optimum does NOT transfer. Different engine,
 different host class, different memory model — see the comparison table
 under [Performance](#performance) and
 [`docs/results/rocm-7.14/dflash2-validation.md`](docs/results/rocm-7.14/dflash2-validation.md).
@@ -281,9 +282,10 @@ Full tables with links to the raw receipts: [docs/results/benchmark.md](docs/res
 
 ## Status & roadmap
 
-Current release: **v0.1.14** — vLLM-path DFlash2 (v0.1.14, this
-release) on top of the GGUF-path DFlash2 series (v0.1.9–v0.1.13:
-with/without evidence, acceptance probe, n-max sweep, docs UX pass) —
+Current release: **v0.1.15** — vLLM-side n-max sweep + cross-day
+replication: 7 confirmed optimal (the GGUF-side 2–4 optimum does not
+transfer); dflash-c1's floor-crossing is day-dependent (dated
+verdict addendum) —
 [CHANGELOG](CHANGELOG.md) ·
 [Releases](https://github.com/AIwork4me/Qwen3.8-27B-ROCm/releases).
 
@@ -297,12 +299,15 @@ receipts do:
   vLLM cell at the interactive floor; +150.1%/+65.3% same-session vs
   base/MTP), c8 erodes to +3.3% vs MTP, anchors clean (lossless). OPEN
   follow-ups, evidence-gated: (1) the patch is an unmerged upstream PR —
-  re-pin when #52816 lands and retire the patch; (2) one-session
-  measurement basis — a cross-day replication before any mapping upgrade;
-  (3) c4/c16 dflash tiers unmeasured; (4) n-max: the GGUF-path sweep found
-  draft length 2–4 >> 7 (gfx1100; `docs/results/dflash2/nmax-sweep.json`)
-  — the vLLM conf still serves the vendor default
-  num_speculative_tokens=7; sweep before treating 10.23 as the optimum.
+  re-pin when #52816 lands and retire the patch; (2) PARTIALLY RESOLVED
+  2026-08-22 — the n-max sweep session ran cross-day: dflash-7 9.79 vs
+  the 10.23 cell = −4.3% common-mode (controls +1.5%/+0.5%); the
+  floor-crossing is day-dependent (dated verdict addendum; a full
+  multi-day series remains open before any mapping upgrade); (3) c4/c16
+  dflash tiers unmeasured; (4) RESOLVED 2026-08-22 — vLLM-side n-max
+  sweep (`matrix-714/stability/dflash-nmax-sweep-2026-08-22/`): 7
+  confirmed (n=4 statistically tied, +2.7% inside run spread; n=2–3
+  ~22% lower; the GGUF-side 2–4 optimum does NOT transfer).
 - **DFlash2 follow-ups (GGUF path)**: c4 n-max-4 re-pairing, and re-pin +
   one-shot re-measure when llama.cpp PR #27342 merges (tracked in
   [`docs/results/dflash2/`](docs/results/dflash2/) F8/F7;

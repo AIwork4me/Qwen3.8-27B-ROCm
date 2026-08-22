@@ -1,0 +1,9 @@
+{
+ "arm": "base",
+ "started_utc": "2026-08-22T02:12:06Z",
+ "runs": [
+  4.145679099535298
+ ],
+ "tok_s_median": 4.15,
+ "anchor_ok": true
+}
