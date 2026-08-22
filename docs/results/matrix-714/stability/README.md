@@ -363,7 +363,9 @@ host must be idle):
 
 Receipts land in `dflash-nmax-sweep-<date>/` (same driver/date convention
 as the 2026-08-22 sweep — `base.json`, `mtp.json`, `dflash-7.json`,
-`nmax-sweep.json`); commit them receipts-only. Ruling criteria are
+`nmax-sweep.json`); commit them receipts-only. One installment per UTC
+day: a same-day rerun OVERWRITES that day's receipts — run it once,
+commit it once (the ruling counts committed installments only). Ruling criteria are
 pre-registered in the README roadmap decision entry (≥5 sessions on ≥5
 distinct UTC days; dflash-7 median ≥ 10.0 in ≥5-of-5 with clean anchors
 upgrades the "at/near the floor" wording to "stably at/above the floor";

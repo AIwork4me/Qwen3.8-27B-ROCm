@@ -1537,9 +1537,9 @@ def test_dflash_floor_series_criteria_are_preregistered():
     block = readme[readme.find("dflash floor series (pre-registered"):][:2500] \
         if "dflash floor series (pre-registered" in readme else ""
     assert block, "README roadmap lacks the pre-registered series block"
-    for token in ("≥5 sessions", "≥5 distinct UTC days", "median ≥ 10.0",
-                  "stably at/above the floor", "straddles",
-                  "mapping does not change", "anchor"):
+    for token in ("first 5 committed installments", "5-of-5",
+                  "median ≥ 10.0", "stably at/above the floor", "straddles",
+                  "mapping does not change", "anchor", "missed day"):
         assert token in block, f"pre-registration lacks {token!r}"
 
     v = load(VERDICTS)
